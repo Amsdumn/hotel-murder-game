@@ -185,7 +185,8 @@ describe("Socket.IO lobby", () => {
     expect(JSON.stringify(event)).not.toContain(String(victim.roomNumber));
     expect(JSON.stringify(event)).not.toContain(victim.id);
     const updatedPublic = await publicState;
-    expect(updatedPublic.publicRooms).toEqual(projectPublicState(controlled.gameState).publicRooms);
+    expect(updatedPublic.publicRooms.find((room) => room.roomNumber === victim.roomNumber)?.state).toBe("MURDERED");
+    expect(JSON.stringify(updatedPublic.players)).not.toContain(String(victim.roomNumber));
     expect(projectPublicState(controlled.gameState).phaseDeadlineAt).toBeUndefined();
     expect(JSON.stringify(updatedPublic.publicHistory?.filter((entry) => entry.type === "MURDER_OCCURRED"))).not.toContain(String(victim.roomNumber));
     expect(updatedPublic.players.every((player) => Object.keys(player).sort().join(",") === "displayName,id,seatIndex")).toBe(true);

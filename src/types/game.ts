@@ -36,7 +36,7 @@ export interface PublicGameState {
   turn: number;
   players: Array<{ id: string; displayName: string; seatIndex: number }>;
   phaseMessage: "กำลังดำเนินการสืบสวน..." | null;
-  publicRooms: Array<{ roomNumber: number; state: "UNKNOWN" | "CRIME_SCENE" | "OPENED_EMPTY" | "OPENED_OCCUPIED" }>;
+  publicRooms: Array<{ roomNumber: number; state: "UNKNOWN" | "CRIME_SCENE" | "MURDERED" | "OPENED_EMPTY" | "OPENED_OCCUPIED" | "OPENED_MURDERED" }>;
   phaseDeadlineAt?: number;
   publicHistory?: Array<{ type: string; message: string }>;
   runoffRooms?: number[];

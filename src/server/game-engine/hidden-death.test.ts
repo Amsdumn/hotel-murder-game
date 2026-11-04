@@ -40,6 +40,10 @@ describe("hidden deaths", () => {
     expect(result.publicEvents).toEqual([{ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: 1 }]);
     expect(JSON.stringify(result.publicEvents)).not.toMatch(/102|Victim|victim|Killer|killer|HOUSEKEEPER/);
     expect(result.privateEvents).toContainEqual(expect.objectContaining({ recipientPlayerId: "victim", type: "DEATH_NOTICE" }));
+    const publicState = projectPublicState(result.state);
+    expect(publicState.publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("MURDERED");
+    expect(publicState.players.find((player) => player.id === "victim")).toEqual({ id: "victim", displayName: "Victim", seatIndex: 1 });
+    expect(JSON.stringify(publicState.publicHistory)).not.toContain("victim");
   });
 
   it("announces immediate Innocent victory if the Killer kills themself", () => {
@@ -65,7 +69,7 @@ describe("hidden deaths", () => {
     expect(publicState.players.map((player) => player.id)).toContain("victim");
     expect(publicState.players.every((player) => Object.keys(player).sort().join(",") === "displayName,id,seatIndex")).toBe(true);
     expect(JSON.stringify(publicState.players)).not.toMatch(/isAlive|isDead|deathReason|deathTurn|roomNumber|HOUSEKEEPER/);
-    expect(publicState.publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("UNKNOWN");
+    expect(publicState.publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("MURDERED");
     expect(publicState.phaseMessage).toBe("กำลังดำเนินการสืบสวน...");
   });
 
@@ -110,6 +114,14 @@ describe("voting eligibility and results", () => {
     expect(result.publicEvents).toEqual([{ type: "ROOM_OPENED", roomNumber: 102, occupancy: "OCCUPIED", gameEnded: false }]);
     expect(JSON.stringify(result.publicEvents)).not.toMatch(/Victim|victim|HOUSEKEEPER|INNOCENT/);
     expect(result.state.players.find((player) => player.id === "victim")?.isAlive).toBe(false);
+  });
+
+  it("keeps the murder label after that room is opened by voting", () => {
+    const murdered = resolveAssassination(game(), 102).state;
+    expect(canVoteForRoom(102, murdered.crimeRooms, murdered.openedRooms)).toBe(true);
+    const opened = resolveVoteRoom({ ...murdered, phase: "VOTING" }, 102).state;
+    expect(projectPublicState(opened).publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("OPENED_MURDERED");
+    expect(canVoteForRoom(102, opened.crimeRooms, opened.openedRooms)).toBe(false);
   });
 
   it("ends the game immediately when voting kills the Killer", () => {

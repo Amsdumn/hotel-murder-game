@@ -14,6 +14,8 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
     publicRooms: HOTEL_ROOMS.map((roomNumber) => {
       if (state.crimeRooms.includes(roomNumber)) return { roomNumber, state: "CRIME_SCENE" as const };
+      const murdered = state.players.some((player) => player.roomNumber === roomNumber && state.deathNotices[player.id]?.cause === "ASSASSINATION");
+      if (murdered) return { roomNumber, state: state.openedRooms.includes(roomNumber) ? "OPENED_MURDERED" as const : "MURDERED" as const };
       if (state.openedRooms.includes(roomNumber)) return { roomNumber, state: state.players.some((player) => player.roomNumber === roomNumber) ? "OPENED_OCCUPIED" as const : "OPENED_EMPTY" as const };
       return { roomNumber, state: "UNKNOWN" as const };
     }),

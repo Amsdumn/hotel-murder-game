@@ -6,7 +6,7 @@
 - **Domain boundary:** `src/server/game-engine` will own roles, room assignment, crime scenes, turns, skills, voting, and win conditions. Socket handlers will authenticate, validate with Zod, call application services, and emit only viewer-specific projections.
 - **Persistence:** Mongoose models for games, player sessions, and game events. Game actions will use optimistic concurrency on a state version and an action ID for idempotency. A per-game serialized command path will guard simultaneous socket events.
 - **Client:** App Router pages render public shell content. Client components use MUI controls, Tailwind layout utilities, and Zustand only for local UI state and authorized projections. All visible text is Thai.
-- **Privacy:** private role, room, death notices, and ability results are sent only to authorized sessions; living Murderer-team members may receive teammate assignments. The full game aggregate never crosses the server boundary. Public players retain ID, display name, and seat index with no alive/dead or gameplay connection status. Public rooms never expose assassination locations.
+- **Privacy:** private role, room, death notices, and ability results are sent only to authorized sessions; living Murderer-team members may receive teammate assignments. The full game aggregate never crosses the server boundary. Public players retain ID, display name, and seat index with no alive/dead or gameplay connection status. A successful assassination marks its room publicly without exposing the victim's identity.
 
 ## Dependencies
 
@@ -16,7 +16,7 @@ Development: `typescript`, `@types/node`, `@types/react`, `@types/react-dom`, `t
 
 ## Risks and controls
 
-1. **Hidden information:** DTO allowlists and tests must prove public payloads, API responses, SSR, Zustand, public events, and errors never expose hidden victim identities, death status, roles, teams, private results, assassination targets, or active skill actors. Initial crime room numbers are the only public details of initial deaths; successful assassination emits only the generic murder notification.
+1. **Hidden information:** DTO allowlists and tests must prove public payloads, API responses, SSR, Zustand, public events, and errors never expose hidden victim identities, death status, roles, teams, private results, failed assassination targets, or active skill actors. Initial crime room numbers are the only public details of initial deaths; successful assassination emits a generic murder notification and marks its room as murdered in public state.
 2. **Concurrent actions:** state version checks and unique action IDs must make retries safe and reject stale actions; use MongoDB optimistic concurrency and serialize commands per game.
 3. **Reconnect and identity:** store hashed, high-entropy reconnect tokens in player sessions; never trust client role, team, or room values.
 4. **Disconnected actors and timers:** server-owned deadlines must advance the game without a connected active player, including after restart.
@@ -47,7 +47,7 @@ Development: `typescript`, `@types/node`, `@types/react`, `@types/react-dom`, `t
 - [x] Implement randomized role/room assignment for 5–10 players and original three-room reroll strategy.
 - [x] Implement role-order queue with seat-index tie break, seven skills, death, and win handling. Private role display happens at game start.
 - [x] In the isolated engine, publish only three `CRIME_SCENE` room numbers for initial crime; privately notify affected players and hide victim identity, role, team, and status from public projections and events.
-- [x] In the isolated engine, publish a generic `MURDER_OCCURRED` only on successful assassination, hide target/victim/Killer information, and privately notify the victim; keep failed attempts private.
+- [x] In the isolated engine, publish a generic `MURDER_OCCURRED` and mark the murdered room on successful assassination, hide victim/Killer identities, and privately notify the victim; keep failed attempts private. Selecting a dead player with the Accomplice skill consumes that turn's use without a floor result.
 - [x] Implement persisted server-owned skill and discussion timing, room voting, runoff, and server-random final tie break. Use `canVoteForRoom(roomNumber, crimeRooms, openedRooms)` on the server for initial and runoff votes; allow self-room votes and reject crime scenes, opened rooms, and invalid hotel rooms.
 - [x] In the isolated engine, enforce dead-player skill and vote restrictions and preserve the dead player's public roster entry and private Spectator Mode.
 - [x] Persist and connect engine state to sessions; prevent a dead player from returning as living through reconnect.
@@ -57,12 +57,12 @@ Development: `typescript`, `@types/node`, `@types/react`, `@types/react-dom`, `t
 ### Phase 4 — Gameplay UI
 
 - [x] Build private role display, 21-room hotel board, generic public skill-phase status, skill forms, discussion timer, voting, private death screen, spectator view, public room outcomes, and result screen. Public murders trigger a 4.6-second sound and motion overlay with mute and reduced-motion support.
-- [ ] Check desktop/mobile layout and ensure room styling does not disclose hidden occupancy or assassination location; mark only initial crime scenes and publicly opened voting rooms.
+- [ ] Check desktop/mobile layout and ensure room styling does not disclose hidden occupancy or victim identity; mark initial crime scenes, successfully murdered rooms, and publicly opened voting rooms.
 
 ### Phase 5 — Multiplayer integration
 
 - [x] Connect server-authoritative game commands to Socket.IO, including private results, public updates, reconnection, and persisted deadline recovery after process restart.
-- [x] Broadcast generic `MURDER_OCCURRED` only after a successful kill, route death notices only to the victim, and withhold actor/target/victim identifiers from other clients.
+- [x] Broadcast generic `MURDER_OCCURRED` only after a successful kill, mark that room in public state, route death notices only to the victim, and withhold actor/victim identifiers from other clients.
 - [ ] Add multi-client integration tests for turn order, hidden dead-player skipping, voting completion without voter eligibility leaks, spectator access, phase sync, private death notices, and public/private information boundaries across broadcasts, API responses, SSR, client state, event logs, and errors.
 
 ### Phase 6 — Polish and release checks

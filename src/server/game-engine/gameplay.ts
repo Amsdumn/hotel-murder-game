@@ -81,9 +81,9 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
       const occupant = state.players.find((player) => player.roomNumber === room && player.isAlive);
       message = `ผลตรวจห้อง ${room}: ${occupant ? occupant.team : "EMPTY"}`;
     } else {
-      const selected = state.players.find((player) => player.id === target && player.isAlive);
+      const selected = state.players.find((player) => player.id === target);
       if (!selected) throw new Error("Invalid skill target");
-      message = `ผู้เล่นที่เลือกอยู่ชั้น ${Math.floor(selected.roomNumber / 100)}`;
+      message = selected.isAlive ? `ผู้เล่นที่เลือกอยู่ชั้น ${Math.floor(selected.roomNumber / 100)}` : "ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก";
       for (const teammate of state.players.filter((player) => player.team === "MURDERER" && player.isAlive && player.id !== actor.id)) {
         next = addPrivateResult(next, teammate.id, message);
         privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: teammate.id, message });
