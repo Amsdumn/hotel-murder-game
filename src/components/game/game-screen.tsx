@@ -7,6 +7,7 @@ import { RolePortrait, roleNames } from "@/components/role-portrait";
 import type { GameResultState, PrivatePlayerState, PrivateTeamState, PublicGameState } from "@/types/game";
 import type { LobbyAck } from "@/types/lobby";
 import { MurderEventOverlay } from "./murder-event-overlay";
+import { PrivateRoomScene } from "./private-room-scene";
 
 export function SoundSettings({ muted, onChange }: { muted: boolean; onChange: (muted: boolean) => void }) {
   return <Button size="small" variant="outlined" onClick={() => onChange(!muted)} aria-label={muted ? "เปิดเสียง" : "ปิดเสียง"}>{muted ? "เปิดเสียง" : "ปิดเสียง"}</Button>;
@@ -56,6 +57,7 @@ export function PrivateInfoPanel({ privateState, teamState, players, open, onTog
       <Button variant="outlined" size="small" aria-expanded={open} onClick={onToggle}>{open ? "ปิดข้อมูลลับ" : "แสดงข้อมูลลับ"}</Button>
     </div>
     {open && <div className="mt-5 space-y-5 border-t border-[#c8a46b]/15 pt-5">
+      <PrivateRoomScene role={privateState.role} roomNumber={privateState.roomNumber} />
       <div className="flex overflow-hidden rounded-lg border border-[#c8a46b]/20 bg-[#23212b]"><RolePortrait role={privateState.role} className="w-24 sm:w-28" sizes="112px" /><div className="p-4"><p className="font-serif text-xl">{roleNames[privateState.role]}</p><p className="mt-2 text-sm">ห้องพัก {privateState.roomNumber}</p><p className="mt-1 text-xs text-[#c8a46b]">{privateState.team === "MURDERER" ? "ฝ่ายฆาตกร" : "ฝ่ายผู้บริสุทธิ์"} · {privateState.isAlive ? "ยังมีชีวิต" : "เสียชีวิต"}</p></div></div>
       {teamState && <section><h3 className="font-semibold text-[#d8bc86]">ฝ่ายฆาตกร</h3>{teamState.teammates.map((mate) => <p className="mt-2 text-sm" key={mate.playerId}>{players.find((player) => player.id === mate.playerId)?.displayName} · {roleNames[mate.role]} · ห้อง {mate.roomNumber}</p>)}</section>}
       {privateState.actionHistory.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ประวัติการกระทำของคุณ</h3><ol className="mt-2 space-y-2 text-sm text-[#d6d2dc]">{privateState.actionHistory.map((entry, index) => <li key={`${entry.turn}-${index}`}>รอบ {entry.turn} · {entry.message}</li>)}</ol></section>}

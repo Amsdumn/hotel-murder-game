@@ -37,12 +37,25 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("แสดงข้อมูลลับ");
     expect(html).not.toContain("ลอบสังหารห้อง 102: สำเร็จ");
     expect(html).not.toContain("ห้องพัก 202");
+    expect(html).not.toContain("ฉากห้องพักของคุณ");
   });
 
   it("reveals only the owner's information when opened", () => {
     const html = renderToStaticMarkup(createElement(PrivateInfoPanel, { privateState, teamState: null, players: publicState.players, open: true, onToggle: () => {} }));
     expect(html).toContain("ห้องพัก 202");
     expect(html).toContain("ลอบสังหารห้อง 102: สำเร็จ");
+    expect(html).toContain("ฉากห้องพักของคุณ");
+    expect(html).toContain("data-character-role=\"KILLER\"");
+  });
+
+  it("uses the player's own room and character in the animated scene", () => {
+    const html = renderToStaticMarkup(createElement(PrivateInfoPanel, {
+      privateState: { ...privateState, role: "DETECTIVE", roomNumber: 703 },
+      teamState: null, players: publicState.players, open: true, onToggle: () => {},
+    }));
+    expect(html).toContain("data-character-role=\"DETECTIVE\"");
+    expect(html).toContain("ห้อง 703");
+    expect(html).not.toContain("data-character-role=\"KILLER\"");
   });
 
   it("shows a quiet hotel board with public room states", () => {
