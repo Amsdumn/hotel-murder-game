@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Button, Chip, CircularProgress, MenuItem, Paper, TextField } from "@mui/material";
+import { Button, Chip, CircularProgress, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import type { Socket } from "socket.io-client";
 import { connectLobbySocket, lobbyErrorMessage, readLobbyToken, requestLobby, saveLobbyIdentity } from "@/lib/lobby-client";
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
@@ -183,11 +183,13 @@ export function LobbyScreen({ code }: { code: string }) {
               <h2 className="font-serif text-xl">ตั้งค่าห้อง</h2>
               <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">เจ้าของห้องตั้งค่าจำนวนผู้เล่นและเวลาพูดคุยก่อนเริ่มเกม</p>
               {view && <div className="mt-5 space-y-4">
-                <TextField select fullWidth label="จำนวนผู้เล่นสูงสุด" value={isHost ? playerLimit : view.playerLimit} onChange={(event) => setPlayerLimit(Number(event.target.value))} disabled={!isHost || busy}>
-                  {[5, 6, 7, 8, 9, 10].map((count) => <MenuItem key={count} value={count}>{count} คน</MenuItem>)}
-                </TextField>
-                <TextField type="number" fullWidth label="เวลาพูดคุย (วินาที)" value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy} slotProps={{ htmlInput: { min: 30, max: 600 } }} />
-                {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds })}>บันทึกการตั้งค่า</Button>}
+                <Stack spacing={2}>
+                  <TextField size="small" select fullWidth label="จำนวนผู้เล่นสูงสุด" value={isHost ? playerLimit : view.playerLimit} onChange={(event) => setPlayerLimit(Number(event.target.value))} disabled={!isHost || busy}>
+                    {[5, 6, 7, 8, 9, 10].map((count) => <MenuItem key={count} value={count}>{count} คน</MenuItem>)}
+                  </TextField>
+                  <TextField size="small" type="number" fullWidth label="เวลาพูดคุย (วินาที)" value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy} slotProps={{ htmlInput: { min: 30, max: 600 } }} />
+                  {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds })}>บันทึกการตั้งค่า</Button>}
+                </Stack>
               </div>}
             </Paper>
             <Paper className="border! border-[#d9b66f]/20! bg-[#211c1c]/95! p-5! sm:p-7!">
