@@ -110,6 +110,31 @@ export function HotelBoard({ state }: { state: PublicGameState }) {
   </Paper>;
 }
 
+export function StoryPrologue({ deadline, connected, connectionMessage }: { deadline?: number; connected: boolean; connectionMessage: string }) {
+  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (deadline === undefined) return;
+    const tick = () => setSecondsLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [deadline]);
+  return <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_50%_20%,#452433,#100f17_68%)] px-5 py-10 text-[#f4efe8]">
+    <section className="w-full max-w-2xl rounded-3xl border border-[#c8a46b]/35 bg-[#17141d]/90 px-7 py-10 text-center shadow-2xl sm:px-14 sm:py-14" aria-labelledby="prologue-title">
+      <p className="text-xs tracking-[.35em] text-[#c8a46b]">HOTEL MURDER ONLINE</p>
+      <p className="mt-8 text-sm tracking-[.22em] text-[#d8bc86]">ก่อนเรื่องราวจะเริ่ม</p>
+      <h1 id="prologue-title" className="mt-3 font-serif text-3xl leading-relaxed sm:text-5xl">คืนที่โรงแรมไม่หลับใหล</h1>
+      <div className="mx-auto mt-7 h-px w-24 bg-[#c8a46b]/60" />
+      <div className="mt-7 space-y-5 text-base leading-8 text-[#d8d2d8] sm:text-lg sm:leading-9">
+        <p>พายุโหมกระหน่ำจนถนนทุกสายถูกตัดขาด แขกทุกคนต้องค้างคืนในโรงแรมเก่าแห่งนี้</p>
+        <p>เมื่อเข็มนาฬิกาชี้เที่ยงคืน ไฟทั้งอาคารดับวูบ เสียงฝีเท้าปริศนาดังผ่านทางเดินที่ไร้ผู้คน</p>
+        <p>พอแสงไฟกลับมา ร่องรอยลึกลับก็รอให้ทุกคนออกค้นหา บางคนมาเพื่อหาความจริง… บางคนมาเพื่อซ่อนมัน</p>
+      </div>
+      <p className="mt-9 text-sm text-[#c8a46b]" role="status">{!connected ? connectionMessage || "กำลังเชื่อมต่อใหม่…" : secondsLeft === null ? "กำลังเตรียมเปิดเผยเบาะแส…" : secondsLeft > 0 ? `เบาะแสแรกจะปรากฏใน ${secondsLeft} วินาที` : "กำลังเปิดเผยเบาะแส…"}</p>
+    </section>
+  </main>;
+}
+
 function SkillPanel({ privateState, state, busy, onSkill }: { privateState: PrivatePlayerState; state: PublicGameState; busy: boolean; onSkill: (target: number | string) => void }) {
   const [target, setTarget] = useState<number | string>(101);
   const role = privateState.role;
@@ -145,6 +170,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     if (!response.ok) setError(lobbyErrorMessage(response.error));
     setBusy(false);
   };
+  if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} />;
   return <main className="min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8"><div className="mx-auto max-w-6xl">
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || "กำลังเชื่อมต่อใหม่…"}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">โรงแรมปริศนา · {state.code}</p><h1 className="mt-2 font-serif text-3xl">รอบ {state.turn} · {state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : "จบเกม"}</h1></div><SoundSettings muted={muted} onChange={changeMuted} /></header>

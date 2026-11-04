@@ -13,12 +13,27 @@ const players: GameEngineState["players"] = [
   { id: "e", displayName: "E", seatIndex: 4, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
 ];
 
-function record(phase: "DISCUSSION" | "SKILL_PHASE" | "VOTING"): LobbyRecord {
+function record(phase: "ROLE_REVEAL" | "DISCUSSION" | "SKILL_PHASE" | "VOTING"): LobbyRecord {
   const gameState: GameEngineState = { code: "ABC234", version: 5, phase, turn: 1, players, crimeRooms: [301, 302, 303], openedRooms: [], lockedRooms: [], activePlayerId: phase === "SKILL_PHASE" ? "a" : null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, phaseDeadlineAt: 1000, phaseStartVersion: 5 };
   return { code: "ABC234", phase, version: 5, creationActionId: "create", hostPlayerId: "a", playerLimit: 5, discussionSeconds: 180, players: players.map(({ id, displayName, seatIndex }) => ({ id, displayName, seatIndex, ready: true, connected: true })), appliedActionIds: [], gameState };
 }
 
 describe("persisted server deadlines", () => {
+  it("reveals crime rooms after a saved prologue expires", async () => {
+    const store = new MemoryLobbyStore();
+    const intro = record("ROLE_REVEAL");
+    intro.gameState!.crimeRooms = [];
+    await store.createLobby(intro);
+    const service = new GameService(store);
+    expect((await service.snapshot("ABC234", "a"))?.publicState.publicRooms.every((room) => room.state === "UNKNOWN")).toBe(true);
+    expect(await service.advanceDue(999)).toEqual([]);
+    const result = await service.advanceDue(1000);
+    expect(result).toHaveLength(1);
+    expect(result[0].state.phase).toBe("SKILL_PHASE");
+    expect(result[0].state.crimeRooms).toHaveLength(3);
+    expect(result[0].state.phaseDeadlineAt).toBe(61000);
+    expect((await service.snapshot("ABC234", "a"))?.publicState.publicRooms.filter((room) => room.state === "CRIME_SCENE")).toHaveLength(3);
+  });
   it("restores and continues a saved game missing legacy death notices and votes", async () => {
     const store = new MemoryLobbyStore();
     const legacy = record("VOTING");

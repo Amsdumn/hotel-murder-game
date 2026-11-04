@@ -12,6 +12,8 @@ The Killer and Accomplice know each other's identities and rooms. Each innocent 
 
 ## Initial crime scenes
 
+After assigning roles and rooms, show all players a 15-second story prologue in `ROLE_REVEAL`. During this interval, the public board and private controls are hidden; no initial crime rooms have been selected or announced. When the persisted server deadline expires, select and publish the three rooms, then start the first skill slot with its full 60-second deadline. Reconnecting players see the same prologue until the server advances the phase.
+
 After roles and rooms are assigned, select three **unique, unoccupied** rooms uniformly with a server-side random source. A selection containing any player's room is discarded and rerolled. No player dies during initial crime scene selection.
 
 Publish the three selected room numbers and mark those rooms `CRIME_SCENE`. The selected rooms are empty by construction; no death notification is sent.

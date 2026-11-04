@@ -124,7 +124,7 @@ export class MongoLobbyStore implements LobbyStore {
 
   async listDueGames(now: number): Promise<LobbyRecord[]> {
     await connectDatabase();
-    const records = await GameModel.find({ phase: { $in: ["SKILL_PHASE", "DISCUSSION"] }, "gameState.phaseDeadlineAt": { $lte: now } }).select("code").lean().exec();
+    const records = await GameModel.find({ phase: { $in: ["ROLE_REVEAL", "SKILL_PHASE", "DISCUSSION"] }, "gameState.phaseDeadlineAt": { $lte: now } }).select("code").lean().exec();
     const games = await Promise.all(records.map((record) => this.findLobby(record.code)));
     return games.filter((game): game is LobbyRecord => game !== null);
   }

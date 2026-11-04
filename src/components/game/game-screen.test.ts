@@ -20,6 +20,18 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("shows story before the crime rooms and hides the hotel board during the prologue", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase: "ROLE_REVEAL", phaseDeadlineAt: 16000, publicHistory: [], publicRooms: publicState.publicRooms.map((room) => ({ ...room, state: "UNKNOWN" as const })) },
+      privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain("ก่อนเรื่องราวจะเริ่ม");
+    expect(html).toContain("พายุ");
+    expect(html).not.toContain("แผนผัง");
+    expect(html).not.toContain("ข้อมูลลับ");
+    expect(html).not.toContain("ที่เกิดเหตุ");
+  });
   it("shows the voting panel only to a player who can vote", () => {
     const render = (viewer: PrivatePlayerState | null) => renderToStaticMarkup(createElement(GameScreen, {
       state: { ...publicState, phase: "VOTING" }, privateState: viewer, teamState: null,

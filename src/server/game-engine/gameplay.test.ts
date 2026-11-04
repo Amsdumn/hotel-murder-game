@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { advanceTimedSkill, createInitialGame, performSkill } from "./gameplay";
+import { advancePrologue, advanceTimedSkill, createInitialGame, performSkill } from "./gameplay";
 import type { GameEngineState } from "./state";
 import { projectPrivatePlayerState } from "./projections";
 
@@ -13,29 +13,38 @@ function choose() {
 }
 
 describe("gameplay setup and skills", () => {
-  it("assigns unique rooms, creates three public crime scenes, and starts a private actor", () => {
-    const result = createInitialGame("ABC234", lobbyPlayers, 3, choose());
+  it("shows the prologue before selecting three empty crime rooms or starting the first actor", () => {
+    const result = createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000);
     expect(new Set(result.state.players.map((player) => player.roomNumber)).size).toBe(5);
     expect(result.state.players.filter((player) => player.role === "KILLER")).toHaveLength(1);
-    expect(result.state.crimeRooms).toHaveLength(3);
-    expect(result.state.crimeRooms.every((room) => result.state.players.every((player) => player.roomNumber !== room))).toBe(true);
+    expect(result.state.phase).toBe("ROLE_REVEAL");
+    expect(result.state.crimeRooms).toEqual([]);
+    expect(result.state.activePlayerId).toBeNull();
+    expect(result.publicEvents).toEqual([]);
+    expect(result.state.phaseDeadlineAt).toBe(16000);
+    expect(advancePrologue(result.state, 15999).state).toBe(result.state);
+    const revealed = advancePrologue(result.state, 16000, choose());
+    expect(revealed.state.phase).toBe("SKILL_PHASE");
+    expect(revealed.state.crimeRooms).toHaveLength(3);
+    expect(revealed.state.crimeRooms.every((room) => revealed.state.players.every((player) => player.roomNumber !== room))).toBe(true);
     expect(result.state.players.every((player) => player.isAlive)).toBe(true);
-    expect(JSON.stringify(result.publicEvents)).not.toMatch(/Player|"p[0-4]"|LOCKSMITH|KILLER/);
-    expect(result.privateEvents.find((event) => event.type === "ACTION_REQUEST")?.recipientPlayerId).toBe(result.state.activePlayerId);
-    expect(projectPrivatePlayerState(result.state, result.state.activePlayerId!).skillDeadlineAt).toBe(result.state.phaseDeadlineAt);
-    expect(projectPrivatePlayerState(result.state, result.state.players.find((player) => player.id !== result.state.activePlayerId)!.id).skillDeadlineAt).toBeUndefined();
+    expect(JSON.stringify(revealed.publicEvents)).not.toMatch(/Player|"p[0-4]"|LOCKSMITH|KILLER/);
+    expect(revealed.privateEvents.find((event) => event.type === "ACTION_REQUEST")?.recipientPlayerId).toBe(revealed.state.activePlayerId);
+    expect(revealed.state.phaseDeadlineAt).toBe(76000);
+    expect(projectPrivatePlayerState(revealed.state, revealed.state.activePlayerId!).skillDeadlineAt).toBe(revealed.state.phaseDeadlineAt);
+    expect(projectPrivatePlayerState(revealed.state, revealed.state.players.find((player) => player.id !== revealed.state.activePlayerId)!.id).skillDeadlineAt).toBeUndefined();
   });
 
   it("finds three unoccupied rooms even with ten players", () => {
     const seats = Array.from({ length: 10 }, (_, seatIndex) => ({ id: `seat-${seatIndex}`, displayName: `Guest ${seatIndex}`, seatIndex }));
-    const result = createInitialGame("ABC234", seats, 3, choose());
+    const result = advancePrologue(createInitialGame("ABC234", seats, 3, choose(), 1000).state, 16000, choose());
     expect(result.state.crimeRooms).toHaveLength(3);
     expect(result.state.crimeRooms.every((room) => result.state.players.every((player) => player.roomNumber !== room))).toBe(true);
     expect(result.state.players.every((player) => player.isAlive)).toBe(true);
   });
 
   it("keeps investigation private and moves to discussion after the last skill", () => {
-    const start = createInitialGame("ABC234", lobbyPlayers, 3, choose()).state;
+    const start = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 16000, choose()).state;
     let state: GameEngineState = start;
     let last;
     for (let step = 0; state.phase === "SKILL_PHASE" && step < 5; step += 1) {
@@ -52,14 +61,14 @@ describe("gameplay setup and skills", () => {
   });
 
   it("rejects a dead player's skill without changing state", () => {
-    const state = createInitialGame("ABC234", lobbyPlayers, 3, choose()).state;
+    const state = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 16000, choose()).state;
     const actor = state.activePlayerId!;
     const dead = { ...state, players: state.players.map((player) => player.id === actor ? { ...player, isAlive: false } : player) };
     expect(() => performSkill(dead, actor, 101, 1000, 180)).toThrow();
   });
 
   it("skips an expired skill slot without publishing the actor", () => {
-    const state = createInitialGame("ABC234", lobbyPlayers, 3, choose()).state;
+    const state = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 16000, choose()).state;
     const active = state.activePlayerId!;
     expect(state.phaseDeadlineAt).toBeDefined();
     expect(advanceTimedSkill(state, state.phaseDeadlineAt! - 1, 180).state.activePlayerId).toBe(active);
@@ -71,7 +80,7 @@ describe("gameplay setup and skills", () => {
   });
 
   it("keeps the Killer's private assassination result for reconnect", () => {
-    const initial = createInitialGame("ABC234", lobbyPlayers, 3, choose()).state;
+    const initial = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 16000, choose()).state;
     const killer = initial.players.find((player) => player.role === "KILLER")!;
     const state = { ...initial, activePlayerId: killer.id, usedSkillPlayerIds: initial.players.filter((player) => player.id !== killer.id && player.isAlive).map((player) => player.id) };
     const result = performSkill(state, killer.id, initial.crimeRooms[0], 1000, 180);
@@ -79,7 +88,7 @@ describe("gameplay setup and skills", () => {
   });
 
   it("consumes the Accomplice's turn when selecting a dead player", () => {
-    const initial = createInitialGame("ABC234", lobbyPlayers, 3, choose()).state;
+    const initial = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 16000, choose()).state;
     const accomplice = initial.players.find((player) => player.role === "ACCOMPLICE")!;
     const killer = initial.players.find((player) => player.role === "KILLER")!;
     const target = initial.players.find((player) => player.team === "INNOCENT")!;

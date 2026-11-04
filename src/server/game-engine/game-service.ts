@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { LobbyError } from "../lobby/lobby-service";
 import type { LobbyRecord, LobbyStore } from "../lobby/lobby-store";
-import { advanceTimedSkill, createInitialGame, performSkill } from "./gameplay";
+import { advancePrologue, advanceTimedSkill, createInitialGame, performSkill } from "./gameplay";
 import { advanceTimedPhase, castRoomVote, projectGameResult } from "./phases";
 import { projectMurdererTeamState, projectPrivatePlayerState, projectPublicState } from "./projections";
 import { appendPrivateAction, type EngineResult, type GameEngineState } from "./state";
@@ -93,7 +93,7 @@ export class GameService {
     const outcomes: EngineResult[] = [];
     for (const record of due) {
       if (!record.gameState) continue;
-      const result = record.gameState.phase === "SKILL_PHASE" ? advanceTimedSkill(record.gameState, now, record.discussionSeconds) : advanceTimedPhase(record.gameState, now);
+      const result = record.gameState.phase === "ROLE_REVEAL" ? advancePrologue(record.gameState, now) : record.gameState.phase === "SKILL_PHASE" ? advanceTimedSkill(record.gameState, now, record.discussionSeconds) : advanceTimedPhase(record.gameState, now);
       if (result.state === record.gameState) continue;
       try { outcomes.push(await this.commit(record, `timer:${record.version}`, result)); }
       catch (error) { if (!(error instanceof LobbyError) || error.code !== "STALE_STATE") throw error; }

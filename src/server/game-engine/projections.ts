@@ -9,7 +9,7 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     turn: state.turn,
     players: state.players.map(({ id, displayName, seatIndex }) => ({ id, displayName, seatIndex })),
     phaseMessage: state.phase === "SKILL_PHASE" ? "กำลังดำเนินการสืบสวน..." : null,
-    ...(state.phase === "DISCUSSION" && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
+    ...((state.phase === "ROLE_REVEAL" || state.phase === "DISCUSSION") && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
     publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
     publicRooms: HOTEL_ROOMS.map((roomNumber) => {

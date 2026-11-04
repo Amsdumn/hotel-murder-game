@@ -45,6 +45,6 @@ export class MemoryLobbyStore implements LobbyStore {
   }
   async appendEvent(record: LobbyEventRecord): Promise<void> { this.events.push(structuredClone(record)); }
   async listDueGames(now: number): Promise<LobbyRecord[]> {
-    return [...this.lobbies.values()].filter((record) => (record.gameState?.phase === "DISCUSSION" || record.gameState?.phase === "SKILL_PHASE") && (record.gameState.phaseDeadlineAt ?? Infinity) <= now).map((record) => structuredClone(record));
+    return [...this.lobbies.values()].filter((record) => (record.gameState?.phase === "ROLE_REVEAL" || record.gameState?.phase === "DISCUSSION" || record.gameState?.phase === "SKILL_PHASE") && (record.gameState.phaseDeadlineAt ?? Infinity) <= now).map((record) => structuredClone(record));
   }
 }

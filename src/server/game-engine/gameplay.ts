@@ -5,6 +5,7 @@ import { beginDiscussion } from "./phases";
 import { appendPrivateAction, HOTEL_ROOMS, isHotelRoom, type EnginePlayer, type EngineResult, type GameEngineState, type PrivateGameEvent, type PublicGameEvent } from "./state";
 
 type RandomIndex = (maximum: number) => number;
+export const PROLOGUE_DURATION_MS = 15_000;
 
 function shuffle<T>(items: readonly T[], choose: RandomIndex): T[] {
   const result = [...items];
@@ -23,9 +24,14 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   const roles: Role[] = shuffle(["KILLER", "ACCOMPLICE", ...shuffle(innocentRoles, choose).slice(0, needed), ...Array.from({ length: Math.max(0, needed - innocentRoles.length) }, (_, index) => innocentRoles[index % innocentRoles.length])], choose);
   const rooms = shuffle(HOTEL_ROOMS, choose);
   const players: EnginePlayer[] = seats.map((seat, index) => ({ ...seat, role: roles[index], team: roles[index] === "KILLER" || roles[index] === "ACCOMPLICE" ? "MURDERER" : "INNOCENT", roomNumber: rooms[index], isAlive: true }));
-  const initial: GameEngineState = { code, version, phase: "INITIAL_CRIME", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, privateActionHistory: {}, publicHistory: [] };
-  const emptyRooms = HOTEL_ROOMS.filter((room) => !players.some((player) => player.roomNumber === room));
-  const crime = applyInitialCrime(initial, () => shuffle(emptyRooms, choose).slice(0, 3));
+  const initial: GameEngineState = { code, version, phase: "ROLE_REVEAL", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, privateActionHistory: {}, publicHistory: [], phaseDeadlineAt: now + PROLOGUE_DURATION_MS };
+  return { state: initial, publicEvents: [], privateEvents: [] };
+}
+
+export function advancePrologue(state: GameEngineState, now: number, choose: RandomIndex = randomInt): EngineResult {
+  if (state.phase !== "ROLE_REVEAL" || state.phaseDeadlineAt === undefined || now < state.phaseDeadlineAt) return { state, publicEvents: [], privateEvents: [] };
+  const emptyRooms = HOTEL_ROOMS.filter((room) => !state.players.some((player) => player.roomNumber === room));
+  const crime = applyInitialCrime({ ...state, phase: "INITIAL_CRIME" }, () => shuffle(emptyRooms, choose).slice(0, 3));
   const phaseEvent: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: 1 };
   const afterCrime: GameEngineState = { ...crime.state, phase: "SKILL_PHASE", publicHistory: [...crime.publicEvents, phaseEvent] };
   const first = advanceSkillTurn(afterCrime, null);
