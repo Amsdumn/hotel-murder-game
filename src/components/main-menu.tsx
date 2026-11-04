@@ -80,8 +80,8 @@ export function MainMenu() {
             <div className="absolute -inset-8 rounded-full bg-[#8c3b47]/20 blur-3xl" />
             <div className="relative grid grid-cols-3 gap-2 sm:gap-3">
               {skillRules.slice(0, 6).map(({ id, role }) => <div key={id} className="group relative overflow-hidden rounded-lg border border-[#e5bd82]/30 bg-[#211727]/85 shadow-[0_12px_35px_rgba(0,0,0,.5)]">
-                <RolePortrait role={id} sizes="(max-width: 640px) 30vw, 150px" className="aspect-[4/5] w-full transition-transform duration-500 group-hover:scale-105" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#100d1a] via-[#100d1a]/75 to-transparent px-2 pb-2 pt-8 text-center text-xs font-semibold text-[#f5e4cf] sm:text-sm">{role}</div>
+                <RolePortrait role={id} sizes="(max-width: 640px) 30vw, 150px" className="aspect-4/5 w-full transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#100d1a] via-[#100d1a]/75 to-transparent px-2 pb-2 pt-8 text-center text-xs font-semibold text-[#f5e4cf] sm:text-sm">{role}</div>
               </div>)}
             </div>
             <p className="relative mt-4 text-center text-xs tracking-[.25em] text-[#e5bd82]">7 บทบาท · 21 ห้อง · ความลับที่ไม่มีใครบอก</p>
@@ -93,7 +93,7 @@ export function MainMenu() {
       </div>
       <Dialog open={aboutOpen} onClose={() => setAboutOpen(false)} fullWidth maxWidth="md" scroll="paper">
         <DialogTitle>วิธีเล่น</DialogTitle>
-        <DialogContent dividers className="!space-y-7 !leading-7">
+        <DialogContent dividers className="space-y-7! leading-7!">
           <section aria-labelledby="how-to-play-overview">
             <h2 id="how-to-play-overview" className="font-serif text-xl text-[#d9b66f]">เริ่มเกม</h2>
             <p className="mt-2">ผู้เล่น 5–10 คนได้รับบทบาทและห้องพักลับคนละห้องในโรงแรม 7 ชั้น รวม 21 ห้อง มีฆาตกร 1 คน ผู้สมรู้ร่วมคิด 1 คน และที่เหลือเป็นฝ่ายผู้บริสุทธิ์</p>

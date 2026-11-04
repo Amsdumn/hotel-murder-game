@@ -27,13 +27,13 @@ export function DeathNotification({ onContinue }: { onContinue: () => void }) {
       <h2 id="death-title" className="font-serif text-4xl text-[#f4efe8]">คุณเสียชีวิตแล้ว</h2>
       <p className="mt-5 leading-8">คุณสามารถติดตามเกมต่อได้ แต่ไม่สามารถใช้สกิลหรือโหวตได้อีก</p>
       <p className="mt-5 rounded-lg border border-[#c8a46b]/30 p-3 text-sm leading-7 text-[#c8a46b]">ผู้เล่นที่เสียชีวิตแล้วต้องหยุดให้ข้อมูลเกี่ยวกับเกมทันที แม้จะยังสามารถรับชมเกมต่อได้</p>
-      <Button className="!mt-7" variant="contained" onClick={onContinue}>รับชมเกมต่อ</Button>
+      <Button className="mt-7!" variant="contained" onClick={onContinue}>รับชมเกมต่อ</Button>
     </div>
   </div>;
 }
 
 export function SpectatorPanel() {
-  return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">โหมดผู้ชม</h2><p className="mt-2 text-sm leading-7 text-[#c6bdb1]">คุณสามารถดูเหตุการณ์สาธารณะและผลโหวตได้ โปรดหยุดให้ข้อมูลเกี่ยวกับเกมทันที</p></Paper>;
+  return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">โหมดผู้ชม</h2><p className="mt-2 text-sm leading-7 text-[#c6bdb1]">คุณสามารถดูเหตุการณ์สาธารณะและผลโหวตได้ โปรดหยุดให้ข้อมูลเกี่ยวกับเกมทันที</p></Paper>;
 }
 
 export function getTurnNotice(state: PublicGameState, privateState: PrivatePlayerState | null): string {
@@ -51,7 +51,7 @@ export function getTurnNotice(state: PublicGameState, privateState: PrivatePlaye
 }
 
 export function PrivateInfoPanel({ privateState, teamState, players, open, onToggle }: { privateState: PrivatePlayerState; teamState: PrivateTeamState | null; players: PublicGameState["players"]; open: boolean; onToggle: () => void }) {
-  return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5">
+  return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!">
     <div className="flex items-center justify-between gap-3">
       <div><h2 className="font-serif text-xl">ข้อมูลลับ · เฉพาะคุณ</h2><p className="mt-1 text-xs text-[#a9a5af]">เปิดดูเมื่ออยู่ในที่ส่วนตัว</p></div>
       <Button variant="outlined" size="small" aria-expanded={open} onClick={onToggle}>{open ? "ปิดข้อมูลลับ" : "แสดงข้อมูลลับ"}</Button>
@@ -66,7 +66,7 @@ export function PrivateInfoPanel({ privateState, teamState, players, open, onTog
 }
 
 export function VotingPanel({ state, onVote, busy }: { state: PublicGameState; onVote: (roomNumber: number) => void; busy: boolean }) {
-  return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5">
+  return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!">
     <h2 className="font-serif text-xl">ลงคะแนนเปิดห้อง</h2>
     <p className="mt-2 text-sm text-[#c6bdb1]">เลือกห้องที่ยังไม่ถูกเปิดหรือเป็นที่เกิดเหตุ คุณเลือกห้องตัวเองได้</p>
     <p className="mt-2 text-xs text-[#c8a46b]">โหวตได้ทันที ไม่ต้องรอตามลำดับ · หนึ่งคนหนึ่งคะแนนต่อรอบ · ยืนยันแล้วเปลี่ยนไม่ได้</p>
@@ -87,7 +87,7 @@ export function GameResultScreen({ result }: { result: GameResultState }) {
 
 export function HotelBoard({ state }: { state: PublicGameState }) {
   const rooms = new Map(state.publicRooms.map((room) => [room.roomNumber, room]));
-  return <Paper component="section" className="!border !border-[#353440] !bg-[#191a22] !p-5 sm:!p-6">
+  return <Paper component="section" className="border! border-[#353440]! bg-[#191a22]! p-5! sm:p-6!">
     <div className="flex items-end justify-between gap-3 border-b border-[#353440] pb-4">
       <div><p className="text-xs uppercase tracking-[.18em] text-[#b6a783]">แผนผัง</p><h2 className="mt-1 font-serif text-2xl">โรงแรม</h2></div>
       <p className="text-xs text-[#a7a8b4]">7 ชั้น · 21 ห้อง</p>
@@ -118,7 +118,7 @@ function SkillPanel({ privateState, state, busy, onSkill }: { privateState: Priv
   const teammate = role === "ACCOMPLICE";
   const options: Array<{ value: number | string; label: string }> = teammate ? state.players.filter((player) => player.id !== privateState.playerId).map((player) => ({ value: player.id, label: player.displayName })) : floor ? Array.from({ length: 7 }, (_, index) => ({ value: index + 1, label: `ชั้น ${index + 1}` })) : column ? [1, 2, 3].map((value) => ({ value, label: `แนวห้อง 0${value}` })) : state.publicRooms.map((room) => ({ value: room.roomNumber, label: `ห้อง ${room.roomNumber}` }));
   const selected = options.some((option) => option.value === target) ? target : options[0]?.value;
-  return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">ใช้สกิล · {roleNames[role]}</h2><div className="mt-4 flex flex-wrap items-center gap-3"><TextField select label="เป้าหมาย" size="small" value={selected ?? ""} onChange={(event) => setTarget(teammate ? event.target.value : Number(event.target.value))} className="min-w-40">{options.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}</TextField><Button variant="contained" disabled={busy || selected === undefined} onClick={() => onSkill(selected!)}>ยืนยันสกิล</Button></div></Paper>;
+  return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">ใช้สกิล · {roleNames[role]}</h2><div className="mt-4 flex flex-wrap items-center gap-3"><TextField select label="เป้าหมาย" size="small" value={selected ?? ""} onChange={(event) => setTarget(teammate ? event.target.value : Number(event.target.value))} className="min-w-40">{options.map((option) => <MenuItem key={option.value} value={option.value}>{option.label}</MenuItem>)}</TextField><Button variant="contained" disabled={busy || selected === undefined} onClick={() => onSkill(selected!)}>ยืนยันสกิล</Button></div></Paper>;
 }
 
 export function GameScreen({ state, privateState, teamState, result, murderSequence, connected, connectionMessage, onCommand }: { state: PublicGameState; privateState: PrivatePlayerState | null; teamState: PrivateTeamState | null; result: GameResultState | null; murderSequence: number; connected: boolean; connectionMessage: string; onCommand: (event: "game:skill" | "game:vote", payload: Record<string, unknown>, version: number) => Promise<LobbyAck<{ version: number }>> }) {
@@ -138,16 +138,16 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   return <main className="min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8"><div className="mx-auto max-w-6xl">
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || "กำลังเชื่อมต่อใหม่…"}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">โรงแรมปริศนา · {state.code}</p><h1 className="mt-2 font-serif text-3xl">รอบ {state.turn} · {state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : "จบเกม"}</h1></div><SoundSettings muted={muted} onChange={changeMuted} /></header>
-    <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="!mb-5">{turnNotice}</Alert>
+    <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="mb-5!">{turnNotice}</Alert>
     {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} /><div className="space-y-5">
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
-      {state.phase === "SKILL_PHASE" && <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><p>{state.phaseMessage}</p></Paper>}
+      {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage}</p></Paper>}
       {privateState?.canUseSkill && showSecret && <SkillPanel state={state} privateState={privateState} busy={busy || !connected} onSkill={(target) => void act("game:skill", { target })} />}
-      {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><DiscussionTimer deadline={state.phaseDeadlineAt} /><p className="mt-2 text-sm text-[#c6bdb1]">พูดคุยนอกเว็บไซต์ได้ตามต้องการ</p></Paper>}
+      {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><DiscussionTimer deadline={state.phaseDeadlineAt} /><p className="mt-2 text-sm text-[#c6bdb1]">พูดคุยนอกเว็บไซต์ได้ตามต้องการ</p></Paper>}
       {state.phase === "VOTING" && privateState?.canVote && <VotingPanel state={state} busy={busy || !connected} onVote={(roomNumber) => void act("game:vote", { roomNumber })} />}
       {error && <p role="alert" className="text-red-200">{error}</p>}
-      <Paper className="!border !border-[#353440] !bg-[#191a22] !p-5"><h2 className="font-serif text-xl">ประวัติเหตุการณ์สาธารณะ</h2><ol className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{event.message}</li>)}</ol></Paper>
+      <Paper className="border! border-[#353440]! bg-[#191a22]! p-5!"><h2 className="font-serif text-xl">ประวัติเหตุการณ์สาธารณะ</h2><ol className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{event.message}</li>)}</ol></Paper>
     </div></div>}
   </div><MurderEventOverlay sequence={murderSequence} muted={muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
 }
