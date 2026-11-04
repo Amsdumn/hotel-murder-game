@@ -27,6 +27,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
   const player = state.players.find((item) => item.id === requesterId);
   if (!player) throw new Error("Player not found");
   const deathNotice = state.deathNotices[player.id];
+  const canUseSkill = player.isAlive && state.phase === "SKILL_PHASE" && state.activePlayerId === player.id && !state.usedSkillPlayerIds.includes(player.id);
   return {
     playerId: player.id,
     role: player.role,
@@ -34,7 +35,8 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
     roomNumber: player.roomNumber,
     isAlive: player.isAlive,
     mode: player.isAlive ? "PLAYER" : "SPECTATOR",
-    canUseSkill: player.isAlive && state.phase === "SKILL_PHASE" && state.activePlayerId === player.id && !state.usedSkillPlayerIds.includes(player.id),
+    canUseSkill,
+    ...(canUseSkill && state.phaseDeadlineAt !== undefined ? { skillDeadlineAt: state.phaseDeadlineAt } : {}),
     canVote: player.isAlive && state.phase === "VOTING" && !Object.hasOwn(state.votes, player.id),
     ...(deathNotice ? { deathNotice } : {}),
     privateResults: [...(state.privateResultMessages?.[player.id] ?? [])],

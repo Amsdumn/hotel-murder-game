@@ -40,7 +40,7 @@ export function getTurnNotice(state: PublicGameState, privateState: PrivatePlaye
   if (state.phase === "FINISHED") return "เกมจบแล้ว ดูผลการแข่งขันและประวัติเหตุการณ์ได้";
   if (privateState?.mode === "SPECTATOR") return "คุณเป็นผู้ชม ติดตามเหตุการณ์ได้ แต่ไม่สามารถใช้สกิลหรือลงคะแนน";
   if (state.phase === "SKILL_PHASE") return privateState?.canUseSkill
-    ? "ถึงตาคุณใช้สกิล เปิดข้อมูลลับเพื่อเลือกเป้าหมายและยืนยันภายใน 60 วินาที"
+    ? "ถึงตาคุณใช้สกิล เปิดข้อมูลลับเพื่อเลือกเป้าหมายและยืนยันก่อนหมดเวลา"
     : "ช่วงใช้สกิล กำลังรอผู้เล่นที่ถึงคิวดำเนินการ";
   if (state.phase === "DISCUSSION") return "เริ่มช่วงพูดคุย แลกเปลี่ยนเบาะแสก่อนลงคะแนน";
   if (state.phase === "VOTING" && !privateState) return "ช่วงลงคะแนน กำลังตรวจสิทธิ์ของคุณ";
@@ -127,6 +127,16 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+  const [clockNow, setClockNow] = useState<number | null>(null);
+  const skillDeadlineAt = privateState?.canUseSkill ? privateState.skillDeadlineAt : undefined;
+  useEffect(() => {
+    if (skillDeadlineAt === undefined) return;
+    const tick = () => setClockNow(Date.now());
+    tick();
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [skillDeadlineAt]);
+  const skillSecondsLeft = skillDeadlineAt === undefined || clockNow === null ? null : Math.max(0, Math.ceil((skillDeadlineAt - clockNow) / 1000));
   const turnNotice = getTurnNotice(state, privateState);
   const changeMuted = (value: boolean) => setMuted(value);
   const act = async (event: "game:skill" | "game:vote", payload: Record<string, unknown>) => {
@@ -139,11 +149,12 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || "กำลังเชื่อมต่อใหม่…"}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">โรงแรมปริศนา · {state.code}</p><h1 className="mt-2 font-serif text-3xl">รอบ {state.turn} · {state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : "จบเกม"}</h1></div><SoundSettings muted={muted} onChange={changeMuted} /></header>
     <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="mb-5!">{turnNotice}</Alert>
+    {privateState?.canUseSkill && skillDeadlineAt !== undefined && <p className="mb-5 text-sm text-[#e7ce98]" role="timer" aria-live="off">{skillSecondsLeft === null ? "กำลังตรวจเวลาใช้สกิล…" : skillSecondsLeft > 0 ? `เวลาใช้สกิลเหลือ ${skillSecondsLeft} วินาที` : "หมดเวลาใช้สกิลแล้ว กำลังรอขั้นตอนถัดไป"}</p>}
     {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} /><div className="space-y-5">
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage}</p></Paper>}
-      {privateState?.canUseSkill && showSecret && <SkillPanel state={state} privateState={privateState} busy={busy || !connected} onSkill={(target) => void act("game:skill", { target })} />}
+      {privateState?.canUseSkill && showSecret && <SkillPanel state={state} privateState={privateState} busy={busy || !connected || (skillDeadlineAt !== undefined && (skillSecondsLeft === null || skillSecondsLeft === 0))} onSkill={(target) => void act("game:skill", { target })} />}
       {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><DiscussionTimer deadline={state.phaseDeadlineAt} /><p className="mt-2 text-sm text-[#c6bdb1]">พูดคุยนอกเว็บไซต์ได้ตามต้องการ</p></Paper>}
       {state.phase === "VOTING" && privateState?.canVote && <VotingPanel state={state} busy={busy || !connected} onVote={(roomNumber) => void act("game:vote", { roomNumber })} />}
       {error && <p role="alert" className="text-red-200">{error}</p>}

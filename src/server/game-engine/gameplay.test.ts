@@ -22,6 +22,8 @@ describe("gameplay setup and skills", () => {
     expect(result.state.players.every((player) => player.isAlive)).toBe(true);
     expect(JSON.stringify(result.publicEvents)).not.toMatch(/Player|"p[0-4]"|LOCKSMITH|KILLER/);
     expect(result.privateEvents.find((event) => event.type === "ACTION_REQUEST")?.recipientPlayerId).toBe(result.state.activePlayerId);
+    expect(projectPrivatePlayerState(result.state, result.state.activePlayerId!).skillDeadlineAt).toBe(result.state.phaseDeadlineAt);
+    expect(projectPrivatePlayerState(result.state, result.state.players.find((player) => player.id !== result.state.activePlayerId)!.id).skillDeadlineAt).toBeUndefined();
   });
 
   it("finds three unoccupied rooms even with ten players", () => {

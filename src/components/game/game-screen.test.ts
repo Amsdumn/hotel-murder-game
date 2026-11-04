@@ -53,11 +53,11 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("ยังมีชีวิต");
   });
 
-  it("shows a 30px circular role portrait and team status on the room frame", () => {
+  it("shows a circular role portrait and team status on the room frame", () => {
     const html = renderToStaticMarkup(createElement(PrivateRoomScene, {
       role: "WITNESS", roomNumber: 301, team: "INNOCENT", isAlive: false,
     }));
-    expect(html).toContain("sizes=\"30px\"");
+    expect(html).toContain("sizes=\"50px\"");
     expect(html).toContain("ภาพตัวละครพยาน");
     expect(html).toContain("ฝ่ายผู้บริสุทธิ์");
     expect(html).toContain("เสียชีวิต");

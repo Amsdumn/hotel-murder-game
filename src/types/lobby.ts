@@ -39,6 +39,7 @@ export type LobbyErrorCode =
   | "CODE_COLLISION"
   | "INVALID_SESSION"
   | "FORBIDDEN"
+  | "SKILL_EXPIRED"
   | "SERVER_UNAVAILABLE";
 
 export type LobbyAck<T> = { ok: true; data: T } | { ok: false; error: LobbyErrorCode };

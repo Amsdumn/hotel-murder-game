@@ -51,6 +51,9 @@ export class GameService {
     if (!parsed.success) throw new LobbyError("INVALID_INPUT");
     const { record, actionId } = await this.record(code, playerId, input, true);
     if (!record.gameState) throw new LobbyError("FORBIDDEN");
+    const state = record.gameState;
+    const missedTurn = state.privateActionHistory?.[playerId]?.some((entry) => entry.turn === state.turn && entry.type === "SKILL" && entry.message === "หมดเวลาใช้สกิล");
+    if (missedTurn || (state.phase === "SKILL_PHASE" && state.activePlayerId === playerId && state.phaseDeadlineAt !== undefined && now >= state.phaseDeadlineAt)) throw new LobbyError("SKILL_EXPIRED");
     let result: EngineResult;
     try { result = performSkill(record.gameState, playerId, parsed.data.target, now, record.discussionSeconds); }
     catch { throw new LobbyError("FORBIDDEN"); }

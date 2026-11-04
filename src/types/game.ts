@@ -50,6 +50,7 @@ export interface PrivatePlayerState {
   isAlive: boolean;
   mode: "PLAYER" | "SPECTATOR";
   canUseSkill: boolean;
+  skillDeadlineAt?: number;
   canVote: boolean;
   deathNotice?: { cause: "INITIAL_CRIME" | "ASSASSINATION" | "VOTE"; turn: number };
   privateResults: string[];

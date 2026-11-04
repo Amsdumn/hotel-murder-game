@@ -19,6 +19,26 @@ function record(phase: "DISCUSSION" | "SKILL_PHASE" | "VOTING"): LobbyRecord {
 }
 
 describe("persisted server deadlines", () => {
+  it("reports a missed first Locksmith turn as expired rather than forbidden", async () => {
+    const store = new MemoryLobbyStore();
+    await store.createLobby(record("SKILL_PHASE"));
+    const service = new GameService(store);
+    await service.advanceDue(1000);
+
+    await expect(service.skill("ABC234", "a", {
+      actionId: crypto.randomUUID(), expectedVersion: 5, target: 103,
+    }, 1001)).rejects.toMatchObject({ code: "SKILL_EXPIRED" });
+    expect((await store.findLobby("ABC234"))?.gameState?.lockedRooms).toEqual([]);
+  });
+
+  it("expires a skill at its deadline even before the timer sweep", async () => {
+    const store = new MemoryLobbyStore();
+    await store.createLobby(record("SKILL_PHASE"));
+    await expect(new GameService(store).skill("ABC234", "a", {
+      actionId: crypto.randomUUID(), expectedVersion: 5, target: 103,
+    }, 1000)).rejects.toMatchObject({ code: "SKILL_EXPIRED" });
+  });
+
   it("restores an expired discussion phase after a new service instance starts", async () => {
     const store = new MemoryLobbyStore();
     await store.createLobby(record("DISCUSSION"));
@@ -70,7 +90,7 @@ describe("viewer-specific action history", () => {
     await store.createLobby(record("SKILL_PHASE"));
     const result = await new GameService(store).skill("ABC234", "a", {
       actionId: crypto.randomUUID(), expectedVersion: 5, target: 103,
-    });
+    }, 999);
     expect(projectPrivatePlayerState(result.state, "a").actionHistory).toEqual([
       { turn: 1, type: "SKILL", message: "ใช้สกิล: ล็อกห้อง 103 แล้ว" },
     ]);
