@@ -24,7 +24,7 @@ export function PrivateRoomScene({ role, roomNumber, team, isAlive }: { role: Ro
           <Image src={characters[role]} alt={`ตัวละคร${roleNames[role]}กำลังเดินอยู่ในห้อง ${roomNumber}`} fill sizes="(max-width: 640px) 130px, 180px" className={styles.character} />
         </div>
       </div>}
-      <div className={styles.facePortrait}><RolePortrait role={role} className="h-full w-full rounded-full" sizes="30px" /></div>
+      <div className={styles.facePortrait}><RolePortrait role={role} className="h-full w-full rounded-full" sizes="50px" /></div>
       <p className={styles.hint}>พื้นที่ส่วนตัว · ตัวละครของคุณ</p>
     </div>
     <div className={styles.meta}><span>{team === "MURDERER" ? "ฝ่ายฆาตกร" : "ฝ่ายผู้บริสุทธิ์"}</span><span className={isAlive ? styles.alive : styles.dead}>{isAlive ? "ยังมีชีวิต" : "เสียชีวิต"}</span></div>
