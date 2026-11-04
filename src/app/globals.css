@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+@keyframes murder-backdrop {
+  0% { opacity: 0; }
+  22%, 78% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes murder-message {
+  0%, 22% { opacity: 0; transform: translateY(12px); }
+  34%, 75% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+
+.murder-event-overlay { animation: murder-backdrop 4.6s ease-in-out both; }
+.murder-event-message { animation: murder-message 4.6s ease-in-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .murder-event-overlay, .murder-event-message { animation: none; }
+}

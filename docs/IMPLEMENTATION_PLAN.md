@@ -1,0 +1,78 @@
+# Hotel Murder Online implementation plan
+
+## Architecture
+
+- **Single process:** a custom Node.js HTTP server prepares Next.js App Router and attaches Socket.IO to the same HTTP server. Deploy to a Node host that supports long-lived WebSocket connections. Avoid Next.js `standalone` output because it does not trace a custom server.
+- **Domain boundary:** `src/server/game-engine` will own roles, room assignment, crime scenes, turns, skills, voting, and win conditions. Socket handlers will authenticate, validate with Zod, call application services, and emit only viewer-specific projections.
+- **Persistence:** Mongoose models for games, player sessions, and game events. Game actions will use optimistic concurrency on a state version and an action ID for idempotency. A per-game serialized command path will guard simultaneous socket events.
+- **Client:** App Router pages render public shell content. Client components use MUI controls, Tailwind layout utilities, and Zustand only for local UI state and authorized projections. All visible text is Thai.
+- **Privacy:** private role, room, death notices, and ability results are sent only to authorized sessions; living Murderer-team members may receive teammate assignments. The full game aggregate never crosses the server boundary. Public players retain ID, display name, and seat index with no alive/dead or gameplay connection status. Public rooms never expose assassination locations.
+
+## Dependencies
+
+Runtime: `next`, `react`, `react-dom`, `@mui/material`, `@mui/material-nextjs`, `@emotion/react`, `@emotion/styled`, `@emotion/cache`, `tailwindcss`, `socket.io`, `socket.io-client`, `mongoose`, `zod`, `zustand`.
+
+Development: `typescript`, `@types/node`, `@types/react`, `@types/react-dom`, `tsx`, `eslint`, `eslint-config-next`, `vitest`, `@tailwindcss/postcss`, `postcss`.
+
+## Risks and controls
+
+1. **Hidden information:** DTO allowlists and tests must prove public payloads, API responses, SSR, Zustand, public events, and errors never expose hidden victim identities, death status, roles, teams, private results, assassination targets, or active skill actors. Initial crime room numbers are the only public details of initial deaths; successful assassination emits only the generic murder notification.
+2. **Concurrent actions:** state version checks and unique action IDs must make retries safe and reject stale actions; use MongoDB optimistic concurrency and serialize commands per game.
+3. **Reconnect and identity:** store hashed, high-entropy reconnect tokens in player sessions; never trust client role, team, or room values.
+4. **Disconnected actors and timers:** server-owned deadlines must advance the game without a connected active player, including after restart.
+5. **Original crime scene balance:** three unique rooms are selected and rerolled if the Killer's room appears. Occupied non-Killer rooms cause hidden deaths and private victim notifications. Preserve this as a named strategy for future balance modes.
+6. **Deployment:** a custom Node server and WebSockets need a persistent Node runtime; serverless-only hosting is unsuitable for this design.
+
+## Milestones
+
+### Phase 1 — Foundation
+
+- [x] Inspect repository and document architecture, dependencies, and risks.
+- [x] Document complete game rules in `docs/GAME_RULES.md`.
+- [x] Configure Next.js App Router, strict TypeScript, ESLint, Vitest, and Tailwind.
+- [x] Add MUI theme/provider, responsive Thai main menu shell, and Zustand UI-only store.
+- [x] Add shared domain contracts without implementing gameplay.
+- [x] Add custom Node server with Socket.IO initialization and a MongoDB connection helper.
+- [x] Add `.env.example`, startup documentation, and run typecheck, lint, tests, build, and startup checks.
+
+### Phase 2 — Lobby system
+
+- [x] Define Game, PlayerSession, and GameEvent Mongoose models and indexes.
+- [x] Implement create/join lobby, 5–10 player limit, room codes, ready/unready, host permissions, and reconnect token rotation.
+- [x] Add lobby UI and socket acknowledgements, action IDs, version checks, and multi-window integration tests.
+
+### Phase 3 — Game engine
+
+- [x] Add isolated hidden-death, public/private projection, spectator eligibility, silent skill-turn skipping, room eligibility, and public voting outcome modules with unit tests.
+- [x] Implement randomized role/room assignment for 5–10 players and original three-room reroll strategy.
+- [x] Implement role-order queue with seat-index tie break, seven skills, death, and win handling. Private role display happens at game start.
+- [x] In the isolated engine, publish only three `CRIME_SCENE` room numbers for initial crime; privately notify affected players and hide victim identity, role, team, and status from public projections and events.
+- [x] In the isolated engine, publish a generic `MURDER_OCCURRED` only on successful assassination, hide target/victim/Killer information, and privately notify the victim; keep failed attempts private.
+- [x] Implement persisted server-owned skill and discussion timing, room voting, runoff, and server-random final tie break. Use `canVoteForRoom(roomNumber, crimeRooms, openedRooms)` on the server for initial and runoff votes; allow self-room votes and reject crime scenes, opened rooms, and invalid hotel rooms.
+- [x] In the isolated engine, enforce dead-player skill and vote restrictions and preserve the dead player's public roster entry and private Spectator Mode.
+- [x] Persist and connect engine state to sessions; prevent a dead player from returning as living through reconnect.
+- [x] Add isolated unit tests for crime victim identity/role secrecy; successful/failed assassination notices; self-room, opened-room, and crime-room voting; dead-player vote/skill rejection; silent turn skipping; and immediate Innocent victory when the Killer dies.
+- [ ] Expand service/transport privacy tests across every public boundary. Socket.IO murder privacy and spectator reconnect tests are in place; API, SSR, Zustand, and error response coverage remains.
+
+### Phase 4 — Gameplay UI
+
+- [x] Build private role display, 21-room hotel board, generic public skill-phase status, skill forms, discussion timer, voting, private death screen, spectator view, public room outcomes, and result screen. Public murders trigger a 4.6-second sound and motion overlay with mute and reduced-motion support.
+- [ ] Check desktop/mobile layout and ensure room styling does not disclose hidden occupancy or assassination location; mark only initial crime scenes and publicly opened voting rooms.
+
+### Phase 5 — Multiplayer integration
+
+- [x] Connect server-authoritative game commands to Socket.IO, including private results, public updates, reconnection, and persisted deadline recovery after process restart.
+- [x] Broadcast generic `MURDER_OCCURRED` only after a successful kill, route death notices only to the victim, and withhold actor/target/victim identifiers from other clients.
+- [ ] Add multi-client integration tests for turn order, hidden dead-player skipping, voting completion without voter eligibility leaks, spectator access, phase sync, private death notices, and public/private information boundaries across broadcasts, API responses, SSR, client state, event logs, and errors.
+
+### Phase 6 — Polish and release checks
+
+- [ ] Improve responsive behavior, motion, errors, reconnect recovery, and deployment configuration.
+- [ ] Run security, multiplayer end-to-end, production build, and deployment smoke checks.
+
+## Phase 1 acceptance checks
+
+- `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build` pass.
+- `npm run dev` serves the Thai main menu and the custom server initializes Socket.IO.
+- The MongoDB helper validates configuration and connects lazily, so the landing page can build without a live database; later data operations must require the connection.
+- No lobby or gameplay actions are implemented in this phase.
