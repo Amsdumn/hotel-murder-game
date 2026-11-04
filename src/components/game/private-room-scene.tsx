@@ -14,10 +14,11 @@ const characters: Record<Role, string> = {
   KILLER: "/art/characters/killer-3d.webp",
 };
 
-export function PrivateRoomScene({ role, roomNumber, team, isAlive }: { role: Role; roomNumber: number; team: Team; isAlive: boolean }) {
+export function PrivateRoomScene({ role, roomNumber, team, isAlive, isActive = false }: { role: Role; roomNumber: number; team: Team; isAlive: boolean; isActive?: boolean }) {
   return <section className={styles.frame} aria-label={`ฉากห้องพักของคุณ ห้อง ${roomNumber} ตัวละคร${roleNames[role]}`}>
     <div className={styles.stage}>
-      <Image src="/art/hotel-room-3d.webp" alt="ห้องพักในโรงแรมยามค่ำคืน" fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.room} />
+      <Image src="/art/hotel-room-3d.webp" alt="ห้องพักในโรงแรม" fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.room} />
+      {isAlive && isActive && <Image src="/art/hotel-room-morning.webp" alt="" aria-hidden="true" fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.morningWindow} />}
       <div className={styles.caption}><span className={styles.liveDot} /> ห้อง {roomNumber} <span className={styles.captionDivider}>/</span> {roleNames[role]}</div>
       {isAlive && <div className={styles.walkPath} data-character-role={role}>
         <span className={styles.shadow} aria-hidden="true" />

@@ -57,7 +57,7 @@ export function PrivateInfoPanel({ privateState, teamState, players, open, onTog
       <Button variant="outlined" size="small" aria-expanded={open} onClick={onToggle}>{open ? "ปิดข้อมูลลับ" : "แสดงข้อมูลลับ"}</Button>
     </div>
     {open && <div className="mt-5 space-y-5 border-t border-[#c8a46b]/15 pt-5">
-      <PrivateRoomScene role={privateState.role} roomNumber={privateState.roomNumber} team={privateState.team} isAlive={privateState.isAlive} />
+      <PrivateRoomScene role={privateState.role} roomNumber={privateState.roomNumber} team={privateState.team} isAlive={privateState.isAlive} isActive={privateState.canUseSkill} />
       {teamState && <section><h3 className="font-semibold text-[#d8bc86]">ฝ่ายฆาตกร</h3>{teamState.teammates.map((mate) => <p className="mt-2 text-sm" key={mate.playerId}>{players.find((player) => player.id === mate.playerId)?.displayName} · {roleNames[mate.role]} · ห้อง {mate.roomNumber}</p>)}</section>}
       {privateState.actionHistory.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ประวัติการกระทำของคุณ</h3><ol className="mt-2 space-y-2 text-sm text-[#d6d2dc]">{privateState.actionHistory.map((entry, index) => <li key={`${entry.turn}-${index}`}>รอบ {entry.turn} · {entry.message}</li>)}</ol></section>}
       {privateState.privateResults.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ผลสืบสวนส่วนตัว</h3><ul className="mt-2 space-y-2 text-sm">{privateState.privateResults.map((message, index) => <li key={index}>{message}</li>)}</ul></section>}

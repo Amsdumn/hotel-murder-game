@@ -18,6 +18,14 @@
   z-index: -1;
 }
 
+.morningWindow {
+  z-index: 0;
+  object-fit: cover;
+  object-position: center;
+  clip-path: polygon(77% 0, 95% 0, 95% 39%, 77% 39%);
+  pointer-events: none;
+}
+
 .caption {
   position: absolute;
   z-index: 2;

@@ -104,6 +104,15 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("ยังมีชีวิต");
   });
 
+  it("shows morning outside the private room window only during the owner's skill turn", () => {
+    const render = (viewer: PrivatePlayerState) => renderToStaticMarkup(createElement(PrivateInfoPanel, {
+      privateState: viewer, teamState: null, players: publicState.players, open: true, onToggle: () => {},
+    }));
+    expect(render(privateState)).not.toContain("hotel-room-morning.webp");
+    expect(render({ ...privateState, canUseSkill: true })).toContain("hotel-room-morning.webp");
+    expect(render({ ...privateState, isAlive: false, canUseSkill: false, mode: "SPECTATOR" })).not.toContain("hotel-room-morning.webp");
+  });
+
   it("shows a circular role portrait and team status on the room frame", () => {
     const html = renderToStaticMarkup(createElement(PrivateRoomScene, {
       role: "WITNESS", roomNumber: 301, team: "INNOCENT", isAlive: false,
