@@ -19,6 +19,19 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("shows the voting panel only to a player who can vote", () => {
+    const render = (viewer: PrivatePlayerState | null) => renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase: "VOTING" }, privateState: viewer, teamState: null,
+      result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+
+    expect(render({ ...privateState, canVote: true })).toContain("ลงคะแนนเปิดห้อง");
+    expect(render(privateState)).not.toContain("ลงคะแนนเปิดห้อง");
+    expect(render({ ...privateState, isAlive: false, mode: "SPECTATOR" })).not.toContain("ลงคะแนนเปิดห้อง");
+    expect(render(null)).not.toContain("ลงคะแนนเปิดห้อง");
+  });
+
   it("starts with private role, room, and action history hidden", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, { state: publicState, privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }) }));
     expect(html).toContain("แสดงข้อมูลลับ");
