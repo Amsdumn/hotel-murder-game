@@ -83,6 +83,14 @@
 .alive { color: #b7d6be; }
 .dead { color: #eba7a8; }
 
+.ability {
+  padding: 12px;
+  border-top: 1px solid #5a4b59;
+  background: #24202b;
+}
+.ability h3 { margin: 0; color: #e8c995; font-size: 13px; font-weight: 600; }
+.ability p { margin: 6px 0 0; color: #d5cbd5; font-size: 12px; line-height: 1.7; }
+
 @keyframes stroll {
   0%, 8% { left: 24%; transform: scaleX(1); }
   43% { left: 65%; transform: scaleX(1); }

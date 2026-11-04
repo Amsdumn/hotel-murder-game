@@ -1,6 +1,7 @@
 import Image from "next/image";
 import type { Role, Team } from "@/types/game";
 import { RolePortrait, roleNames } from "@/components/role-portrait";
+import { roleSkillDescriptions } from "@/lib/role-skills";
 import styles from "./private-room-scene.module.css";
 
 const characters: Record<Role, string> = {
@@ -28,5 +29,6 @@ export function PrivateRoomScene({ role, roomNumber, team, isAlive }: { role: Ro
       <p className={styles.hint}>พื้นที่ส่วนตัว · ตัวละครของคุณ</p>
     </div>
     <div className={styles.meta}><span>{team === "MURDERER" ? "ฝ่ายฆาตกร" : "ฝ่ายผู้บริสุทธิ์"}</span><span className={isAlive ? styles.alive : styles.dead}>{isAlive ? "ยังมีชีวิต" : "เสียชีวิต"}</span></div>
+    <div className={styles.ability}><h3>ความสามารถ · {roleNames[role]}</h3><p>{roleSkillDescriptions[role]}</p></div>
   </section>;
 }

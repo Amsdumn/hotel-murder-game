@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { PrivatePlayerState, PublicGameState } from "@/types/game";
+import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
 import { GameScreen, HotelBoard, PrivateInfoPanel, getTurnNotice } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
 
@@ -39,6 +39,29 @@ describe("game privacy and turn UI", () => {
     expect(html).not.toContain("ลอบสังหารห้อง 102: สำเร็จ");
     expect(html).not.toContain("ห้องพัก 202");
     expect(html).not.toContain("ฉากห้องพักของคุณ");
+    expect(html).not.toContain("ความสามารถ · ฆาตกร");
+  });
+
+  it("shows the owner's ability under the room for every role", () => {
+    const abilityPhrases = {
+      LOCKSMITH: "ล็อกห้องหนึ่งห้อง",
+      HOUSEKEEPER: "จำนวนผู้เล่นที่ยังมีชีวิตบนชั้น",
+      WINDOW_CLEANER: "แนวห้อง 01, 02 หรือ 03",
+      WITNESS: "ชั้นสูงกว่า ต่ำกว่า หรือชั้นเดียวกัน",
+      DETECTIVE: "ตรวจหนึ่งห้อง",
+      ACCOMPLICE: "เลือกผู้เล่นหนึ่งคน",
+      KILLER: "ลอบสังหารผู้พักที่ยังมีชีวิต",
+    };
+    for (const role of ROLE_ORDER) {
+      const html = renderToStaticMarkup(createElement(PrivateRoomScene, {
+        role, roomNumber: 301, team: role === "KILLER" || role === "ACCOMPLICE" ? "MURDERER" : "INNOCENT", isAlive: true,
+      }));
+      expect(html).toContain("ความสามารถ ·");
+      expect(html).toContain(abilityPhrases[role]);
+    }
+    const locksmith = renderToStaticMarkup(createElement(PrivateRoomScene, { role: "LOCKSMITH", roomNumber: 301, team: "INNOCENT", isAlive: true }));
+    expect(locksmith).toContain("ล็อกห้องหนึ่งห้องในรอบนั้น");
+    expect(locksmith).not.toContain("ลอบสังหารผู้พักที่ยังมีชีวิต");
   });
 
   it("reveals only the owner's information when opened", () => {

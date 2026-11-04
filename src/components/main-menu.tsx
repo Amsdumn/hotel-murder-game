@@ -9,6 +9,7 @@ import { ActiveRooms } from "@/components/lobby/active-rooms";
 import { RolePortrait } from "@/components/role-portrait";
 import type { Role } from "@/types/game";
 import { readGuestProfile, readLobbyToken } from "@/lib/lobby-client";
+import { roleSkillDescriptions } from "@/lib/role-skills";
 
 function subscribeToProfile(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -18,13 +19,13 @@ function subscribeToProfile(onChange: () => void) {
 function profileNameSnapshot() { return readGuestProfile()?.displayName ?? ""; }
 
 const skillRules = [
-  { id: "LOCKSMITH", role: "ช่างกุญแจ", team: "ผู้บริสุทธิ์", description: "ล็อกห้องหนึ่งห้องในรอบนั้น ฆาตกรลอบสังหารห้องที่ล็อกไม่ได้ แต่ยังโหวตเปิดห้องนั้นได้" },
-  { id: "HOUSEKEEPER", role: "แม่บ้าน", team: "ผู้บริสุทธิ์", description: "เลือกหนึ่งชั้น แล้วทราบจำนวนผู้เล่นที่ยังมีชีวิตบนชั้นนั้นเป็นข้อมูลส่วนตัว" },
-  { id: "WINDOW_CLEANER", role: "คนเช็ดกระจก", team: "ผู้บริสุทธิ์", description: "เลือกแนวห้อง 01, 02 หรือ 03 แล้วทราบจำนวนผู้เล่นที่ยังมีชีวิตในแนวนั้นตลอดเจ็ดชั้น" },
-  { id: "WITNESS", role: "พยาน", team: "ผู้บริสุทธิ์", description: "เลือกหนึ่งชั้น หากมีห้องที่เกิดเหตุเริ่มต้นบนชั้นนั้น จะทราบว่าฆาตกรอยู่ชั้นสูงกว่า ต่ำกว่า หรือชั้นเดียวกัน" },
-  { id: "DETECTIVE", role: "นักสืบ", team: "ผู้บริสุทธิ์", description: "ตรวจหนึ่งห้อง ทราบว่าผู้พักที่ยังมีชีวิตอยู่ฝ่ายผู้บริสุทธิ์หรือฝ่ายฆาตกร หรือเป็นห้องว่าง โดยไม่ทราบชื่อและบทบาท" },
-  { id: "ACCOMPLICE", role: "ผู้สมรู้ร่วมคิด", team: "ฝ่ายฆาตกร", description: "เลือกผู้เล่นหนึ่งคนเพื่อทราบชั้นที่เขาพัก หากเลือกผู้เล่นที่ตายแล้วจะไม่ได้ข้อมูลและถือว่าใช้สกิล ผลเป็นข้อมูลเฉพาะฝ่ายฆาตกร" },
-  { id: "KILLER", role: "ฆาตกร", team: "ฝ่ายฆาตกร", description: "เลือกหนึ่งห้องเพื่อลอบสังหารผู้พักที่ยังมีชีวิต หากห้องไม่ถูกล็อก ทำได้ครั้งเดียวต่อรอบ เมื่อฆ่าสำเร็จห้องนั้นจะแสดงว่าถูกฆาตกรรม แต่ไม่ประกาศชื่อเหยื่อ" },
+  { id: "LOCKSMITH", role: "ช่างกุญแจ", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.LOCKSMITH },
+  { id: "HOUSEKEEPER", role: "แม่บ้าน", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.HOUSEKEEPER },
+  { id: "WINDOW_CLEANER", role: "คนเช็ดกระจก", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.WINDOW_CLEANER },
+  { id: "WITNESS", role: "พยาน", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.WITNESS },
+  { id: "DETECTIVE", role: "นักสืบ", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.DETECTIVE },
+  { id: "ACCOMPLICE", role: "ผู้สมรู้ร่วมคิด", team: "ฝ่ายฆาตกร", description: roleSkillDescriptions.ACCOMPLICE },
+  { id: "KILLER", role: "ฆาตกร", team: "ฝ่ายฆาตกร", description: roleSkillDescriptions.KILLER },
 ] satisfies Array<{ id: Role; role: string; team: string; description: string }>;
 
 export function MainMenu() {
