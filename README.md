@@ -11,9 +11,9 @@ Phase 2 foundation for a real-time social deduction browser game. The app serves
 ## Local setup
 
 1. Run `npm install`.
-2. Copy `.env.example` to `.env.local` and adjust `PORT`, `HOSTNAME`, and `MONGODB_URI` for your environment.
+2. Copy `.env.example` to `.env.local` and adjust `PORT`, `BIND_HOST`, and `MONGODB_URI` for your environment. `BIND_HOST=0.0.0.0` lets the server accept connections on the LAN; the unrelated machine `HOSTNAME` variable is ignored.
 3. Start MongoDB locally or set `MONGODB_URI` to a reachable MongoDB instance.
-4. Run `npm run dev` and open `http://localhost:3000`.
+4. Run `npm run dev` and open the `Local` URL printed by the server. Share a printed `Network` URL with friends on the same LAN. If their browser cannot reach it, allow the Node.js process through the host firewall on private networks.
 
 The custom server loads `.env.local` before reading its settings. `MONGODB_URI` is validated when a lobby operation first requests a connection. Do not commit `.env.local`.
 
