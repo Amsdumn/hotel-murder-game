@@ -26,7 +26,7 @@ export interface GameConfig {
   minPlayers: 5;
   maxPlayers: 10;
   discussionSeconds: number;
-  crimeSceneStrategy: "ORIGINAL_THREE_ROOM_REROLL";
+  crimeSceneStrategy: "THREE_EMPTY_ROOMS";
 }
 
 export interface PublicGameState {

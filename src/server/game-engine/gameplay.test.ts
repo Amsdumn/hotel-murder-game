@@ -18,8 +18,18 @@ describe("gameplay setup and skills", () => {
     expect(new Set(result.state.players.map((player) => player.roomNumber)).size).toBe(5);
     expect(result.state.players.filter((player) => player.role === "KILLER")).toHaveLength(1);
     expect(result.state.crimeRooms).toHaveLength(3);
+    expect(result.state.crimeRooms.every((room) => result.state.players.every((player) => player.roomNumber !== room))).toBe(true);
+    expect(result.state.players.every((player) => player.isAlive)).toBe(true);
     expect(JSON.stringify(result.publicEvents)).not.toMatch(/Player|"p[0-4]"|LOCKSMITH|KILLER/);
     expect(result.privateEvents.find((event) => event.type === "ACTION_REQUEST")?.recipientPlayerId).toBe(result.state.activePlayerId);
+  });
+
+  it("finds three unoccupied rooms even with ten players", () => {
+    const seats = Array.from({ length: 10 }, (_, seatIndex) => ({ id: `seat-${seatIndex}`, displayName: `Guest ${seatIndex}`, seatIndex }));
+    const result = createInitialGame("ABC234", seats, 3, choose());
+    expect(result.state.crimeRooms).toHaveLength(3);
+    expect(result.state.crimeRooms.every((room) => result.state.players.every((player) => player.roomNumber !== room))).toBe(true);
+    expect(result.state.players.every((player) => player.isAlive)).toBe(true);
   });
 
   it("keeps investigation private and moves to discussion after the last skill", () => {
@@ -61,7 +71,7 @@ describe("gameplay setup and skills", () => {
     const initial = createInitialGame("ABC234", lobbyPlayers, 3, choose()).state;
     const killer = initial.players.find((player) => player.role === "KILLER")!;
     const state = { ...initial, activePlayerId: killer.id, usedSkillPlayerIds: initial.players.filter((player) => player.id !== killer.id && player.isAlive).map((player) => player.id) };
-    const result = performSkill(state, killer.id, 703, 1000, 180);
+    const result = performSkill(state, killer.id, initial.crimeRooms[0], 1000, 180);
     expect(projectPrivatePlayerState(result.state, killer.id).privateResults).toContain("ลอบสังหารไม่สำเร็จ");
   });
 

@@ -24,7 +24,8 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   const rooms = shuffle(HOTEL_ROOMS, choose);
   const players: EnginePlayer[] = seats.map((seat, index) => ({ ...seat, role: roles[index], team: roles[index] === "KILLER" || roles[index] === "ACCOMPLICE" ? "MURDERER" : "INNOCENT", roomNumber: rooms[index], isAlive: true }));
   const initial: GameEngineState = { code, version, phase: "INITIAL_CRIME", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, publicHistory: [] };
-  const crime = applyInitialCrime(initial, () => shuffle(HOTEL_ROOMS, choose).slice(0, 3));
+  const emptyRooms = HOTEL_ROOMS.filter((room) => !players.some((player) => player.roomNumber === room));
+  const crime = applyInitialCrime(initial, () => shuffle(emptyRooms, choose).slice(0, 3));
   const afterCrime: GameEngineState = { ...crime.state, phase: "SKILL_PHASE", publicHistory: crime.publicEvents };
   const first = advanceSkillTurn(afterCrime, null);
   return { state: { ...first.state, phaseDeadlineAt: now + 60_000 }, publicEvents: crime.publicEvents, privateEvents: [...crime.privateEvents, ...first.privateEvents] };

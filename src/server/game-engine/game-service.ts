@@ -60,12 +60,18 @@ export class GameService {
   async vote(code: string, playerId: string, input: unknown): Promise<EngineResult> {
     const parsed = voteSchema.safeParse(input);
     if (!parsed.success) throw new LobbyError("INVALID_INPUT");
-    const { record, actionId } = await this.record(code, playerId, input, true);
-    if (!record.gameState) throw new LobbyError("FORBIDDEN");
-    let result: EngineResult;
-    try { result = castRoomVote(record.gameState, playerId, parsed.data.roomNumber); }
-    catch { throw new LobbyError("FORBIDDEN"); }
-    return this.commit(record, actionId, result);
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const { record, actionId } = await this.record(code, playerId, input, true);
+      if (!record.gameState) throw new LobbyError("FORBIDDEN");
+      let result: EngineResult;
+      try { result = castRoomVote(record.gameState, playerId, parsed.data.roomNumber); }
+      catch { throw new LobbyError("FORBIDDEN"); }
+      try { return await this.commit(record, actionId, result); }
+      catch (error) {
+        if (!(error instanceof LobbyError) || error.code !== "STALE_STATE") throw error;
+      }
+    }
+    throw new LobbyError("STALE_STATE");
   }
 
   async advanceDue(now = Date.now()): Promise<EngineResult[]> {

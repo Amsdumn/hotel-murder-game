@@ -12,9 +12,9 @@ The Killer and Accomplice know each other's identities and rooms. Each innocent 
 
 ## Initial crime scenes
 
-After roles and rooms are assigned, select three **unique** rooms uniformly with a server-side random source. If any selected room is the Killer's room, discard the full selection and reroll. A selected room occupied by another player kills that player immediately; an empty selected room is an empty crime scene. There is no guaranteed death count. Check victory after each death. This original procedure is the default named strategy; alternative strategies may be added later only as explicit configuration.
+After roles and rooms are assigned, select three **unique, unoccupied** rooms uniformly with a server-side random source. A selection containing any player's room is discarded and rerolled. No player dies during initial crime scene selection.
 
-Publish only the three selected room numbers and mark those rooms `CRIME_SCENE`. Do not publish whether a selected room was occupied, the victim's identity, role, or team, or a living/dead status change that identifies the victim. Send a private death notification to each affected player. Other players receive no victim-identifying information.
+Publish the three selected room numbers and mark those rooms `CRIME_SCENE`. The selected rooms are empty by construction; no death notification is sent.
 
 Initial crime scene rooms remain unavailable for voting throughout the game.
 
@@ -50,11 +50,11 @@ On a public `MURDER_OCCURRED` event, clients darken the screen, play a short sus
 
 Discussion defaults to 180 seconds; the host may configure duration before game start. Players may speak outside the website and may lie about roles, rooms, and clues. The website does not verify discussion claims. Voice chat is outside the MVP.
 
-Each living player votes for one eligible room, including their own room. Initial crime scene rooms and rooms previously opened through voting are ineligible. The server must validate room geometry and eligibility for every initial vote and runoff vote; disabled frontend buttons are only a visual aid. A room number is valid only when it is an integer on floors 1–7 with room suffix 01, 02, or 03.
+Each living player may vote immediately in any order for one eligible room per ballot, including their own room. The first accepted vote is final for that ballot; the player cannot change it or cast another vote until a separate runoff ballot begins. Concurrent votes from different players must all be accepted without requiring them to resubmit after another player's vote. Initial crime scene rooms and rooms previously opened through voting are ineligible. The server must validate room geometry and eligibility for every initial vote and runoff vote; disabled frontend buttons are only a visual aid. A room number is valid only when it is an integer on floors 1–7 with room suffix 01, 02, or 03.
 
 The room with the most votes opens. If multiple rooms tie, conduct one runoff limited to those rooms. If the runoff still ties, the server randomly chooses a tied room. A room opens at the end of every voting phase. An empty room is announced as `EMPTY ROOM`; a living occupant dies. Check victory immediately if that occupant is the Killer. Locks do not affect voting. Dead players cannot submit votes.
 
-Public voting results reveal the selected room, whether it is empty or occupied, and whether the game ended. They do not reveal the occupant's identity or role during ongoing play. If the room contains a dead player, opening it does not revive or kill them again. Determine voting completion from the server's private living-player set; do not publish individual voter eligibility, voter identities, or counters that identify dead players.
+Public voting results reveal the selected room, whether it is empty or occupied, and whether the game ended. They do not reveal the occupant's identity or role during ongoing play. If the room contains a dead player, opening it does not revive or kill them again. Determine voting completion from the server's private living-player set; do not publish individual voter eligibility, voter identities, or counters that identify dead players. A tied first ballot starts a runoff with a fresh one-vote allowance for each living player.
 
 The voting engine must use this server-side eligibility rule:
 

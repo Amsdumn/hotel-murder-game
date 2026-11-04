@@ -12,8 +12,8 @@ const players: GameEngineState["players"] = [
   { id: "e", displayName: "E", seatIndex: 4, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
 ];
 
-function record(phase: "DISCUSSION" | "SKILL_PHASE"): LobbyRecord {
-  const gameState: GameEngineState = { code: "ABC234", version: 5, phase, turn: 1, players, crimeRooms: [301, 302, 303], openedRooms: [], lockedRooms: [], activePlayerId: phase === "SKILL_PHASE" ? "a" : null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, phaseDeadlineAt: 1000 };
+function record(phase: "DISCUSSION" | "SKILL_PHASE" | "VOTING"): LobbyRecord {
+  const gameState: GameEngineState = { code: "ABC234", version: 5, phase, turn: 1, players, crimeRooms: [301, 302, 303], openedRooms: [], lockedRooms: [], activePlayerId: phase === "SKILL_PHASE" ? "a" : null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, phaseDeadlineAt: 1000, phaseStartVersion: 5 };
   return { code: "ABC234", phase, version: 5, creationActionId: "create", hostPlayerId: "a", playerLimit: 5, discussionSeconds: 180, players: players.map(({ id, displayName, seatIndex }) => ({ id, displayName, seatIndex, ready: true, connected: true })), appliedActionIds: [], gameState };
 }
 
@@ -40,4 +40,25 @@ describe("persisted server deadlines", () => {
     expect(result[0].state.phaseDeadlineAt).toBe(61000);
   });
 
+});
+
+describe("voting from independent players", () => {
+  it("accepts votes in any order, retries concurrent writes, and keeps each first vote", async () => {
+    const store = new MemoryLobbyStore();
+    await store.createLobby(record("VOTING"));
+    const service = new GameService(store);
+    const originalVersion = 5;
+    const first = await service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101 });
+    expect(first.state.votes.e).toBe(101);
+    await expect(service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 102 }))
+      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    const others = await Promise.all(["d", "b", "a", "c"].map((playerId) => service.vote("ABC234", playerId, {
+      actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101,
+    })));
+    expect(others).toHaveLength(4);
+    const final = (await store.findLobby("ABC234"))!.gameState!;
+    expect(final.openedRooms).toEqual([101]);
+    expect(final.phase).toBe("SKILL_PHASE");
+    expect(final.players.find((player) => player.id === "a")?.isAlive).toBe(false);
+  });
 });

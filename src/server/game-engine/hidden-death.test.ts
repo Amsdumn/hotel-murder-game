@@ -20,14 +20,15 @@ function game(overrides: Partial<GameEngineState> = {}): GameEngineState {
 }
 
 describe("hidden deaths", () => {
-  it("publishes three crime rooms without victim identity or role", () => {
-    const selections = [[202, 101, 301], [102, 301, 401]];
+  it("rerolls occupied rooms and marks only three empty crime scenes", () => {
+    const selections = [[202, 101, 301], [102, 301, 401], [301, 401, 501]];
     const result = applyInitialCrime(game({ phase: "INITIAL_CRIME" }), () => selections.shift() ?? []);
-    expect(result.state.players.find((player) => player.id === "victim")?.isAlive).toBe(false);
-    expect(result.publicEvents).toEqual([{ type: "CRIME_SCENES_REVEALED", roomNumbers: [102, 301, 401] }]);
+    expect(result.state.players.every((player) => player.isAlive)).toBe(true);
+    expect(result.publicEvents).toEqual([{ type: "CRIME_SCENES_REVEALED", roomNumbers: [301, 401, 501] }]);
     expect(JSON.stringify(result.publicEvents)).not.toMatch(/Victim|victim|HOUSEKEEPER|INNOCENT/);
-    expect(projectPublicState(result.state).publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("CRIME_SCENE");
-    expect(result.privateEvents).toContainEqual(expect.objectContaining({ recipientPlayerId: "victim", type: "DEATH_NOTICE" }));
+    expect(projectPublicState(result.state).publicRooms.find((room) => room.roomNumber === 301)?.state).toBe("CRIME_SCENE");
+    expect(result.privateEvents).toEqual([]);
+    expect(result.state.deathNotices).toEqual({});
   });
 
   it("rejects initial crime generation outside its server phase", () => {

@@ -35,11 +35,12 @@ export function SpectatorPanel() {
   return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">โหมดผู้ชม</h2><p className="mt-2 text-sm leading-7 text-[#c6bdb1]">คุณสามารถดูเหตุการณ์สาธารณะและผลโหวตได้ โปรดหยุดให้ข้อมูลเกี่ยวกับเกมทันที</p></Paper>;
 }
 
-export function VotingPanel({ state, canVote, onVote, busy }: { state: PublicGameState; canVote: boolean; onVote: (roomNumber: number) => void; busy: boolean }) {
+export function VotingPanel({ state, canVote, hasVoted, onVote, busy }: { state: PublicGameState; canVote: boolean; hasVoted: boolean; onVote: (roomNumber: number) => void; busy: boolean }) {
   return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5">
     <h2 className="font-serif text-xl">ลงคะแนนเปิดห้อง</h2>
     <p className="mt-2 text-sm text-[#c6bdb1]">เลือกห้องที่ยังไม่ถูกเปิดหรือเป็นที่เกิดเหตุ คุณเลือกห้องตัวเองได้</p>
-    <p className="mt-2 text-xs text-[#c8a46b]">กำลังรวบรวมคะแนนโดยไม่แสดงตัวตนผู้ลงคะแนน</p>
+    <p className="mt-2 text-xs text-[#c8a46b]">โหวตได้ทันที ไม่ต้องรอตามลำดับ · หนึ่งคนหนึ่งคะแนนต่อรอบ · ยืนยันแล้วเปลี่ยนไม่ได้</p>
+    {hasVoted && <p className="mt-2 text-sm text-[#e7ce98]">คุณลงคะแนนแล้ว รอผู้เล่นคนอื่นลงคะแนน</p>}
     <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
       {state.publicRooms.filter((room) => (room.state === "UNKNOWN" || room.state === "MURDERED") && (!state.runoffRooms?.length || state.runoffRooms.includes(room.roomNumber))).map((room) => <Button key={room.roomNumber} variant="outlined" disabled={!canVote || busy} onClick={() => onVote(room.roomNumber)}>{room.roomNumber}</Button>)}
     </div>
@@ -92,7 +93,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       {state.phase === "SKILL_PHASE" && <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><p>{state.phaseMessage}</p></Paper>}
       {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} busy={busy || !connected} onSkill={(target) => void act("game:skill", { target })} />}
       {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><DiscussionTimer deadline={state.phaseDeadlineAt} /><p className="mt-2 text-sm text-[#c6bdb1]">พูดคุยนอกเว็บไซต์ได้ตามต้องการ</p></Paper>}
-      {state.phase === "VOTING" && <VotingPanel state={state} canVote={privateState?.canVote ?? false} busy={busy || !connected} onVote={(roomNumber) => void act("game:vote", { roomNumber })} />}
+      {state.phase === "VOTING" && <VotingPanel state={state} canVote={privateState?.canVote ?? false} hasVoted={Boolean(privateState?.isAlive && !privateState.canVote)} busy={busy || !connected} onVote={(roomNumber) => void act("game:vote", { roomNumber })} />}
       {error && <p role="alert" className="text-red-200">{error}</p>}
       <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">เหตุการณ์สาธารณะ</h2><ul className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{event.message}</li>)}</ul></Paper>
       {privateState?.privateResults.length ? <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">ผลสืบสวนส่วนตัว</h2><ul className="mt-3 space-y-2 text-sm">{privateState.privateResults.map((message, index) => <li key={index}>{message}</li>)}</ul></Paper> : null}

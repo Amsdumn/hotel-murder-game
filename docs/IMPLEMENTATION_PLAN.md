@@ -16,11 +16,11 @@ Development: `typescript`, `@types/node`, `@types/react`, `@types/react-dom`, `t
 
 ## Risks and controls
 
-1. **Hidden information:** DTO allowlists and tests must prove public payloads, API responses, SSR, Zustand, public events, and errors never expose hidden victim identities, death status, roles, teams, private results, failed assassination targets, or active skill actors. Initial crime room numbers are the only public details of initial deaths; successful assassination emits a generic murder notification and marks its room as murdered in public state.
+1. **Hidden information:** DTO allowlists and tests must prove public payloads, API responses, SSR, Zustand, public events, and errors never expose hidden victim identities, death status, roles, teams, private results, failed assassination targets, or active skill actors. Initial crime scene rooms are empty; successful assassination emits a generic murder notification and marks its room as murdered in public state.
 2. **Concurrent actions:** state version checks and unique action IDs must make retries safe and reject stale actions; use MongoDB optimistic concurrency and serialize commands per game.
 3. **Reconnect and identity:** store hashed, high-entropy reconnect tokens in player sessions; never trust client role, team, or room values.
 4. **Disconnected actors and timers:** server-owned deadlines must advance the game without a connected active player, including after restart.
-5. **Original crime scene balance:** three unique rooms are selected and rerolled if the Killer's room appears. Occupied non-Killer rooms cause hidden deaths and private victim notifications. Preserve this as a named strategy for future balance modes.
+5. **Empty initial crime scenes:** choose three unique unoccupied rooms after assigning players. Reroll any selection containing a player's room. Initial selection causes no deaths.
 6. **Deployment:** a custom Node server and WebSockets need a persistent Node runtime; serverless-only hosting is unsuitable for this design.
 
 ## Milestones
@@ -44,14 +44,14 @@ Development: `typescript`, `@types/node`, `@types/react`, `@types/react-dom`, `t
 ### Phase 3 — Game engine
 
 - [x] Add isolated hidden-death, public/private projection, spectator eligibility, silent skill-turn skipping, room eligibility, and public voting outcome modules with unit tests.
-- [x] Implement randomized role/room assignment for 5–10 players and original three-room reroll strategy.
+- [x] Implement randomized role/room assignment for 5–10 players and select three empty initial crime scene rooms.
 - [x] Implement role-order queue with seat-index tie break, seven skills, death, and win handling. Private role display happens at game start.
-- [x] In the isolated engine, publish only three `CRIME_SCENE` room numbers for initial crime; privately notify affected players and hide victim identity, role, team, and status from public projections and events.
+- [x] In the isolated engine, publish three empty `CRIME_SCENE` room numbers; initial selection causes no deaths or private death notifications.
 - [x] In the isolated engine, publish a generic `MURDER_OCCURRED` and mark the murdered room on successful assassination, hide victim/Killer identities, and privately notify the victim; keep failed attempts private. Selecting a dead player with the Accomplice skill consumes that turn's use without a floor result.
-- [x] Implement persisted server-owned skill and discussion timing, room voting, runoff, and server-random final tie break. Use `canVoteForRoom(roomNumber, crimeRooms, openedRooms)` on the server for initial and runoff votes; allow self-room votes and reject crime scenes, opened rooms, and invalid hotel rooms.
+- [x] Implement persisted server-owned skill and discussion timing, immediate order-independent room voting, runoff, and server-random final tie break. Retry concurrent version conflicts so different players can vote without resubmitting; keep each player's first vote final for that ballot. Use `canVoteForRoom(roomNumber, crimeRooms, openedRooms)` on the server for initial and runoff votes; allow self-room votes and reject crime scenes, opened rooms, and invalid hotel rooms.
 - [x] In the isolated engine, enforce dead-player skill and vote restrictions and preserve the dead player's public roster entry and private Spectator Mode.
 - [x] Persist and connect engine state to sessions; prevent a dead player from returning as living through reconnect.
-- [x] Add isolated unit tests for crime victim identity/role secrecy; successful/failed assassination notices; self-room, opened-room, and crime-room voting; dead-player vote/skill rejection; silent turn skipping; and immediate Innocent victory when the Killer dies.
+- [x] Add isolated unit tests for empty initial crime scenes; successful/failed assassination notices; self-room, opened-room, and crime-room voting; concurrent voting, one vote per ballot, dead-player vote/skill rejection; silent turn skipping; and immediate Innocent victory when the Killer dies.
 - [ ] Expand service/transport privacy tests across every public boundary. Socket.IO murder privacy and spectator reconnect tests are in place; API, SSR, Zustand, and error response coverage remains.
 
 ### Phase 4 — Gameplay UI
