@@ -15,6 +15,12 @@ export interface DeathNotice {
   turn: number;
 }
 
+export interface PrivateActionEntry {
+  turn: number;
+  type: "SKILL" | "VOTE" | "EVENT";
+  message: string;
+}
+
 export interface GameEngineState {
   code: string;
   version: number;
@@ -33,12 +39,15 @@ export interface GameEngineState {
   runoffRooms?: number[];
   publicHistory?: PublicGameEvent[];
   privateResultMessages?: Record<string, string[]>;
+  privateActionHistory?: Record<string, PrivateActionEntry[]>;
   phaseStartVersion?: number;
 }
 
 export type PublicGameEvent =
   | { type: "CRIME_SCENES_REVEALED"; roomNumbers: number[] }
   | { type: "MURDER_OCCURRED"; message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม"; turn: number }
+  | { type: "PHASE_CHANGED"; phase: "SKILL_PHASE" | "DISCUSSION" | "VOTING"; turn: number }
+  | { type: "RUNOFF_STARTED"; turn: number }
   | { type: "ROOM_OPENED"; roomNumber: number; occupancy: "EMPTY" | "OCCUPIED"; gameEnded: boolean }
   | { type: "GAME_FINISHED"; winner: Team };
 
@@ -52,6 +61,26 @@ export interface EngineResult {
   state: GameEngineState;
   publicEvents: PublicGameEvent[];
   privateEvents: PrivateGameEvent[];
+}
+
+export function appendPrivateAction(state: GameEngineState, playerId: string, entry: PrivateActionEntry): GameEngineState {
+  return {
+    ...state,
+    privateActionHistory: {
+      ...state.privateActionHistory,
+      [playerId]: [...(state.privateActionHistory?.[playerId] ?? []), entry],
+    },
+  };
+}
+
+export function publicEventMessage(event: PublicGameEvent): string {
+  if (event.type === "CRIME_SCENES_REVEALED") return `พบที่เกิดเหตุ ${event.roomNumbers.join(", ")}`;
+  if (event.type === "MURDER_OCCURRED") return event.message;
+  if (event.type === "ROOM_OPENED") return `เปิดห้อง ${event.roomNumber}`;
+  if (event.type === "GAME_FINISHED") return `ฝ่าย${event.winner === "INNOCENT" ? "ผู้บริสุทธิ์" : "ฆาตกร"}ชนะ`;
+  if (event.type === "RUNOFF_STARTED") return `รอบ ${event.turn}: เริ่มโหวตตัดสิน`;
+  const phase = event.phase === "SKILL_PHASE" ? "ใช้สกิล" : event.phase === "DISCUSSION" ? "พูดคุย" : "ลงคะแนน";
+  return `รอบ ${event.turn}: เริ่มช่วง${phase}`;
 }
 
 export const HOTEL_ROOMS = Array.from({ length: 7 }, (_, floor) =>
@@ -69,13 +98,13 @@ export function killPlayer(state: GameEngineState, playerId: string, cause: Deat
   if (!player || !player.isAlive) return { state, privateEvent: null };
   const winner = player.role === "KILLER" ? "INNOCENT" : state.winner;
   return {
-    state: {
+    state: appendPrivateAction({
       ...state,
       players: state.players.map((item) => item.id === playerId ? { ...item, isAlive: false } : item),
       deathNotices: { ...state.deathNotices, [playerId]: { cause, turn: state.turn } },
       winner,
       phase: winner ? "FINISHED" : state.phase,
-    },
+    }, playerId, { turn: state.turn, type: "EVENT", message: cause === "ASSASSINATION" ? "คุณถูกลอบสังหาร" : cause === "VOTE" ? "คุณเสียชีวิตจากการเปิดห้อง" : "คุณเสียชีวิตจากที่เกิดเหตุเริ่มต้น" }),
     privateEvent: { type: "DEATH_NOTICE", recipientPlayerId: playerId, cause, turn: state.turn },
   };
 }

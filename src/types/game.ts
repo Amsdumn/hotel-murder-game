@@ -53,6 +53,7 @@ export interface PrivatePlayerState {
   canVote: boolean;
   deathNotice?: { cause: "INITIAL_CRIME" | "ASSASSINATION" | "VOTE"; turn: number };
   privateResults: string[];
+  actionHistory: Array<{ turn: number; type: "SKILL" | "VOTE" | "EVENT"; message: string }>;
 }
 
 export interface PrivateTeamState {

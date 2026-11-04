@@ -41,7 +41,7 @@ describe("gameplay setup and skills", () => {
       expect(actor).toBeDefined();
       const target = actor?.role === "WINDOW_CLEANER" || actor?.role === "HOUSEKEEPER" || actor?.role === "WITNESS" ? 1 : actor?.role === "ACCOMPLICE" ? state.players.find((player) => player.id !== actor.id && player.isAlive)?.id : 703;
       last = performSkill(state, actor!.id, target, 1000, 180);
-      expect(last.publicEvents).toEqual([]);
+      expect(last.publicEvents.every((event) => event.type === "PHASE_CHANGED")).toBe(true);
       state = last.state;
     }
     expect(state.phase).toBe("DISCUSSION");
@@ -65,6 +65,7 @@ describe("gameplay setup and skills", () => {
     expect(advanced.publicEvents).toEqual([]);
     expect(advanced.state.usedSkillPlayerIds).toContain(active);
     expect(advanced.state.activePlayerId).not.toBe(active);
+    expect(projectPrivatePlayerState(advanced.state, active).actionHistory).toContainEqual({ turn: 1, type: "SKILL", message: "หมดเวลาใช้สกิล" });
   });
 
   it("keeps the Killer's private assassination result for reconnect", () => {

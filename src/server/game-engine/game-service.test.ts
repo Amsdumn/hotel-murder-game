@@ -3,6 +3,7 @@ import { MemoryLobbyStore } from "../lobby/test-memory-store";
 import type { LobbyRecord } from "../lobby/lobby-store";
 import { GameService } from "./game-service";
 import type { GameEngineState } from "./state";
+import { projectPrivatePlayerState, projectPublicState } from "./projections";
 
 const players: GameEngineState["players"] = [
   { id: "a", displayName: "A", seatIndex: 0, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 101, isAlive: true },
@@ -60,5 +61,35 @@ describe("voting from independent players", () => {
     expect(final.openedRooms).toEqual([101]);
     expect(final.phase).toBe("SKILL_PHASE");
     expect(final.players.find((player) => player.id === "a")?.isAlive).toBe(false);
+  });
+});
+
+describe("viewer-specific action history", () => {
+  it("stores accepted skills for the actor without publishing the target", async () => {
+    const store = new MemoryLobbyStore();
+    await store.createLobby(record("SKILL_PHASE"));
+    const result = await new GameService(store).skill("ABC234", "a", {
+      actionId: crypto.randomUUID(), expectedVersion: 5, target: 103,
+    });
+    expect(projectPrivatePlayerState(result.state, "a").actionHistory).toEqual([
+      { turn: 1, type: "SKILL", message: "ใช้สกิล: ล็อกห้อง 103 แล้ว" },
+    ]);
+    expect(projectPrivatePlayerState(result.state, "b").actionHistory).toEqual([]);
+    expect(JSON.stringify(projectPublicState(result.state))).not.toContain("ล็อกห้อง 103");
+    const restored = await new GameService(store).snapshot("ABC234", "a");
+    expect(restored?.privateState.actionHistory).toEqual(projectPrivatePlayerState(result.state, "a").actionHistory);
+  });
+
+  it("stores each accepted vote only in that voter's history", async () => {
+    const store = new MemoryLobbyStore();
+    await store.createLobby(record("VOTING"));
+    const result = await new GameService(store).vote("ABC234", "b", {
+      actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 102,
+    });
+    expect(projectPrivatePlayerState(result.state, "b").actionHistory).toEqual([
+      { turn: 1, type: "VOTE", message: "โหวตห้อง 102" },
+    ]);
+    expect(projectPrivatePlayerState(result.state, "a").actionHistory).toEqual([]);
+    expect(JSON.stringify(projectPublicState(result.state))).not.toContain("โหวตห้อง 102");
   });
 });

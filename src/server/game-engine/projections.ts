@@ -1,5 +1,5 @@
 import type { PrivatePlayerState, PrivateTeamState, PublicGameState } from "../../types/game";
-import { HOTEL_ROOMS, type GameEngineState } from "./state";
+import { HOTEL_ROOMS, publicEventMessage, type GameEngineState } from "./state";
 
 export function projectPublicState(state: GameEngineState): PublicGameState {
   return {
@@ -10,7 +10,7 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     players: state.players.map(({ id, displayName, seatIndex }) => ({ id, displayName, seatIndex })),
     phaseMessage: state.phase === "SKILL_PHASE" ? "กำลังดำเนินการสืบสวน..." : null,
     ...(state.phase === "DISCUSSION" && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
-    publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: event.type === "MURDER_OCCURRED" ? event.message : event.type === "ROOM_OPENED" ? `เปิดห้อง ${event.roomNumber}` : event.type === "CRIME_SCENES_REVEALED" ? `พบที่เกิดเหตุ ${event.roomNumbers.join(", ")}` : "เกมจบแล้ว" })),
+    publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
     publicRooms: HOTEL_ROOMS.map((roomNumber) => {
       if (state.crimeRooms.includes(roomNumber)) return { roomNumber, state: "CRIME_SCENE" as const };
@@ -38,6 +38,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
     canVote: player.isAlive && state.phase === "VOTING" && !Object.hasOwn(state.votes, player.id),
     ...(deathNotice ? { deathNotice } : {}),
     privateResults: [...(state.privateResultMessages?.[player.id] ?? [])],
+    actionHistory: [...(state.privateActionHistory?.[player.id] ?? [])],
   };
 }
 

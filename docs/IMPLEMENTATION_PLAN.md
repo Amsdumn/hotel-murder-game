@@ -57,6 +57,7 @@ Development: `typescript`, `@types/node`, `@types/react`, `@types/react-dom`, `t
 ### Phase 4 — Gameplay UI
 
 - [x] Build private role display, 21-room hotel board, generic public skill-phase status, skill forms, discussion timer, voting, private death screen, spectator view, public room outcomes, and result screen. Public murders trigger a 4.6-second sound and motion overlay with mute and reduced-motion support.
+- [x] Start the private information panel closed, show server-authoritative phase and active-turn notices, and render a minimal hotel board. Persist public phase/event history separately from each player's private accepted-action history so reconnect restores both without leaking hidden data.
 - [ ] Check desktop/mobile layout and ensure room styling does not disclose hidden occupancy or victim identity; mark initial crime scenes, successfully murdered rooms, and publicly opened voting rooms.
 
 ### Phase 5 — Multiplayer integration

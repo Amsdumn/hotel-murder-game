@@ -1,12 +1,13 @@
 import { randomInt } from "node:crypto";
 import type { GameResultState } from "../../types/game";
 import { advanceSkillTurn } from "./hidden-death";
-import { type EngineResult, type GameEngineState, type PublicGameEvent } from "./state";
+import { publicEventMessage, type EngineResult, type GameEngineState, type PublicGameEvent } from "./state";
 import { resolveVoteRoom, submitVote } from "./voting";
 
 export function beginDiscussion(state: GameEngineState, now: number, seconds: number): EngineResult {
   if (state.phase !== "SKILL_PHASE" || state.activePlayerId || state.players.some((player) => player.isAlive && !state.usedSkillPlayerIds.includes(player.id)) || !Number.isInteger(seconds) || seconds < 30 || seconds > 600) throw new Error("Discussion cannot begin");
-  return { state: { ...state, phase: "DISCUSSION", phaseDeadlineAt: now + seconds * 1000 }, publicEvents: [], privateEvents: [] };
+  const event: PublicGameEvent = { type: "PHASE_CHANGED", phase: "DISCUSSION", turn: state.turn };
+  return { state: { ...state, phase: "DISCUSSION", phaseDeadlineAt: now + seconds * 1000, publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
 }
 
 export function finishSkillPhase(state: GameEngineState, now: number, seconds: number): EngineResult {
@@ -17,7 +18,8 @@ export function finishSkillPhase(state: GameEngineState, now: number, seconds: n
 
 export function advanceTimedPhase(state: GameEngineState, now: number): EngineResult {
   if (state.phase !== "DISCUSSION" || state.phaseDeadlineAt === undefined || now < state.phaseDeadlineAt) return { state, publicEvents: [], privateEvents: [] };
-  return { state: { ...state, phase: "VOTING", phaseDeadlineAt: undefined, votes: {}, runoffRooms: [] }, publicEvents: [], privateEvents: [] };
+  const event: PublicGameEvent = { type: "PHASE_CHANGED", phase: "VOTING", turn: state.turn };
+  return { state: { ...state, phase: "VOTING", phaseDeadlineAt: undefined, votes: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
 }
 
 function leaders(votes: Record<string, number>): number[] {
@@ -33,7 +35,8 @@ export function castRoomVote(state: GameEngineState, playerId: string, roomNumbe
   if (!submitted.complete) return { state: submitted.state, publicEvents: [], privateEvents: [] };
   const tied = leaders(submitted.state.votes);
   if (tied.length > 1 && !state.runoffRooms?.length) {
-    return { state: { ...submitted.state, votes: {}, runoffRooms: tied }, publicEvents: [], privateEvents: [] };
+    const event: PublicGameEvent = { type: "RUNOFF_STARTED", turn: state.turn };
+    return { state: { ...submitted.state, votes: {}, runoffRooms: tied, publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
   }
   const index = tied.length > 1 ? chooseTie(tied.length) : 0;
   if (!Number.isInteger(index) || index < 0 || index >= tied.length) throw new Error("Invalid tie selection");
@@ -48,6 +51,9 @@ export function castRoomVote(state: GameEngineState, playerId: string, roomNumbe
       next.publicHistory = [...publicHistory, publicEvents[publicEvents.length - 1]];
     } else {
       next = { ...next, turn: next.turn + 1, phase: "SKILL_PHASE", activePlayerId: null, usedSkillPlayerIds: [], lockedRooms: [] };
+      const event: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: next.turn };
+      next.publicHistory = [...(next.publicHistory ?? []), event];
+      publicEvents.push(event);
       const first = advanceSkillTurn(next, null);
       next = { ...first.state, phaseDeadlineAt: now + 60_000 };
       opened.privateEvents.push(...first.privateEvents);
@@ -62,6 +68,6 @@ export function projectGameResult(state: GameEngineState): GameResultState {
     winner: state.winner,
     turnsPlayed: state.turn,
     players: state.players.map(({ id, displayName, role, team, roomNumber, isAlive }) => ({ playerId: id, displayName, role, team, roomNumber, isAlive })),
-    events: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: event.type === "MURDER_OCCURRED" ? event.message : event.type === "ROOM_OPENED" ? `เปิดห้อง ${event.roomNumber}` : event.type === "CRIME_SCENES_REVEALED" ? `พบที่เกิดเหตุ ${event.roomNumbers.join(", ")}` : `ฝ่าย${event.winner}ชนะ` })),
+    events: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),
   };
 }

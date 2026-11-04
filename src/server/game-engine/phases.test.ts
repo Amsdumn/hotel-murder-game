@@ -19,8 +19,11 @@ describe("server-owned phases", () => {
     expect(() => beginDiscussion(game({ activePlayerId: "a" }), 1000, 180)).toThrow();
     const discussion = finishSkillPhase(game({ usedSkillPlayerIds: players.map((player) => player.id) }), 1000, 180).state;
     expect(discussion).toMatchObject({ phase: "DISCUSSION", phaseDeadlineAt: 181000 });
+    expect(discussion.publicHistory).toContainEqual({ type: "PHASE_CHANGED", phase: "DISCUSSION", turn: 1 });
     expect(advanceTimedPhase(discussion, 180999).state.phase).toBe("DISCUSSION");
-    expect(advanceTimedPhase(discussion, 181000).state.phase).toBe("VOTING");
+    const voting = advanceTimedPhase(discussion, 181000).state;
+    expect(voting.phase).toBe("VOTING");
+    expect(voting.publicHistory).toContainEqual({ type: "PHASE_CHANGED", phase: "VOTING", turn: 1 });
   });
 
   it("keeps voting progress anonymous and resolves a runoff tie", () => {
@@ -28,10 +31,11 @@ describe("server-owned phases", () => {
     for (const [id, room] of [["a", 101], ["b", 102], ["c", 101], ["d", 102], ["e", 103]] as const) {
       const result = castRoomVote(state, id, room);
       state = result.state;
-      expect(JSON.stringify(result.publicEvents)).not.toMatch(/voter|eligible|living|[abcde]/i);
+      expect(JSON.stringify(result.publicEvents)).not.toMatch(/playerId|actorId|roomNumber|voter|eligible|living/i);
     }
     expect(state.phase).toBe("VOTING");
     expect(state.runoffRooms).toEqual([101, 102]);
+    expect(state.publicHistory).toContainEqual({ type: "RUNOFF_STARTED", turn: 1 });
     expect(state.votes).toEqual({});
     expect(() => castRoomVote(state, "a", 103)).toThrow();
     for (const [id, room] of [["a", 101], ["b", 102], ["c", 101], ["d", 102], ["e", 101]] as const) state = castRoomVote(state, id, room).state;

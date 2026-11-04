@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import { ROLE_ORDER, type Role } from "../../types/game";
 import { advanceSkillTurn, applyInitialCrime, resolveAssassination } from "./hidden-death";
 import { beginDiscussion } from "./phases";
-import { HOTEL_ROOMS, isHotelRoom, type EnginePlayer, type EngineResult, type GameEngineState, type PrivateGameEvent } from "./state";
+import { appendPrivateAction, HOTEL_ROOMS, isHotelRoom, type EnginePlayer, type EngineResult, type GameEngineState, type PrivateGameEvent, type PublicGameEvent } from "./state";
 
 type RandomIndex = (maximum: number) => number;
 
@@ -23,12 +23,13 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   const roles: Role[] = shuffle(["KILLER", "ACCOMPLICE", ...shuffle(innocentRoles, choose).slice(0, needed), ...Array.from({ length: Math.max(0, needed - innocentRoles.length) }, (_, index) => innocentRoles[index % innocentRoles.length])], choose);
   const rooms = shuffle(HOTEL_ROOMS, choose);
   const players: EnginePlayer[] = seats.map((seat, index) => ({ ...seat, role: roles[index], team: roles[index] === "KILLER" || roles[index] === "ACCOMPLICE" ? "MURDERER" : "INNOCENT", roomNumber: rooms[index], isAlive: true }));
-  const initial: GameEngineState = { code, version, phase: "INITIAL_CRIME", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, publicHistory: [] };
+  const initial: GameEngineState = { code, version, phase: "INITIAL_CRIME", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, privateActionHistory: {}, publicHistory: [] };
   const emptyRooms = HOTEL_ROOMS.filter((room) => !players.some((player) => player.roomNumber === room));
   const crime = applyInitialCrime(initial, () => shuffle(emptyRooms, choose).slice(0, 3));
-  const afterCrime: GameEngineState = { ...crime.state, phase: "SKILL_PHASE", publicHistory: crime.publicEvents };
+  const phaseEvent: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: 1 };
+  const afterCrime: GameEngineState = { ...crime.state, phase: "SKILL_PHASE", publicHistory: [...crime.publicEvents, phaseEvent] };
   const first = advanceSkillTurn(afterCrime, null);
-  return { state: { ...first.state, phaseDeadlineAt: now + 60_000 }, publicEvents: crime.publicEvents, privateEvents: [...crime.privateEvents, ...first.privateEvents] };
+  return { state: { ...first.state, phaseDeadlineAt: now + 60_000 }, publicEvents: [...crime.publicEvents, phaseEvent], privateEvents: [...crime.privateEvents, ...first.privateEvents] };
 }
 
 function requireRoom(value: unknown): number {
@@ -97,7 +98,11 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
   const following = advanceSkillTurn(next, playerId);
   next = following.state;
   privateEvents.push(...following.privateEvents);
-  if (!next.activePlayerId) next = beginDiscussion(next, now, discussionSeconds).state;
+  if (!next.activePlayerId) {
+    const discussion = beginDiscussion(next, now, discussionSeconds);
+    next = discussion.state;
+    publicEvents.push(...discussion.publicEvents);
+  }
   else next = { ...next, phaseDeadlineAt: now + 60_000 };
   return { state: next, publicEvents, privateEvents };
 }
@@ -106,7 +111,8 @@ export function advanceTimedSkill(state: GameEngineState, now: number, discussio
   if (state.phase !== "SKILL_PHASE" || !state.activePlayerId || state.phaseDeadlineAt === undefined || now < state.phaseDeadlineAt) return { state, publicEvents: [], privateEvents: [] };
   const skipped = state.activePlayerId;
   const usedSkillPlayerIds = [...state.usedSkillPlayerIds, skipped];
-  const advanced = advanceSkillTurn({ ...state, usedSkillPlayerIds }, skipped);
+  const timedOut = appendPrivateAction({ ...state, usedSkillPlayerIds }, skipped, { turn: state.turn, type: "SKILL", message: "หมดเวลาใช้สกิล" });
+  const advanced = advanceSkillTurn(timedOut, skipped);
   if (!advanced.state.activePlayerId) return beginDiscussion(advanced.state, now, discussionSeconds);
   return { state: { ...advanced.state, phaseDeadlineAt: now + 60_000 }, publicEvents: [], privateEvents: advanced.privateEvents };
 }

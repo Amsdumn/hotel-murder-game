@@ -4,7 +4,7 @@ import type { LobbyRecord, LobbyStore } from "../lobby/lobby-store";
 import { advanceTimedSkill, createInitialGame, performSkill } from "./gameplay";
 import { advanceTimedPhase, castRoomVote, projectGameResult } from "./phases";
 import { projectMurdererTeamState, projectPrivatePlayerState, projectPublicState } from "./projections";
-import type { EngineResult, GameEngineState } from "./state";
+import { appendPrivateAction, type EngineResult, type GameEngineState } from "./state";
 
 const commandSchema = z.object({ actionId: z.uuid(), expectedVersion: z.number().int().nonnegative() });
 const skillSchema = commandSchema.extend({ target: z.union([z.number(), z.string()]) });
@@ -54,6 +54,13 @@ export class GameService {
     let result: EngineResult;
     try { result = performSkill(record.gameState, playerId, parsed.data.target, now, record.discussionSeconds); }
     catch { throw new LobbyError("FORBIDDEN"); }
+    const privateResult = result.privateEvents.find((event) => event.recipientPlayerId === playerId && (event.type === "SKILL_RESULT" || event.type === "ASSASSINATION_RESULT"));
+    const message = privateResult?.type === "SKILL_RESULT"
+      ? `ใช้สกิล: ${privateResult.message}`
+      : privateResult?.type === "ASSASSINATION_RESULT"
+        ? `ลอบสังหารห้อง ${parsed.data.target}: ${privateResult.success ? "สำเร็จ" : "ไม่สำเร็จ"}`
+        : "ใช้สกิล";
+    result = { ...result, state: appendPrivateAction(result.state, playerId, { turn: record.gameState.turn, type: "SKILL", message }) };
     return this.commit(record, actionId, result);
   }
 
@@ -66,6 +73,10 @@ export class GameService {
       let result: EngineResult;
       try { result = castRoomVote(record.gameState, playerId, parsed.data.roomNumber); }
       catch { throw new LobbyError("FORBIDDEN"); }
+      result = { ...result, state: appendPrivateAction(result.state, playerId, {
+        turn: record.gameState.turn, type: "VOTE",
+        message: `${record.gameState.runoffRooms?.length ? "โหวตตัดสิน" : "โหวต"}ห้อง ${parsed.data.roomNumber}`,
+      }) };
       try { return await this.commit(record, actionId, result); }
       catch (error) {
         if (!(error instanceof LobbyError) || error.code !== "STALE_STATE") throw error;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, MenuItem, Paper, TextField } from "@mui/material";
+import { Alert, Button, MenuItem, Paper, TextField } from "@mui/material";
 import { lobbyErrorMessage } from "@/lib/lobby-client";
 import { RolePortrait, roleNames } from "@/components/role-portrait";
 import type { GameResultState, PrivatePlayerState, PrivateTeamState, PublicGameState } from "@/types/game";
@@ -35,6 +35,35 @@ export function SpectatorPanel() {
   return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">โหมดผู้ชม</h2><p className="mt-2 text-sm leading-7 text-[#c6bdb1]">คุณสามารถดูเหตุการณ์สาธารณะและผลโหวตได้ โปรดหยุดให้ข้อมูลเกี่ยวกับเกมทันที</p></Paper>;
 }
 
+export function getTurnNotice(state: PublicGameState, privateState: PrivatePlayerState | null): string {
+  if (state.phase === "FINISHED") return "เกมจบแล้ว ดูผลการแข่งขันและประวัติเหตุการณ์ได้";
+  if (privateState?.mode === "SPECTATOR") return "คุณเป็นผู้ชม ติดตามเหตุการณ์ได้ แต่ไม่สามารถใช้สกิลหรือลงคะแนน";
+  if (state.phase === "SKILL_PHASE") return privateState?.canUseSkill
+    ? "ถึงตาคุณใช้สกิล เปิดข้อมูลลับเพื่อเลือกเป้าหมายและยืนยันภายใน 60 วินาที"
+    : "ช่วงใช้สกิล กำลังรอผู้เล่นที่ถึงคิวดำเนินการ";
+  if (state.phase === "DISCUSSION") return "เริ่มช่วงพูดคุย แลกเปลี่ยนเบาะแสก่อนลงคะแนน";
+  if (state.phase === "VOTING" && !privateState) return "ช่วงลงคะแนน กำลังตรวจสิทธิ์ของคุณ";
+  if (state.phase === "VOTING") return privateState?.canVote
+    ? state.runoffRooms?.length ? "ถึงตาคุณลงคะแนนรอบตัดสิน เลือกได้หนึ่งห้องและเปลี่ยนไม่ได้" : "ถึงตาคุณลงคะแนน เลือกได้หนึ่งห้องและเปลี่ยนไม่ได้"
+    : "ส่งคะแนนแล้ว รอผู้เล่นคนอื่นลงคะแนน";
+  return "กำลังเตรียมขั้นตอนถัดไป";
+}
+
+export function PrivateInfoPanel({ privateState, teamState, players, open, onToggle }: { privateState: PrivatePlayerState; teamState: PrivateTeamState | null; players: PublicGameState["players"]; open: boolean; onToggle: () => void }) {
+  return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5">
+    <div className="flex items-center justify-between gap-3">
+      <div><h2 className="font-serif text-xl">ข้อมูลลับ · เฉพาะคุณ</h2><p className="mt-1 text-xs text-[#a9a5af]">เปิดดูเมื่ออยู่ในที่ส่วนตัว</p></div>
+      <Button variant="outlined" size="small" aria-expanded={open} onClick={onToggle}>{open ? "ปิดข้อมูลลับ" : "แสดงข้อมูลลับ"}</Button>
+    </div>
+    {open && <div className="mt-5 space-y-5 border-t border-[#c8a46b]/15 pt-5">
+      <div className="flex overflow-hidden rounded-lg border border-[#c8a46b]/20 bg-[#23212b]"><RolePortrait role={privateState.role} className="w-24 sm:w-28" sizes="112px" /><div className="p-4"><p className="font-serif text-xl">{roleNames[privateState.role]}</p><p className="mt-2 text-sm">ห้องพัก {privateState.roomNumber}</p><p className="mt-1 text-xs text-[#c8a46b]">{privateState.team === "MURDERER" ? "ฝ่ายฆาตกร" : "ฝ่ายผู้บริสุทธิ์"} · {privateState.isAlive ? "ยังมีชีวิต" : "เสียชีวิต"}</p></div></div>
+      {teamState && <section><h3 className="font-semibold text-[#d8bc86]">ฝ่ายฆาตกร</h3>{teamState.teammates.map((mate) => <p className="mt-2 text-sm" key={mate.playerId}>{players.find((player) => player.id === mate.playerId)?.displayName} · {roleNames[mate.role]} · ห้อง {mate.roomNumber}</p>)}</section>}
+      {privateState.actionHistory.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ประวัติการกระทำของคุณ</h3><ol className="mt-2 space-y-2 text-sm text-[#d6d2dc]">{privateState.actionHistory.map((entry, index) => <li key={`${entry.turn}-${index}`}>รอบ {entry.turn} · {entry.message}</li>)}</ol></section>}
+      {privateState.privateResults.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ผลสืบสวนส่วนตัว</h3><ul className="mt-2 space-y-2 text-sm">{privateState.privateResults.map((message, index) => <li key={index}>{message}</li>)}</ul></section>}
+    </div>}
+  </Paper>;
+}
+
 export function VotingPanel({ state, canVote, hasVoted, onVote, busy }: { state: PublicGameState; canVote: boolean; hasVoted: boolean; onVote: (roomNumber: number) => void; busy: boolean }) {
   return <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5">
     <h2 className="font-serif text-xl">ลงคะแนนเปิดห้อง</h2>
@@ -56,8 +85,29 @@ export function GameResultScreen({ result }: { result: GameResultState }) {
   </section>;
 }
 
-function HotelBoard({ state }: { state: PublicGameState }) {
-  return <Paper className="!overflow-hidden !border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5 sm:!p-7"><div className="flex flex-wrap items-end justify-between gap-2"><div><p className="text-xs tracking-[.22em] text-[#c8a46b]">HOTEL MAP</p><h2 className="mt-1 font-serif text-2xl">แผนผังโรงแรม</h2></div><span className="text-xs text-[#c6bdb1]">7 ชั้น · 21 ห้อง</span></div><p className="mt-3 text-sm text-[#c6bdb1]">สถานะห้องเป็นข้อมูลสาธารณะ ไม่แสดงตัวตนผู้พัก</p><div className="mt-6 space-y-3">{Array.from({ length: 7 }, (_, index) => 7 - index).map((floor) => <div key={floor} className="grid grid-cols-[2.5rem_repeat(3,minmax(0,1fr))] items-center gap-2"><span className="text-center font-serif text-lg text-[#c8a46b]">{floor}</span>{[1, 2, 3].map((column) => { const room = state.publicRooms.find((item) => item.roomNumber === floor * 100 + column); if (!room) return null; const crime = room.state === "CRIME_SCENE"; const murdered = room.state === "MURDERED" || room.state === "OPENED_MURDERED"; const opened = room.state === "OPENED_EMPTY" || room.state === "OPENED_OCCUPIED"; return <div key={room.roomNumber} className={`relative min-h-20 rounded-t-xl border px-2 py-3 text-center shadow-[inset_0_-8px_15px_rgba(0,0,0,.28)] sm:min-h-24 ${crime ? "border-[#b85967]/60 bg-[#4d2334]" : murdered ? "border-[#e07077]/70 bg-[#612130]" : opened ? "border-[#b99a62]/45 bg-[#423b39]" : "border-[#c8a46b]/30 bg-[linear-gradient(160deg,#35303b,#211c2a)]"}`}><span className="font-serif text-lg font-semibold text-[#f4e5d0]">{room.roomNumber}</span><span className={`mt-1 block text-[11px] leading-tight sm:text-xs ${crime || murdered ? "text-[#ffc1c5]" : "text-[#d2b988]"}`}>{crime ? "ที่เกิดเหตุ" : murdered ? room.state === "OPENED_MURDERED" ? "ถูกฆาตกรรม · เปิดแล้ว" : "ถูกฆาตกรรม" : room.state === "OPENED_EMPTY" ? "เปิดแล้ว · ว่าง" : room.state === "OPENED_OCCUPIED" ? "เปิดแล้ว · มีผู้พัก" : "ยังไม่เปิด"}</span></div>; })}</div>)}</div></Paper>;
+export function HotelBoard({ state }: { state: PublicGameState }) {
+  const rooms = new Map(state.publicRooms.map((room) => [room.roomNumber, room]));
+  return <Paper component="section" className="!border !border-[#353440] !bg-[#191a22] !p-5 sm:!p-6">
+    <div className="flex items-end justify-between gap-3 border-b border-[#353440] pb-4">
+      <div><p className="text-xs uppercase tracking-[.18em] text-[#b6a783]">แผนผัง</p><h2 className="mt-1 font-serif text-2xl">โรงแรม</h2></div>
+      <p className="text-xs text-[#a7a8b4]">7 ชั้น · 21 ห้อง</p>
+    </div>
+    <div className="mt-4 space-y-2">{Array.from({ length: 7 }, (_, index) => 7 - index).map((floor) =>
+      <div key={floor} className="grid grid-cols-[2rem_repeat(3,minmax(0,1fr))] items-stretch gap-2">
+        <span className="self-center text-center text-sm text-[#a7a8b4]">{floor}</span>
+        {[1, 2, 3].map((column) => {
+          const room = rooms.get(floor * 100 + column);
+          if (!room) return null;
+          const label = room.state === "CRIME_SCENE" ? "ที่เกิดเหตุ" : room.state === "MURDERED" ? "ถูกฆาตกรรม" : room.state === "OPENED_MURDERED" ? "ถูกฆาตกรรม · เปิดแล้ว" : room.state === "OPENED_EMPTY" ? "เปิดแล้ว · ว่าง" : room.state === "OPENED_OCCUPIED" ? "เปิดแล้ว · มีผู้พัก" : "ยังไม่เปิด";
+          const marked = room.state === "CRIME_SCENE" || room.state === "MURDERED" || room.state === "OPENED_MURDERED";
+          const opened = room.state.startsWith("OPENED_");
+          return <div key={room.roomNumber} aria-label={`ห้อง ${room.roomNumber} ${label}`} className={`flex min-h-16 flex-col justify-center rounded-md border px-2 py-2 text-center sm:min-h-18 ${marked ? "border-[#9b555d] bg-[#302127]" : opened ? "border-[#5f594f] bg-[#25252b]" : "border-[#3d3d49] bg-[#22232c]"}`}>
+            <span className="font-mono text-sm font-semibold text-[#f4efe8] sm:text-base">{room.roomNumber}</span>
+            <span className={`mt-1 text-[10px] leading-tight sm:text-xs ${marked ? "text-[#efb3b7]" : "text-[#b0b0bc]"}`}>{label}</span>
+          </div>;
+        })}
+      </div>)}</div>
+  </Paper>;
 }
 
 function SkillPanel({ privateState, state, busy, onSkill }: { privateState: PrivatePlayerState; state: PublicGameState; busy: boolean; onSkill: (target: number | string) => void }) {
@@ -76,6 +126,8 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const [deathDismissed, setDeathDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showSecret, setShowSecret] = useState(false);
+  const turnNotice = getTurnNotice(state, privateState);
   const changeMuted = (value: boolean) => setMuted(value);
   const act = async (event: "game:skill" | "game:vote", payload: Record<string, unknown>) => {
     setBusy(true); setError("");
@@ -86,17 +138,16 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   return <main className="min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8"><div className="mx-auto max-w-6xl">
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || "กำลังเชื่อมต่อใหม่…"}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">โรงแรมปริศนา · {state.code}</p><h1 className="mt-2 font-serif text-3xl">รอบ {state.turn} · {state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : "จบเกม"}</h1></div><SoundSettings muted={muted} onChange={changeMuted} /></header>
-    {result ? <GameResultScreen result={result} /> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} /><div className="space-y-5">
-      {privateState && <Paper className="!flex !overflow-hidden !border !border-[#c8a46b]/35 !bg-[#231c2b] !p-0"><RolePortrait role={privateState.role} className="w-28 sm:w-36" sizes="144px" /><div className="min-w-0 p-5"><p className="text-xs tracking-[.18em] text-[#c8a46b]">ข้อมูลลับ · เฉพาะคุณ</p><h2 className="mt-2 font-serif text-2xl text-[#f4e5d0]">{roleNames[privateState.role]}</h2><p className="mt-2 text-sm text-[#c6bdb1]">ห้องพัก {privateState.roomNumber}</p><p className="mt-3 text-xs text-[#d2b988]">{privateState.team === "MURDERER" ? "ฝ่ายฆาตกร" : "ฝ่ายผู้บริสุทธิ์"} · {privateState.isAlive ? "ยังมีชีวิต" : "เสียชีวิต"}</p></div></Paper>}
-      {teamState && <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">ฝ่ายฆาตกร</h2>{teamState.teammates.map((mate) => <p className="mt-2 text-sm" key={mate.playerId}>{state.players.find((player) => player.id === mate.playerId)?.displayName} · {roleNames[mate.role]} · ห้อง {mate.roomNumber}</p>)}</Paper>}
+    <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="!mb-5">{turnNotice}</Alert>
+    {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} /><div className="space-y-5">
+      {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><p>{state.phaseMessage}</p></Paper>}
-      {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} busy={busy || !connected} onSkill={(target) => void act("game:skill", { target })} />}
+      {privateState?.canUseSkill && showSecret && <SkillPanel state={state} privateState={privateState} busy={busy || !connected} onSkill={(target) => void act("game:skill", { target })} />}
       {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><DiscussionTimer deadline={state.phaseDeadlineAt} /><p className="mt-2 text-sm text-[#c6bdb1]">พูดคุยนอกเว็บไซต์ได้ตามต้องการ</p></Paper>}
       {state.phase === "VOTING" && <VotingPanel state={state} canVote={privateState?.canVote ?? false} hasVoted={Boolean(privateState?.isAlive && !privateState.canVote)} busy={busy || !connected} onVote={(roomNumber) => void act("game:vote", { roomNumber })} />}
       {error && <p role="alert" className="text-red-200">{error}</p>}
-      <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">เหตุการณ์สาธารณะ</h2><ul className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{event.message}</li>)}</ul></Paper>
-      {privateState?.privateResults.length ? <Paper className="!border !border-[#c8a46b]/25 !bg-[#1d1d26] !p-5"><h2 className="font-serif text-xl">ผลสืบสวนส่วนตัว</h2><ul className="mt-3 space-y-2 text-sm">{privateState.privateResults.map((message, index) => <li key={index}>{message}</li>)}</ul></Paper> : null}
+      <Paper className="!border !border-[#353440] !bg-[#191a22] !p-5"><h2 className="font-serif text-xl">ประวัติเหตุการณ์สาธารณะ</h2><ol className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{event.message}</li>)}</ol></Paper>
     </div></div>}
   </div><MurderEventOverlay sequence={murderSequence} muted={muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
 }
