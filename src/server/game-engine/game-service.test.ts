@@ -19,6 +19,22 @@ function record(phase: "DISCUSSION" | "SKILL_PHASE" | "VOTING"): LobbyRecord {
 }
 
 describe("persisted server deadlines", () => {
+  it("restores and continues a saved game missing legacy death notices and votes", async () => {
+    const store = new MemoryLobbyStore();
+    const legacy = record("VOTING");
+    delete (legacy.gameState as Partial<GameEngineState>).deathNotices;
+    delete (legacy.gameState as Partial<GameEngineState>).votes;
+    await store.createLobby(legacy);
+
+    const service = new GameService(store);
+    const snapshot = await service.snapshot("ABC234", "a");
+    expect(snapshot?.publicState.publicRooms.find((room) => room.roomNumber === 101)?.state).toBe("UNKNOWN");
+    expect(snapshot?.privateState).toMatchObject({ playerId: "a", isAlive: true, canVote: true });
+    expect(snapshot?.privateState.deathNotice).toBeUndefined();
+    const vote = await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 101 });
+    expect(vote.state.votes.a).toBe(101);
+  });
+
   it("reports a missed first Locksmith turn as expired rather than forbidden", async () => {
     const store = new MemoryLobbyStore();
     await store.createLobby(record("SKILL_PHASE"));

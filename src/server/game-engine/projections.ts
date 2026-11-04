@@ -14,7 +14,7 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
     publicRooms: HOTEL_ROOMS.map((roomNumber) => {
       if (state.crimeRooms.includes(roomNumber)) return { roomNumber, state: "CRIME_SCENE" as const };
-      const murdered = state.players.some((player) => player.roomNumber === roomNumber && state.deathNotices[player.id]?.cause === "ASSASSINATION");
+      const murdered = state.players.some((player) => player.roomNumber === roomNumber && state.deathNotices?.[player.id]?.cause === "ASSASSINATION");
       if (murdered) return { roomNumber, state: state.openedRooms.includes(roomNumber) ? "OPENED_MURDERED" as const : "MURDERED" as const };
       if (state.openedRooms.includes(roomNumber)) return { roomNumber, state: state.players.some((player) => player.roomNumber === roomNumber) ? "OPENED_OCCUPIED" as const : "OPENED_EMPTY" as const };
       return { roomNumber, state: "UNKNOWN" as const };
@@ -26,7 +26,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
   if (requesterId !== targetId) throw new Error("Private state access denied");
   const player = state.players.find((item) => item.id === requesterId);
   if (!player) throw new Error("Player not found");
-  const deathNotice = state.deathNotices[player.id];
+  const deathNotice = state.deathNotices?.[player.id];
   const canUseSkill = player.isAlive && state.phase === "SKILL_PHASE" && state.activePlayerId === player.id && !state.usedSkillPlayerIds.includes(player.id);
   return {
     playerId: player.id,
@@ -37,7 +37,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
     mode: player.isAlive ? "PLAYER" : "SPECTATOR",
     canUseSkill,
     ...(canUseSkill && state.phaseDeadlineAt !== undefined ? { skillDeadlineAt: state.phaseDeadlineAt } : {}),
-    canVote: player.isAlive && state.phase === "VOTING" && !Object.hasOwn(state.votes, player.id),
+    canVote: player.isAlive && state.phase === "VOTING" && !Object.hasOwn(state.votes ?? {}, player.id),
     ...(deathNotice ? { deathNotice } : {}),
     privateResults: [...(state.privateResultMessages?.[player.id] ?? [])],
     actionHistory: [...(state.privateActionHistory?.[player.id] ?? [])],

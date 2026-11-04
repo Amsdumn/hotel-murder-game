@@ -8,8 +8,9 @@ export function submitVote(state: GameEngineState, playerId: string, roomNumber:
   const player = state.players.find((item) => item.id === playerId);
   if (state.phase !== "VOTING" || !player || !player.isAlive) throw new Error("Voting is not permitted");
   if (!canVoteForRoom(roomNumber, state.crimeRooms, state.openedRooms)) throw new Error("Room is not eligible");
-  if (Object.hasOwn(state.votes, playerId)) throw new Error("Player has already voted");
-  const votes = { ...state.votes, [playerId]: roomNumber };
+  const currentVotes = state.votes ?? {};
+  if (Object.hasOwn(currentVotes, playerId)) throw new Error("Player has already voted");
+  const votes = { ...currentVotes, [playerId]: roomNumber };
   return {
     state: { ...state, votes },
     complete: state.players.filter((item) => item.isAlive).every((item) => Object.hasOwn(votes, item.id)),
