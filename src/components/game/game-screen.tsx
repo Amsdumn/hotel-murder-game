@@ -45,7 +45,7 @@ export function getTurnNotice(state: PublicGameState, privateState: PrivatePlaye
   if (state.phase === "DISCUSSION") return "เริ่มช่วงพูดคุย แลกเปลี่ยนเบาะแสก่อนลงคะแนน";
   if (state.phase === "VOTING" && !privateState) return "ช่วงลงคะแนน กำลังตรวจสิทธิ์ของคุณ";
   if (state.phase === "VOTING") return privateState?.canVote
-    ? state.runoffRooms?.length ? "ถึงตาคุณลงคะแนนรอบตัดสิน เลือกได้หนึ่งห้องและเปลี่ยนไม่ได้" : "ถึงตาคุณลงคะแนน เลือกได้หนึ่งห้องและเปลี่ยนไม่ได้"
+    ? state.runoffRooms?.length ? "ถึงตาคุณลงคะแนนรอบตัดสิน แตะห้องที่เลือกได้บนแผนผังหนึ่งครั้ง ยืนยันแล้วเปลี่ยนไม่ได้" : "ถึงตาคุณลงคะแนน แตะห้องที่เลือกได้บนแผนผังหนึ่งครั้ง ยืนยันแล้วเปลี่ยนไม่ได้"
     : "ส่งคะแนนแล้ว รอผู้เล่นคนอื่นลงคะแนน";
   return "กำลังเตรียมขั้นตอนถัดไป";
 }
@@ -65,17 +65,6 @@ export function PrivateInfoPanel({ privateState, teamState, players, open, onTog
   </Paper>;
 }
 
-export function VotingPanel({ state, onVote, busy }: { state: PublicGameState; onVote: (roomNumber: number) => void; busy: boolean }) {
-  return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!">
-    <h2 className="font-serif text-xl">ลงคะแนนเปิดห้อง</h2>
-    <p className="mt-2 text-sm text-[#c6bdb1]">เลือกห้องที่ยังไม่ถูกเปิดหรือเป็นที่เกิดเหตุ คุณเลือกห้องตัวเองได้</p>
-    <p className="mt-2 text-xs text-[#c8a46b]">โหวตได้ทันที ไม่ต้องรอตามลำดับ · หนึ่งคนหนึ่งคะแนนต่อรอบ · ยืนยันแล้วเปลี่ยนไม่ได้</p>
-    <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-      {state.publicRooms.filter((room) => (room.state === "UNKNOWN" || room.state === "MURDERED") && (!state.runoffRooms?.length || state.runoffRooms.includes(room.roomNumber))).map((room) => <Button key={room.roomNumber} variant="outlined" disabled={busy} onClick={() => onVote(room.roomNumber)}>{room.roomNumber}</Button>)}
-    </div>
-  </Paper>;
-}
-
 export function GameResultScreen({ result }: { result: GameResultState }) {
   return <section className="rounded-2xl border border-[#c8a46b]/40 bg-[radial-gradient(circle_at_top,#4a1928,#111116_70%)] p-6 shadow-2xl sm:p-10">
     <p className="text-center text-sm tracking-[.3em] text-[#c8a46b]">ผลเกม · {result.turnsPlayed} รอบ</p>
@@ -85,12 +74,12 @@ export function GameResultScreen({ result }: { result: GameResultState }) {
   </section>;
 }
 
-export function HotelBoard({ state }: { state: PublicGameState }) {
+export function HotelBoard({ state, onVote, voteBusy = false }: { state: PublicGameState; onVote?: (roomNumber: number) => void; voteBusy?: boolean }) {
   const rooms = new Map(state.publicRooms.map((room) => [room.roomNumber, room]));
   return <Paper component="section" className="border! border-[#353440]! bg-[#191a22]! p-5! sm:p-6!">
     <div className="flex items-end justify-between gap-3 border-b border-[#353440] pb-4">
       <div><p className="text-xs uppercase tracking-[.18em] text-[#b6a783]">แผนผัง</p><h2 className="mt-1 font-serif text-2xl">โรงแรม</h2></div>
-      <p className="text-xs text-[#a7a8b4]">7 ชั้น · 21 ห้อง</p>
+      <p className="text-xs text-[#a7a8b4]">{onVote ? "แตะห้องเพื่อลงคะแนน" : "7 ชั้น · 21 ห้อง"}</p>
     </div>
     <div className="mt-4 space-y-2">{Array.from({ length: 7 }, (_, index) => 7 - index).map((floor) =>
       <div key={floor} className="grid grid-cols-[2rem_repeat(3,minmax(0,1fr))] items-stretch gap-2">
@@ -101,10 +90,14 @@ export function HotelBoard({ state }: { state: PublicGameState }) {
           const label = room.state === "CRIME_SCENE" ? "ที่เกิดเหตุ" : room.state === "MURDERED" ? "ถูกฆาตกรรม" : room.state === "OPENED_MURDERED" ? "ถูกฆาตกรรม · เปิดแล้ว" : room.state === "OPENED_EMPTY" ? "เปิดแล้ว · ว่าง" : room.state === "OPENED_OCCUPIED" ? "เปิดแล้ว · มีผู้พัก" : "ยังไม่เปิด";
           const marked = room.state === "CRIME_SCENE" || room.state === "MURDERED" || room.state === "OPENED_MURDERED";
           const opened = room.state.startsWith("OPENED_");
-          return <div key={room.roomNumber} aria-label={`ห้อง ${room.roomNumber} ${label}`} className={`flex min-h-16 flex-col justify-center rounded-md border px-2 py-2 text-center sm:min-h-18 ${marked ? "border-[#9b555d] bg-[#302127]" : opened ? "border-[#5f594f] bg-[#25252b]" : "border-[#3d3d49] bg-[#22232c]"}`}>
+          const canSelect = !!onVote && (room.state === "UNKNOWN" || room.state === "MURDERED") && (!state.runoffRooms?.length || state.runoffRooms.includes(room.roomNumber));
+          const className = `flex min-h-16 flex-col justify-center rounded-md border px-2 py-2 text-center sm:min-h-18 ${marked ? "border-[#9b555d] bg-[#302127]" : opened ? "border-[#5f594f] bg-[#25252b]" : "border-[#3d3d49] bg-[#22232c]"} ${canSelect ? "cursor-pointer ring-1 ring-[#c8a46b]/50 transition-colors hover:border-[#e3c88e] hover:bg-[#38313b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e3c88e] disabled:cursor-wait disabled:opacity-60" : ""}`;
+          const content = <>
             <span className="font-mono text-sm font-semibold text-[#f4efe8] sm:text-base">{room.roomNumber}</span>
             <span className={`mt-1 text-[10px] leading-tight sm:text-xs ${marked ? "text-[#efb3b7]" : "text-[#b0b0bc]"}`}>{label}</span>
-          </div>;
+          </>;
+          return canSelect ? <button key={room.roomNumber} type="button" aria-label={`โหวตห้อง ${room.roomNumber} ${label}`} className={className} disabled={voteBusy} onClick={() => onVote(room.roomNumber)}>{content}</button>
+            : <div key={room.roomNumber} aria-label={`ห้อง ${room.roomNumber} ${label}`} className={className}>{content}</div>;
         })}
       </div>)}</div>
   </Paper>;
@@ -176,13 +169,12 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">โรงแรมปริศนา · {state.code}</p><h1 className="mt-2 font-serif text-3xl">รอบ {state.turn} · {state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : "จบเกม"}</h1></div><SoundSettings muted={muted} onChange={changeMuted} /></header>
     <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="mb-5!">{turnNotice}</Alert>
     {privateState?.canUseSkill && skillDeadlineAt !== undefined && <p className="mb-5 text-sm text-[#e7ce98]" role="timer" aria-live="off">{skillSecondsLeft === null ? "กำลังตรวจเวลาใช้สกิล…" : skillSecondsLeft > 0 ? `เวลาใช้สกิลเหลือ ${skillSecondsLeft} วินาที` : "หมดเวลาใช้สกิลแล้ว กำลังรอขั้นตอนถัดไป"}</p>}
-    {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} /><div className="space-y-5">
+    {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} voteBusy={busy || !connected} /><div className="space-y-5">
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage}</p></Paper>}
       {privateState?.canUseSkill && showSecret && <SkillPanel state={state} privateState={privateState} busy={busy || !connected || (skillDeadlineAt !== undefined && (skillSecondsLeft === null || skillSecondsLeft === 0))} onSkill={(target) => void act("game:skill", { target })} />}
       {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><DiscussionTimer deadline={state.phaseDeadlineAt} /><p className="mt-2 text-sm text-[#c6bdb1]">พูดคุยนอกเว็บไซต์ได้ตามต้องการ</p></Paper>}
-      {state.phase === "VOTING" && privateState?.canVote && <VotingPanel state={state} busy={busy || !connected} onVote={(roomNumber) => void act("game:vote", { roomNumber })} />}
       {error && <p role="alert" className="text-red-200">{error}</p>}
       <Paper className="border! border-[#353440]! bg-[#191a22]! p-5!"><h2 className="font-serif text-xl">ประวัติเหตุการณ์สาธารณะ</h2><ol className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{event.message}</li>)}</ol></Paper>
     </div></div>}

@@ -32,17 +32,33 @@ describe("game privacy and turn UI", () => {
     expect(html).not.toContain("ข้อมูลลับ");
     expect(html).not.toContain("ที่เกิดเหตุ");
   });
-  it("shows the voting panel only to a player who can vote", () => {
+  it("offers voting on the hotel board only to an eligible player", () => {
     const render = (viewer: PrivatePlayerState | null) => renderToStaticMarkup(createElement(GameScreen, {
       state: { ...publicState, phase: "VOTING" }, privateState: viewer, teamState: null,
       result: null, murderSequence: 0, connected: true, connectionMessage: "",
       onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
     }));
 
-    expect(render({ ...privateState, canVote: true })).toContain("ลงคะแนนเปิดห้อง");
-    expect(render(privateState)).not.toContain("ลงคะแนนเปิดห้อง");
-    expect(render({ ...privateState, isAlive: false, mode: "SPECTATOR" })).not.toContain("ลงคะแนนเปิดห้อง");
-    expect(render(null)).not.toContain("ลงคะแนนเปิดห้อง");
+    expect(render({ ...privateState, canVote: true })).toContain('aria-label="โหวตห้อง 101');
+    expect(render({ ...privateState, canVote: true })).toContain('aria-label="โหวตห้อง 102');
+    expect(render({ ...privateState, canVote: true })).not.toContain("ลงคะแนนเปิดห้อง");
+    expect(render(privateState)).not.toContain('aria-label="โหวตห้อง');
+    expect(render({ ...privateState, isAlive: false, mode: "SPECTATOR" })).not.toContain('aria-label="โหวตห้อง');
+    expect(render(null)).not.toContain('aria-label="โหวตห้อง');
+  });
+
+  it("only makes eligible runoff rooms clickable on the board", () => {
+    const state: PublicGameState = { ...publicState, phase: "VOTING", runoffRooms: [101, 103], publicRooms: [
+      { roomNumber: 101, state: "UNKNOWN" }, { roomNumber: 102, state: "UNKNOWN" },
+      { roomNumber: 103, state: "MURDERED" }, { roomNumber: 201, state: "CRIME_SCENE" },
+      { roomNumber: 202, state: "OPENED_EMPTY" },
+    ] };
+    const html = renderToStaticMarkup(createElement(HotelBoard, { state, onVote: () => {} }));
+    expect(html).toContain('aria-label="โหวตห้อง 101');
+    expect(html).toContain('aria-label="โหวตห้อง 103');
+    expect(html).not.toContain('aria-label="โหวตห้อง 102');
+    expect(html).not.toContain('aria-label="โหวตห้อง 201');
+    expect(html).not.toContain('aria-label="โหวตห้อง 202');
   });
 
   it("starts with private role, room, and action history hidden", () => {
