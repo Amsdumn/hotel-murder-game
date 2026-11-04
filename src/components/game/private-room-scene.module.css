@@ -1,11 +1,14 @@
 .frame {
-  position: relative;
   overflow: hidden;
-  aspect-ratio: 16 / 9;
   border: 1px solid #5a4b59;
   border-radius: 14px;
   background: #211b29;
   box-shadow: inset 0 1px #ffffff18, 0 16px 32px #0b09125c;
+}
+
+.stage {
+  position: relative;
+  aspect-ratio: 16 / 9;
   isolation: isolate;
 }
 
@@ -51,6 +54,34 @@
 .character { object-fit: contain; object-position: center bottom; filter: drop-shadow(2px 4px 5px #120b19a8); }
 .shadow { position: absolute; bottom: 0; left: 25%; width: 50%; height: 7%; border-radius: 50%; background: #130f1bc0; filter: blur(5px); }
 .hint { position: absolute; z-index: 2; bottom: 8px; right: 12px; margin: 0; color: #fff5eb; font-size: 10px; letter-spacing: .08em; text-shadow: 0 1px 5px #111; }
+
+.facePortrait {
+  position: absolute;
+  z-index: 3;
+  bottom: 8px;
+  left: 12px;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border: 2px solid #e5c99d;
+  border-radius: 50%;
+  background: #302735;
+  box-shadow: 0 2px 6px #110b19, 0 0 0 2px #211823b3, inset 0 1px 2px #fff8;
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border-top: 1px solid #786170;
+  color: #e8d5bb;
+  font-size: 12px;
+}
+.alive { color: #b7d6be; }
+.dead { color: #eba7a8; }
 
 @keyframes stroll {
   0%, 8% { left: 24%; transform: scaleX(1); }

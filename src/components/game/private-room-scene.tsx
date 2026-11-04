@@ -1,6 +1,6 @@
 import Image from "next/image";
-import type { Role } from "@/types/game";
-import { roleNames } from "@/components/role-portrait";
+import type { Role, Team } from "@/types/game";
+import { RolePortrait, roleNames } from "@/components/role-portrait";
 import styles from "./private-room-scene.module.css";
 
 const characters: Record<Role, string> = {
@@ -13,16 +13,20 @@ const characters: Record<Role, string> = {
   KILLER: "/art/characters/killer-3d.webp",
 };
 
-export function PrivateRoomScene({ role, roomNumber }: { role: Role; roomNumber: number }) {
+export function PrivateRoomScene({ role, roomNumber, team, isAlive }: { role: Role; roomNumber: number; team: Team; isAlive: boolean }) {
   return <section className={styles.frame} aria-label={`ฉากห้องพักของคุณ ห้อง ${roomNumber} ตัวละคร${roleNames[role]}`}>
-    <Image src="/art/hotel-room-3d.webp" alt="ห้องพักในโรงแรมยามค่ำคืน" fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.room} />
-    <div className={styles.caption}><span className={styles.liveDot} /> ห้อง {roomNumber} <span className={styles.captionDivider}>/</span> {roleNames[role]}</div>
-    <div className={styles.walkPath} data-character-role={role}>
-      <span className={styles.shadow} aria-hidden="true" />
-      <div className={styles.bob}>
-        <Image src={characters[role]} alt={`ตัวละคร${roleNames[role]}กำลังเดินอยู่ในห้อง ${roomNumber}`} fill sizes="(max-width: 640px) 130px, 180px" className={styles.character} />
+    <div className={styles.stage}>
+      <Image src="/art/hotel-room-3d.webp" alt="ห้องพักในโรงแรมยามค่ำคืน" fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.room} />
+      <div className={styles.caption}><span className={styles.liveDot} /> ห้อง {roomNumber} <span className={styles.captionDivider}>/</span> {roleNames[role]}</div>
+      <div className={styles.walkPath} data-character-role={role}>
+        <span className={styles.shadow} aria-hidden="true" />
+        <div className={styles.bob}>
+          <Image src={characters[role]} alt={`ตัวละคร${roleNames[role]}กำลังเดินอยู่ในห้อง ${roomNumber}`} fill sizes="(max-width: 640px) 130px, 180px" className={styles.character} />
+        </div>
       </div>
+      <div className={styles.facePortrait}><RolePortrait role={role} className="h-full w-full rounded-full" sizes="30px" /></div>
+      <p className={styles.hint}>พื้นที่ส่วนตัว · ตัวละครของคุณ</p>
     </div>
-    <p className={styles.hint}>พื้นที่ส่วนตัว · ตัวละครของคุณ</p>
+    <div className={styles.meta}><span>{team === "MURDERER" ? "ฝ่ายฆาตกร" : "ฝ่ายผู้บริสุทธิ์"}</span><span className={isAlive ? styles.alive : styles.dead}>{isAlive ? "ยังมีชีวิต" : "เสียชีวิต"}</span></div>
   </section>;
 }

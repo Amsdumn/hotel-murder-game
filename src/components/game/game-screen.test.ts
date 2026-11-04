@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PrivatePlayerState, PublicGameState } from "@/types/game";
 import { GameScreen, HotelBoard, PrivateInfoPanel, getTurnNotice } from "./game-screen";
+import { PrivateRoomScene } from "./private-room-scene";
 
 const privateState: PrivatePlayerState = {
   playerId: "a", role: "KILLER", team: "MURDERER", roomNumber: 202,
@@ -42,12 +43,24 @@ describe("game privacy and turn UI", () => {
 
   it("reveals only the owner's information when opened", () => {
     const html = renderToStaticMarkup(createElement(PrivateInfoPanel, { privateState, teamState: null, players: publicState.players, open: true, onToggle: () => {} }));
-    expect(html).toContain("ห้องพัก 202");
+    expect(html).toContain("ห้อง 202");
     expect(html).toContain("ลอบสังหารห้อง 102: สำเร็จ");
     expect(html).toContain("ฉากห้องพักของคุณ");
     expect(html).toContain("data-character-role=\"KILLER\"");
     expect(html).toContain("killer-3d.webp");
     expect(html).toContain("hotel-room-3d.webp");
+    expect(html.match(/ฝ่ายฆาตกร/g)).toHaveLength(1);
+    expect(html).toContain("ยังมีชีวิต");
+  });
+
+  it("shows a 30px circular role portrait and team status on the room frame", () => {
+    const html = renderToStaticMarkup(createElement(PrivateRoomScene, {
+      role: "WITNESS", roomNumber: 301, team: "INNOCENT", isAlive: false,
+    }));
+    expect(html).toContain("sizes=\"30px\"");
+    expect(html).toContain("ภาพตัวละครพยาน");
+    expect(html).toContain("ฝ่ายผู้บริสุทธิ์");
+    expect(html).toContain("เสียชีวิต");
   });
 
   it("uses the player's own room and character in the animated scene", () => {
