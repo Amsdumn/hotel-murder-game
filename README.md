@@ -17,7 +17,7 @@ Phase 2 foundation for a real-time social deduction browser game. The app serves
 
 The custom server loads `.env.local` before reading its settings. `MONGODB_URI` is validated when a lobby operation first requests a connection. Do not commit `.env.local`.
 
-Create a room in one browser and join from another with its six-character code. Each browser keeps a rotating reconnect token in session storage; do not share that token. Players can ready or unready. The host can set a player limit from 5 to 10 and discussion time from 30 to 600 seconds. All changes are validated and versioned on the server. Starting the game is reserved for Phase 3.
+Create a room in one browser and join from another with its six-character code. The first successful create or join saves a guest profile and a room-specific reconnect token in that browser. Returning to a room from the same browser resumes the existing player, including after closing the tab; it does not create another character. This is a browser-local profile, so another device or cleared browser storage cannot recover it. Do not share the token. Rooms are removed after everyone has been disconnected for 10 minutes, after which their players cannot resume. Players can ready or unready. The host can set a player limit from 5 to 10 and discussion time from 30 to 600 seconds. All changes are validated and versioned on the server.
 
 The build and custom server use Next.js's webpack path. In this environment, the default Turbopack build exited while starting its CSS worker; the webpack build completed successfully.
 

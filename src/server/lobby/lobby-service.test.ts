@@ -108,12 +108,16 @@ describe("LobbyService", () => {
       .rejects.toMatchObject({ code: "LOBBY_FULL" });
   });
 
-  it("rotates reconnect tokens and rejects the previous token", async () => {
+  it("resumes the same player repeatedly without creating another seat", async () => {
     const service = new LobbyService(new MemoryLobbyStore());
     const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
-    const resumed = await service.resume(host.view.code, host.token);
-    expect(resumed.token).not.toBe(host.token);
-    await expect(service.resume(host.view.code, host.token)).rejects.toMatchObject({ code: "INVALID_SESSION" });
+    const first = await service.resume(host.view.code, host.token);
+    const second = await service.resume(host.view.code, host.token);
+    expect(first.playerId).toBe(host.playerId);
+    expect(second.playerId).toBe(host.playerId);
+    expect(second.token).toBe(host.token);
+    expect(second.view.players).toHaveLength(1);
+    await expect(service.resume(host.view.code, "0".repeat(64))).rejects.toMatchObject({ code: "INVALID_SESSION" });
   });
 
   it("marks the lobby startable only with five ready players", async () => {

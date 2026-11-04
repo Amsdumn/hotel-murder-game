@@ -43,12 +43,6 @@ export class MemoryLobbyStore implements LobbyStore {
   async findSessionByTokenHash(tokenHash: string): Promise<SessionRecord | null> {
     return structuredClone([...this.sessions.values()].find((item) => item.tokenHash === tokenHash) ?? null);
   }
-  async rotateSession(id: string, previousHash: string, nextHash: string): Promise<boolean> {
-    const session = this.sessions.get(id);
-    if (!session || session.tokenHash !== previousHash) return false;
-    this.sessions.set(id, { ...session, tokenHash: nextHash });
-    return true;
-  }
   async appendEvent(record: LobbyEventRecord): Promise<void> { this.events.push(structuredClone(record)); }
   async listDueGames(now: number): Promise<LobbyRecord[]> {
     return [...this.lobbies.values()].filter((record) => (record.gameState?.phase === "DISCUSSION" || record.gameState?.phase === "SKILL_PHASE") && (record.gameState.phaseDeadlineAt ?? Infinity) <= now).map((record) => structuredClone(record));

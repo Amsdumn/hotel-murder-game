@@ -55,7 +55,6 @@ export interface LobbyStore {
   deleteSession(id: string): Promise<void>;
   findSessionByPlayerId(playerId: string): Promise<SessionRecord | null>;
   findSessionByTokenHash(tokenHash: string): Promise<SessionRecord | null>;
-  rotateSession(id: string, previousHash: string, nextHash: string): Promise<boolean>;
   appendEvent(record: LobbyEventRecord): Promise<void>;
   listDueGames(now: number): Promise<LobbyRecord[]>;
 }

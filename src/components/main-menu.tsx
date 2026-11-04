@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { useUiStore } from "@/stores/use-ui-store";
@@ -8,6 +8,14 @@ import { LobbyEntryDialog } from "@/components/lobby/lobby-entry-dialog";
 import { ActiveRooms } from "@/components/lobby/active-rooms";
 import { RolePortrait } from "@/components/role-portrait";
 import type { Role } from "@/types/game";
+import { readGuestProfile, readLobbyToken } from "@/lib/lobby-client";
+
+function subscribeToProfile(onChange: () => void) {
+  window.addEventListener("storage", onChange);
+  return () => window.removeEventListener("storage", onChange);
+}
+
+function profileNameSnapshot() { return readGuestProfile()?.displayName ?? ""; }
 
 const skillRules = [
   { id: "LOCKSMITH", role: "ช่างกุญแจ", team: "ผู้บริสุทธิ์", description: "ล็อกห้องหนึ่งห้องในรอบนั้น ฆาตกรลอบสังหารห้องที่ล็อกไม่ได้ แต่ยังโหวตเปิดห้องนั้นได้" },
@@ -20,10 +28,20 @@ const skillRules = [
 ] satisfies Array<{ id: Role; role: string; team: string; description: string }>;
 
 export function MainMenu() {
+  const profileName = useSyncExternalStore(subscribeToProfile, profileNameSnapshot, () => "");
   const [entryMode, setEntryMode] = useState<"create" | "join" | null>(null);
   const [selectedCode, setSelectedCode] = useState("");
+  const [initialDisplayName, setInitialDisplayName] = useState("");
+  const [initialSavedSeat, setInitialSavedSeat] = useState(false);
   const aboutOpen = useUiStore((state) => state.aboutOpen);
   const setAboutOpen = useUiStore((state) => state.setAboutOpen);
+
+  const openEntry = (mode: "create" | "join", code = "") => {
+    setInitialDisplayName(readGuestProfile()?.displayName ?? "");
+    setInitialSavedSeat(mode === "join" && Boolean(readLobbyToken(code)));
+    setSelectedCode(code);
+    setEntryMode(mode);
+  };
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#10101b] text-[#f8f1e4]">
@@ -34,9 +52,10 @@ export function MainMenu() {
             <span aria-hidden="true" className="text-2xl">✧</span>
             <span className="text-sm font-bold tracking-[0.12em]">โรงแรมปริศนา</span>
           </div>
-          <Button color="primary" variant="text" size="small" onClick={() => setAboutOpen(true)}>
-            วิธีเล่น
-          </Button>
+          <div className="flex items-center gap-2">
+            {profileName && <span className="max-w-28 truncate rounded-full border border-[#d9b66f]/30 px-3 py-1 text-xs text-[#e7ce98] sm:max-w-48">ผู้เล่น: {profileName}</span>}
+            <Button color="primary" variant="text" size="small" onClick={() => setAboutOpen(true)}>วิธีเล่น</Button>
+          </div>
         </header>
 
         <div className="grid flex-1 items-center gap-12 py-12 lg:grid-cols-[1.05fr_.95fr] lg:py-16">
@@ -50,11 +69,11 @@ export function MainMenu() {
               แขกทุกคนมีความลับ หนึ่งคนคือฆาตกร ร่วมสืบหาความจริงก่อนจะถึงคืนสุดท้าย
             </p>
             <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <Button variant="contained" size="large" onClick={() => { setSelectedCode(""); setEntryMode("create"); }} className="!px-8 !py-3">สร้างห้องเกม</Button>
-              <Button variant="outlined" size="large" onClick={() => { setSelectedCode(""); setEntryMode("join"); }} className="!px-8 !py-3">เข้าร่วมห้อง</Button>
+              <Button variant="contained" size="large" onClick={() => openEntry("create")} className="!px-8 !py-3">สร้างห้องเกม</Button>
+              <Button variant="outlined" size="large" onClick={() => openEntry("join")} className="!px-8 !py-3">เข้าร่วมห้อง</Button>
             </div>
             {/* <p className="mt-5 text-sm text-[#c9b8ae]">รองรับผู้เล่น 5–10 คน · ใช้เวลาสูงสุด 4 รอบ</p> */}
-            <ActiveRooms onJoin={(code) => { setSelectedCode(code); setEntryMode("join"); }} />
+            <ActiveRooms onJoin={(code) => openEntry("join", code)} />
           </section>
 
           <section aria-label="ตัวละครในโรงแรม" className="relative mx-auto w-full max-w-lg lg:mt-20">
@@ -109,7 +128,7 @@ export function MainMenu() {
         </DialogContent>
         <DialogActions><Button onClick={() => setAboutOpen(false)}>ปิด</Button></DialogActions>
       </Dialog>
-      <LobbyEntryDialog key={`${entryMode}-${selectedCode}`} mode={entryMode} initialCode={selectedCode} onClose={() => setEntryMode(null)} />
+      <LobbyEntryDialog key={`${entryMode}-${selectedCode}`} mode={entryMode} initialCode={selectedCode} initialDisplayName={initialDisplayName} initialSavedSeat={initialSavedSeat} onClose={() => setEntryMode(null)} />
     </main>
   );
 }

@@ -223,8 +223,8 @@ describe("Socket.IO lobby", () => {
     expect(denied).toEqual({ ok: false, error: "FORBIDDEN" });
   }, 15000);
 
-  it("rotates a token on reconnect and rejects reuse", async () => {
-    const { client } = await setup();
+  it("reuses a valid token to restore the same seat on repeated visits", async () => {
+    const { client, store } = await setup();
     const original = client();
     const created = await original.emitWithAck("lobby:create", { displayName: "Host", actionId: crypto.randomUUID() });
     expect(created.ok).toBe(true);
@@ -234,8 +234,12 @@ describe("Socket.IO lobby", () => {
     const resumed = await replacement.emitWithAck("lobby:resume", { code: created.data.code, token: created.data.token });
     expect(resumed.ok).toBe(true);
     if (!resumed.ok) return;
-    expect(resumed.data.token).not.toBe(created.data.token);
+    expect(resumed.data.playerId).toBe(created.data.playerId);
+    expect(resumed.data.token).toBe(created.data.token);
+    replacement.disconnect();
     const replay = await client().emitWithAck("lobby:resume", { code: created.data.code, token: created.data.token });
-    expect(replay).toEqual({ ok: false, error: "INVALID_SESSION" });
+    expect(replay.ok).toBe(true);
+    if (replay.ok) expect(replay.data.playerId).toBe(created.data.playerId);
+    expect((await store.findLobby(created.data.code))?.players).toHaveLength(1);
   }, 15000);
 });

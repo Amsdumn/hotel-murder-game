@@ -172,11 +172,9 @@ export class LobbyService {
     if (typeof rawToken !== "string" || !/^[a-f0-9]{64}$/.test(rawToken)) throw new LobbyError("INVALID_SESSION");
     const session = await this.store.findSessionByTokenHash(hashToken(rawToken));
     if (!session || session.gameCode !== code) throw new LobbyError("INVALID_SESSION");
-    const token = makeToken();
-    if (!await this.store.rotateSession(session.id, session.tokenHash, hashToken(token))) throw new LobbyError("INVALID_SESSION");
     const view = await this.setConnected(session.playerId, true);
     await this.store.setRoomEmptySince(code, null);
-    return { code, playerId: session.playerId, token, view };
+    return { code, playerId: session.playerId, token: rawToken, view };
   }
 
   async setConnected(playerId: string, connected: boolean): Promise<LobbyView> {

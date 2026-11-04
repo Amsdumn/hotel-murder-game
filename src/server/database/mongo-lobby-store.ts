@@ -115,11 +115,6 @@ export class MongoLobbyStore implements LobbyStore {
     return record ? { id: record.id, gameCode: record.gameCode, playerId: record.playerId, tokenHash: record.tokenHash } : null;
   }
 
-  async rotateSession(id: string, previousHash: string, nextHash: string): Promise<boolean> {
-    await connectDatabase();
-    const result = await PlayerSessionModel.updateOne({ id, tokenHash: previousHash }, { $set: { tokenHash: nextHash } }).exec();
-    return result.modifiedCount === 1;
-  }
 
   async appendEvent(record: LobbyEventRecord): Promise<void> {
     await connectDatabase();
