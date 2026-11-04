@@ -88,9 +88,17 @@ describe("hidden deaths", () => {
   it("skips dead skill actors without a public identity event", () => {
     const state = game({ activePlayerId: null, players: game().players.map((player) => player.id === "victim" ? { ...player, isAlive: false } : player) });
     const result = advanceSkillTurn(state, "innocent");
-    expect(result.state.activePlayerId).toBe("witness");
+    expect(result.state.activePlayerId).toBe("accomplice");
     expect(result.publicEvents).toEqual([]);
-    expect(result.privateEvents).toEqual([{ type: "ACTION_REQUEST", recipientPlayerId: "witness" }]);
+    expect(result.privateEvents).toEqual([{ type: "ACTION_REQUEST", recipientPlayerId: "accomplice" }]);
+  });
+
+  it("gives the Witness a turn only after the Killer's room choice", () => {
+    const afterKiller = advanceSkillTurn(game({ activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim", "accomplice", "killer"] }), "killer");
+    expect(afterKiller.state.activePlayerId).toBe("witness");
+    expect(afterKiller.privateEvents).toEqual([{ type: "ACTION_REQUEST", recipientPlayerId: "witness" }]);
+    const killedWitness = resolveAssassination(game(), 103).state;
+    expect(advanceSkillTurn(killedWitness, "killer").state.activePlayerId).toBeNull();
   });
 });
 

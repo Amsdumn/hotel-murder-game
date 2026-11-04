@@ -2,10 +2,10 @@ export const ROLE_ORDER = [
   "LOCKSMITH",
   "HOUSEKEEPER",
   "WINDOW_CLEANER",
-  "WITNESS",
   "DETECTIVE",
   "ACCOMPLICE",
   "KILLER",
+  "WITNESS",
 ] as const;
 
 export type Role = (typeof ROLE_ORDER)[number];

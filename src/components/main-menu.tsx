@@ -22,10 +22,10 @@ const skillRules = [
   { id: "LOCKSMITH", role: "ช่างกุญแจ", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.LOCKSMITH },
   { id: "HOUSEKEEPER", role: "แม่บ้าน", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.HOUSEKEEPER },
   { id: "WINDOW_CLEANER", role: "คนเช็ดกระจก", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.WINDOW_CLEANER },
-  { id: "WITNESS", role: "พยาน", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.WITNESS },
   { id: "DETECTIVE", role: "นักสืบ", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.DETECTIVE },
   { id: "ACCOMPLICE", role: "ผู้สมรู้ร่วมคิด", team: "ฝ่ายฆาตกร", description: roleSkillDescriptions.ACCOMPLICE },
   { id: "KILLER", role: "ฆาตกร", team: "ฝ่ายฆาตกร", description: roleSkillDescriptions.KILLER },
+  { id: "WITNESS", role: "พยาน", team: "ผู้บริสุทธิ์", description: roleSkillDescriptions.WITNESS },
 ] satisfies Array<{ id: Role; role: string; team: string; description: string }>;
 
 export function MainMenu() {
