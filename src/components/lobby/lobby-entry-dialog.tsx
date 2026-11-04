@@ -6,6 +6,7 @@ import { Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } 
 import { connectLobbySocket, lobbyErrorMessage, requestLobby, saveLobbyIdentity } from "@/lib/lobby-client";
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
 import { createActionId } from "@/lib/action-id";
+import { RoomLoadingScreen } from "@/components/lobby/room-loading-screen";
 
 export function LobbyEntryDialog({ mode, initialCode = "", onClose }: { mode: "create" | "join" | null; initialCode?: string; onClose: () => void }) {
   const router = useRouter();
@@ -13,11 +14,14 @@ export function LobbyEntryDialog({ mode, initialCode = "", onClose }: { mode: "c
   const [code, setCode] = useState(initialCode);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [createdCode, setCreatedCode] = useState<string | null>(null);
 
   async function submit() {
+    if (busy) return;
     setBusy(true);
     setError("");
     const socket = connectLobbySocket();
+    let navigatingToCreatedRoom = false;
     try {
       let result;
       if (mode === "create") {
@@ -31,16 +35,22 @@ export function LobbyEntryDialog({ mode, initialCode = "", onClose }: { mode: "c
       }
       if (!result.ok) { setError(lobbyErrorMessage(result.error)); return; }
       saveLobbyIdentity(result.data);
+      if (mode === "create") {
+        setCreatedCode(result.data.code);
+        navigatingToCreatedRoom = true;
+      }
       router.push(`/lobby/${result.data.code}`);
-      onClose();
+      if (mode !== "create") onClose();
     } finally {
       socket.disconnect();
-      setBusy(false);
+      if (!navigatingToCreatedRoom) setBusy(false);
     }
   }
 
   return (
-    <Dialog open={mode !== null} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
+    <>
+    {mode === "create" && busy && <RoomLoadingScreen phase={createdCode ? "entering" : "creating"} code={createdCode ?? undefined} />}
+    <Dialog open={mode !== null && !(mode === "create" && busy)} onClose={busy ? undefined : onClose} fullWidth maxWidth="xs">
       <form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
         <DialogTitle>{mode === "create" ? "สร้างห้องเกม" : "เข้าร่วมห้องเกม"}</DialogTitle>
         <DialogContent className="space-y-5! pt-3!">
@@ -54,5 +64,6 @@ export function LobbyEntryDialog({ mode, initialCode = "", onClose }: { mode: "c
         </DialogActions>
       </form>
     </Dialog>
+    </>
   );
 }
