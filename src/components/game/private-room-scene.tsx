@@ -18,12 +18,12 @@ export function PrivateRoomScene({ role, roomNumber, team, isAlive }: { role: Ro
     <div className={styles.stage}>
       <Image src="/art/hotel-room-3d.webp" alt="ห้องพักในโรงแรมยามค่ำคืน" fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.room} />
       <div className={styles.caption}><span className={styles.liveDot} /> ห้อง {roomNumber} <span className={styles.captionDivider}>/</span> {roleNames[role]}</div>
-      <div className={styles.walkPath} data-character-role={role}>
+      {isAlive && <div className={styles.walkPath} data-character-role={role}>
         <span className={styles.shadow} aria-hidden="true" />
         <div className={styles.bob}>
           <Image src={characters[role]} alt={`ตัวละคร${roleNames[role]}กำลังเดินอยู่ในห้อง ${roomNumber}`} fill sizes="(max-width: 640px) 130px, 180px" className={styles.character} />
         </div>
-      </div>
+      </div>}
       <div className={styles.facePortrait}><RolePortrait role={role} className="h-full w-full rounded-full" sizes="30px" /></div>
       <p className={styles.hint}>พื้นที่ส่วนตัว · ตัวละครของคุณ</p>
     </div>

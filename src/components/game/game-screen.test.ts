@@ -61,6 +61,9 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("ภาพตัวละครพยาน");
     expect(html).toContain("ฝ่ายผู้บริสุทธิ์");
     expect(html).toContain("เสียชีวิต");
+    expect(html).toContain("hotel-room-3d.webp");
+    expect(html).not.toContain("data-character-role=\"WITNESS\"");
+    expect(html).not.toContain("witness-3d.webp");
   });
 
   it("uses the player's own room and character in the animated scene", () => {
