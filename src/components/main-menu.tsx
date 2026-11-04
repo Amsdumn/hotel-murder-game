@@ -60,17 +60,17 @@ export function MainMenu() {
 
         <div className="grid flex-1 items-center gap-12 py-12 lg:grid-cols-[1.05fr_.95fr] lg:py-16">
           <section className="relative z-10 max-w-xl">
-            <Chip label="ANIME MYSTERY · เกมสืบสวนออนไลน์" color="primary" variant="outlined" size="small" className="!mb-8 !bg-[#171324]/70" />
-            <p className="mb-3 text-sm tracking-[0.34em] text-[#e5bd82]">ยินดีต้อนรับสู่โรงแรม</p>
-            <h1 className="font-serif text-5xl font-semibold leading-[1.12] tracking-tight sm:text-6xl lg:text-7xl">
+            <Chip label="ANIME MYSTERY · เกมสืบสวนออนไลน์" color="primary" variant="outlined" size="small" className="mb-6! bg-[#171324]/70!" />
+            <p className="mb-6 text-sm tracking-[0.34em] text-[#e5bd82]">ยินดีต้อนรับสู่โรงแรม</p>
+            <h1 className="font-serif text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
               คืนนี้<br /><span className="text-[#d9b66f]">ใครคือฆาตกร</span>
             </h1>
-            <p className="mt-7 max-w-lg text-base leading-8 text-[#c6bdb1] sm:text-lg">
+            <p className="mt-5 max-w-lg text-base leading-8 text-[#c6bdb1] sm:text-lg">
               แขกทุกคนมีความลับ หนึ่งคนคือฆาตกร ร่วมสืบหาความจริงก่อนจะถึงคืนสุดท้าย
             </p>
-            <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-              <Button variant="contained" size="large" onClick={() => openEntry("create")} className="!px-8 !py-3">สร้างห้องเกม</Button>
-              <Button variant="outlined" size="large" onClick={() => openEntry("join")} className="!px-8 !py-3">เข้าร่วมห้อง</Button>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+              <Button variant="contained" size="large" onClick={() => openEntry("create")} className="px-8! py-3!">สร้างห้องเกม</Button>
+              {/* <Button variant="outlined" size="large" onClick={() => openEntry("join")} className="px-8! py-3!">เข้าร่วมห้อง</Button> */}
             </div>
             {/* <p className="mt-5 text-sm text-[#c9b8ae]">รองรับผู้เล่น 5–10 คน · ใช้เวลาสูงสุด 4 รอบ</p> */}
             <ActiveRooms onJoin={(code) => openEntry("join", code)} />
