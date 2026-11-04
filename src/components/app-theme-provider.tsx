@@ -13,7 +13,7 @@ const theme = createTheme({
     text: { primary: "#f8f1e4", secondary: "#c6bdb1" },
   },
   shape: { borderRadius: 12 },
-  typography: { fontFamily: '"Noto Sans Thai", "Leelawadee UI", sans-serif' },
+  typography: { fontFamily: "var(--font-noto-sans-thai), sans-serif" },
   components: {
     MuiButton: {
       styleOverrides: { root: { fontWeight: 700, letterSpacing: "0.02em" } },

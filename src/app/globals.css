@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-noto-sans-thai), sans-serif;
+  --font-serif: var(--font-noto-sans-thai), sans-serif;
+}
+
 :root {
   color-scheme: dark;
 }
@@ -7,6 +12,7 @@
 html,
 body {
   min-height: 100%;
+  font-family: var(--font-noto-sans-thai), sans-serif;
 }
 
 @keyframes murder-backdrop {
