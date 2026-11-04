@@ -1,21 +1,29 @@
 .frame {
   position: relative;
   overflow: hidden;
+  aspect-ratio: 16 / 9;
   border: 1px solid #5a4b59;
   border-radius: 14px;
-  background: #1b1c27;
+  background: #211b29;
   box-shadow: inset 0 1px #ffffff18, 0 16px 32px #0b09125c;
+  isolation: isolate;
+}
+
+.room {
+  object-fit: cover;
+  object-position: center;
+  z-index: -1;
 }
 
 .caption {
   position: absolute;
-  z-index: 1;
+  z-index: 2;
   top: 12px;
   left: 12px;
   padding: 6px 10px;
   border: 1px solid #dabf9f47;
   border-radius: 7px;
-  background: #181720d9;
+  background: #181720dc;
   color: #f1dfca;
   font-size: 12px;
   backdrop-filter: blur(5px);
@@ -23,22 +31,36 @@
 
 .captionDivider { color: #ad9c9b; padding: 0 5px; }
 .liveDot { display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: #deb885; box-shadow: 0 0 8px #deb885; vertical-align: middle; }
-.scene { display: block; width: 100%; height: auto; aspect-ratio: 640 / 330; }
-.hint { position: absolute; bottom: 8px; right: 12px; margin: 0; color: #efe4dcc2; font-size: 10px; letter-spacing: .08em; text-shadow: 0 1px 4px #111; }
 
-.walkPath { transform: translate(218px, 253px); animation: stroll 8s ease-in-out infinite; }
-.bob { animation: bob 0.48s ease-in-out infinite alternate; }
-.frontLeg { transform-origin: 8px -39px; animation: step 0.6s ease-in-out infinite alternate; }
-.backLeg { transform-origin: -8px -39px; animation: step 0.6s ease-in-out infinite alternate-reverse; }
+.walkPath {
+  position: absolute;
+  z-index: 1;
+  bottom: 4%;
+  left: 25%;
+  width: 31%;
+  height: 77%;
+  animation: stroll 9s linear infinite;
+}
+
+.bob {
+  position: absolute;
+  inset: 0;
+  animation: bob .55s ease-in-out infinite alternate;
+}
+
+.character { object-fit: contain; object-position: center bottom; filter: drop-shadow(2px 4px 5px #120b19a8); }
+.shadow { position: absolute; bottom: 0; left: 25%; width: 50%; height: 7%; border-radius: 50%; background: #130f1bc0; filter: blur(5px); }
+.hint { position: absolute; z-index: 2; bottom: 8px; right: 12px; margin: 0; color: #fff5eb; font-size: 10px; letter-spacing: .08em; text-shadow: 0 1px 5px #111; }
 
 @keyframes stroll {
-  0%, 8% { transform: translate(218px, 253px); }
-  42%, 54% { transform: translate(376px, 245px); }
-  92%, 100% { transform: translate(218px, 253px); }
+  0%, 8% { left: 24%; transform: scaleX(1); }
+  43% { left: 65%; transform: scaleX(1); }
+  44%, 54% { left: 65%; transform: scaleX(-1); }
+  92% { left: 24%; transform: scaleX(-1); }
+  93%, 100% { left: 24%; transform: scaleX(1); }
 }
-@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-3px); } }
-@keyframes step { from { transform: rotate(-13deg); } to { transform: rotate(13deg); } }
+@keyframes bob { from { transform: translateY(0); } to { transform: translateY(-3%); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .walkPath, .bob, .frontLeg, .backLeg { animation: none; }
+  .walkPath, .bob { animation: none; }
 }

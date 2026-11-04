@@ -46,6 +46,8 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("ลอบสังหารห้อง 102: สำเร็จ");
     expect(html).toContain("ฉากห้องพักของคุณ");
     expect(html).toContain("data-character-role=\"KILLER\"");
+    expect(html).toContain("killer-3d.webp");
+    expect(html).toContain("hotel-room-3d.webp");
   });
 
   it("uses the player's own room and character in the animated scene", () => {
@@ -54,8 +56,10 @@ describe("game privacy and turn UI", () => {
       teamState: null, players: publicState.players, open: true, onToggle: () => {},
     }));
     expect(html).toContain("data-character-role=\"DETECTIVE\"");
+    expect(html).toContain("detective-3d.webp");
     expect(html).toContain("ห้อง 703");
     expect(html).not.toContain("data-character-role=\"KILLER\"");
+    expect(html).not.toContain("killer-3d.webp");
   });
 
   it("shows a quiet hotel board with public room states", () => {
