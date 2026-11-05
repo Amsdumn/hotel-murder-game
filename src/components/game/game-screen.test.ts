@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
-import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, getTurnNotice, skillActionInstructions } from "./game-screen";
+import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, getFreshSkillResult, getTurnNotice, skillActionInstructions } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
 import { roleSkillDescriptions } from "@/lib/role-skills";
 import { roleNames } from "../role-portrait";
@@ -22,6 +22,20 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("shows only a newly received private skill result", () => {
+    const previous = { ...privateState, actionHistory: [], privateResults: [] };
+    expect(getFreshSkillResult(null, privateState)).toBeNull();
+    expect(getFreshSkillResult(previous, { ...previous, actionHistory: [{ turn: 1, type: "VOTE", message: "โหวตห้อง 101" }] })).toBeNull();
+    expect(getFreshSkillResult(previous, { ...previous, actionHistory: [{ turn: 1, type: "SKILL", message: "ใช้สกิล: พบผู้เล่น 2 คน" }] })).toBe("ใช้สกิล: พบผู้เล่น 2 คน");
+    expect(getFreshSkillResult(previous, { ...previous, privateResults: ["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B"] })).toBe("ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B");
+  });
+
+  it("renders the private result as a focused screen", () => {
+    const html = renderToStaticMarkup(createElement(SkillResultOverlay, { message: "ใช้สกิล: พบผู้เล่น 2 คน", language: "th" }));
+    expect(html).toContain('role="alertdialog"');
+    expect(html).toContain("ผลลัพธ์สกิล");
+    expect(html).toContain("พบผู้เล่น 2 คน");
+  });
   it("provides English phase guidance without exposing a hidden role", () => {
     expect(getTurnNotice(publicState, { ...privateState, canUseSkill: true }, "en")).toContain("Choose a target");
     expect(getTurnNotice(publicState, null, "en")).toBe("Skill phase: waiting for the active player.");
