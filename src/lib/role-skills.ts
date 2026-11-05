@@ -12,3 +12,16 @@ export const roleSkillDescriptions: Record<Role, string> = {
   ACCOMPLICE: "เลือกผู้เล่นหนึ่งคนเพื่อทราบชั้นที่เขาพัก หากเลือกผู้เล่นที่ตายแล้วจะไม่ได้ข้อมูลและถือว่าใช้สกิล ผลเป็นข้อมูลเฉพาะฝ่ายฆาตกร",
   KILLER: "เลือกหนึ่งห้องเพื่อลอบสังหารผู้พักที่ยังมีชีวิต หากห้องไม่ถูกล็อก ทำได้ครั้งเดียวต่อรอบ เมื่อฆ่าสำเร็จห้องนั้นจะแสดงว่าถูกฆาตกรรม แต่ไม่ประกาศชื่อเหยื่อ",
 };
+
+export const roleSkillDescriptionsEn: Record<Role, string> = {
+  ELECTRICIAN: "Black out one floor for this turn. Players on that floor cannot use their skills. After using it, wait one full turn before using it again.",
+  LOCKSMITH: "Lock one room for the turn. The Assassin cannot kill in that room, but players may still vote to open it.",
+  HOUSEKEEPER: "Choose a floor and privately learn how many living players are there.",
+  WINDOW_CLEANER: "Choose room column 01, 02, or 03 and learn how many living players are in that column across all seven floors.",
+  WITNESS: "Choose a floor. If it contains a mysterious clue, learn whether the Assassin is above, below, or on the same floor.",
+  DETECTIVE: "Inspect a room and learn whether its living occupant is Innocent or Murderer, or whether it is empty. You do not learn their name or role.",
+  RECEPTIONIST: "On your slot in turn 3, automatically receive a private register of every player and room. You receive nothing if you have died or your floor is dark.",
+  PHOTOGRAPHER: "You accidentally photographed the Assassin. On your slot in turn 3, privately learn their name and player number. You receive nothing if you have died or your floor is dark.",
+  ACCOMPLICE: "Choose a player and learn their floor. A dead player yields no information but still uses your skill. The result is shared only with the Murderer team.",
+  KILLER: "Choose a room to kill a living occupant if it is unlocked. You may act once per turn. A successful murder marks the room but does not reveal the victim's name.",
+};

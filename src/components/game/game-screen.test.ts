@@ -22,6 +22,10 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("provides English phase guidance without exposing a hidden role", () => {
+    expect(getTurnNotice(publicState, { ...privateState, canUseSkill: true }, "en")).toContain("Choose a target");
+    expect(getTurnNotice(publicState, null, "en")).toBe("Skill phase: waiting for the active player.");
+  });
   it("provides a home button after the result", () => {
     const html = renderToStaticMarkup(createElement(GameResultScreen, { result: { winner: "INNOCENT", turnsPlayed: 2, players: [], events: [] } }));
     expect(html).toContain("กลับหน้าแรก");

@@ -7,3 +7,5 @@ When adding or changing a playable role, read [docs/CHARACTER_ART_GUIDE.md](docs
 Keep the role present in `ROLE_ORDER`, `roleNames`, the portrait map, `roleSkillDescriptions`, the rules dialog, and the full-body character map in `src/lib/character-art.ts`. Verify all ten existing roles remain documented after a new role is added. The homepage gallery shows the twelve public characters from `src/lib/avatars.ts`.
 
 After completing and verifying each requested change, commit the finished work to Git in the same task. Include only files belonging to that change in its commit; do not push unless requested.
+
+The player interface supports Thai and English. For new public characters, add English names and stories to `src/lib/avatar-translations.ts`. For new roles, add English names and skill descriptions alongside the Thai ones. New player-facing UI and server-result copy must render in both languages; keep language selection local to each browser so players in one game may use different languages.

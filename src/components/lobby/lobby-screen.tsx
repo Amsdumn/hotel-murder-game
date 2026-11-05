@@ -11,8 +11,13 @@ import type { GameResultState, PrivatePlayerState, PublicGameState, VersionedTea
 import { GameScreen } from "@/components/game/game-screen";
 import { createActionId } from "@/lib/action-id";
 import { acceptNewerGameState } from "@/lib/game-state-version";
+import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 
 export function LobbyScreen({ code }: { code: string }) {
+  const language = useLanguage();
+  const en = language === "en";
+  const languageRef = useRef(language);
+  useEffect(() => { languageRef.current = language; }, [language]);
   const socketRef = useRef<Socket | null>(null);
   const [view, setView] = useState<LobbyView | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -47,14 +52,14 @@ export function LobbyScreen({ code }: { code: string }) {
       try {
         const currentToken = readLobbyToken(code);
         if (!currentToken) {
-          setError("ไม่พบสิทธิ์เข้าห้อง กรุณาเข้าร่วมจากหน้าแรก");
+          setError(languageRef.current === "en" ? "No room access found. Join from the home page." : "ไม่พบสิทธิ์เข้าห้อง กรุณาเข้าร่วมจากหน้าแรก");
           return;
         }
         const result = await requestLobby<LobbyIdentity>(socket, "lobby:resume", { code, token: currentToken });
         if (result.ok) saveLobbyIdentity(result.data);
         if (disposed || !socket.connected) return;
         if (!result.ok) {
-          setError(lobbyErrorMessage(result.error));
+          setError(lobbyErrorMessage(result.error, languageRef.current));
           if (result.error === "SERVER_UNAVAILABLE" && retryTimer === null) {
             retryTimer = window.setTimeout(() => { retryTimer = null; void onConnect(); }, 3000);
           }
@@ -72,9 +77,9 @@ export function LobbyScreen({ code }: { code: string }) {
     };
     const onDisconnect = (reason: string) => {
       setConnected(false);
-      setError(reason === "io server disconnect" ? "ห้องนี้ถูกเปิดจากแท็บหรืออุปกรณ์อื่น กรุณาเข้าร่วมใหม่จากหน้าแรก" : "การเชื่อมต่อขาด กำลังเชื่อมต่อใหม่…");
+      setError(reason === "io server disconnect" ? languageRef.current === "en" ? "This room was opened in another tab or device. Join again from home." : "ห้องนี้ถูกเปิดจากแท็บหรืออุปกรณ์อื่น กรุณาเข้าร่วมใหม่จากหน้าแรก" : languageRef.current === "en" ? "Connection lost. Reconnecting…" : "การเชื่อมต่อขาด กำลังเชื่อมต่อใหม่…");
     };
-    const onConnectError = () => setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองอีกครั้ง…");
+    const onConnectError = () => setError(languageRef.current === "en" ? "Cannot connect to the server. Retrying…" : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองอีกครั้ง…");
     const onGameState = (next: PublicGameState) => setGameState((current) => acceptNewerGameState(current, next));
     const onPrivateState = (next: PrivatePlayerState) => setPrivateState((current) => acceptNewerGameState(current, next));
     const onTeamState = (next: VersionedTeamState) => setVersionedTeamState((current) => acceptNewerGameState(current, next));
@@ -120,14 +125,14 @@ export function LobbyScreen({ code }: { code: string }) {
       setView(result.data);
       if (event === "lobby:rename") { saveGuestProfile(String(payload.displayName).trim()); setEditingName(false); }
     }
-    else setError(lobbyErrorMessage(result.error));
+    else setError(lobbyErrorMessage(result.error, language));
     setBusy(false);
   }
 
   const self = view?.players.find((player) => player.id === playerId);
   const isHost = view?.hostPlayerId === playerId;
 
-  if (kicked) return <main className="flex min-h-screen items-center justify-center bg-[#12111c] px-5 text-[#f8f1e4]"><Paper className="max-w-md border! border-[#d9b66f]/30! bg-[#211c1c]! p-8! text-center"><h1 className="font-serif text-2xl">คุณถูกนำออกจากห้องนี้</h1><p className="mt-3 text-sm text-[#c6bdb1]">เจ้าของห้องนำคุณออกจากห้องพักก่อนเริ่มเกม</p><Button className="mt-6!" component={Link} href="/" variant="contained">กลับหน้าแรก</Button></Paper></main>;
+  if (kicked) return <main className="flex min-h-screen items-center justify-center bg-[#12111c] px-5 text-[#f8f1e4]"><Paper className="max-w-md border! border-[#d9b66f]/30! bg-[#211c1c]! p-8! text-center"><h1 className="font-serif text-2xl">{en ? "You were removed from this room" : "คุณถูกนำออกจากห้องนี้"}</h1><p className="mt-3 text-sm text-[#c6bdb1]">{en ? "The host removed you before the game started." : "เจ้าของห้องนำคุณออกจากห้องพักก่อนเริ่มเกม"}</p><Button className="mt-6!" component={Link} href="/" variant="contained">{en ? "Back to home" : "กลับหน้าแรก"}</Button></Paper></main>;
 
   if (gameState) return <GameScreen state={gameState} privateState={privateState} teamState={privateState?.isAlive ? versionedTeamState?.teamState ?? null : null} result={result} murderSequence={murderSequence} connected={connected} connectionMessage={error} onCommand={(event, payload, version) => {
     const socket = socketRef.current;
@@ -141,11 +146,11 @@ export function LobbyScreen({ code }: { code: string }) {
       <div className="relative mx-auto max-w-5xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-[#d9b66f]/25 pb-5">
           <div>
-            <p className="text-sm tracking-[.22em] text-[#d9b66f]">คืนนี้ใครฆ่า...</p>
-            <h1 className="mt-2 font-serif text-3xl sm:text-4xl">ห้องพักก่อนเริ่มเกม</h1>
-            <p className="mt-2 text-sm text-[#c6bdb1]">แขกทุกคนกำลังมารวมตัวกัน ก่อนความลับในโรงแรมจะเริ่มเปิดเผย</p>
+            <p className="text-sm tracking-[.22em] text-[#d9b66f]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."}</p>
+            <h1 className="mt-2 font-serif text-3xl sm:text-4xl">{en ? "Waiting room" : "ห้องพักก่อนเริ่มเกม"}</h1>
+            <p className="mt-2 text-sm text-[#c6bdb1]">{en ? "The guests are gathering before the hotel's secrets come to light." : "แขกทุกคนกำลังมารวมตัวกัน ก่อนความลับในโรงแรมจะเริ่มเปิดเผย"}</p>
           </div>
-          <Button component={Link} href="/" variant="text">กลับหน้าแรก</Button>
+          <div className="flex items-center gap-2"><LanguageSwitcher /><Button component={Link} href="/" variant="text">{en ? "Back to home" : "กลับหน้าแรก"}</Button></div>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
@@ -153,19 +158,19 @@ export function LobbyScreen({ code }: { code: string }) {
             <Paper className="border! border-[#d9b66f]/20! bg-[#211c1c]/95! p-5! sm:p-7!">
               <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <p className="text-sm text-[#c6bdb1]">รหัสห้อง</p>
+                  <p className="text-sm text-[#c6bdb1]">{en ? "Room code" : "รหัสห้อง"}</p>
                   <p className="mt-1 font-mono text-3xl tracking-[.18em] text-[#d9b66f]">{code}</p>
                 </div>
-                <Chip label={connected ? "เชื่อมต่อแล้ว" : "กำลังเชื่อมต่อ"} color={connected ? "success" : "default"} variant="outlined" />
+                <Chip label={connected ? en ? "Connected" : "เชื่อมต่อแล้ว" : en ? "Connecting" : "กำลังเชื่อมต่อ"} color={connected ? "success" : "default"} variant="outlined" />
               </div>
 
-              {!view && !error && <div className="flex items-center gap-3 text-[#c6bdb1]"><CircularProgress size={22} /> กำลังโหลดห้องเกม…</div>}
+              {!view && !error && <div className="flex items-center gap-3 text-[#c6bdb1]"><CircularProgress size={22} /> {en ? "Loading game room…" : "กำลังโหลดห้องเกม…"}</div>}
               {error && <p role="alert" className="mb-5 rounded-lg border border-red-400/30 bg-red-950/30 p-3 text-sm text-red-200">{error}</p>}
 
               {view && <>
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className="font-serif text-xl">ผู้เข้าพัก</h2>
-                  <span className="text-sm text-[#c6bdb1]">{view.players.length}/{view.playerLimit} คน</span>
+                  <h2 className="font-serif text-xl">{en ? "Guests" : "ผู้เข้าพัก"}</h2>
+                  <span className="text-sm text-[#c6bdb1]">{view.players.length}/{view.playerLimit} {en ? "players" : "คน"}</span>
                 </div>
                 <div className="space-y-2">
                   {view.players.map((player) => (
@@ -174,47 +179,47 @@ export function LobbyScreen({ code }: { code: string }) {
                         <div className="min-w-0">
                         <span className="mr-3 text-[#a9977d]">{player.seatIndex + 1}.</span>
                         <span className="wrap-break-word">{player.displayName}</span>
-                        {player.id === view.hostPlayerId && <span className="ml-2 text-xs text-[#d9b66f]">เจ้าของห้อง</span>}
-                        {player.id === playerId && <span className="ml-2 text-xs text-[#c6bdb1]">คุณ</span>}
+                        {player.id === view.hostPlayerId && <span className="ml-2 text-xs text-[#d9b66f]">{en ? "Host" : "เจ้าของห้อง"}</span>}
+                        {player.id === playerId && <span className="ml-2 text-xs text-[#c6bdb1]">{en ? "You" : "คุณ"}</span>}
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
-                        {!player.connected && <span className="text-xs text-[#9f9486]">ออฟไลน์</span>}
-                        <Chip size="small" label={player.ready ? "พร้อม" : "รอ"} color={player.ready ? "success" : "default"} />
-                        {player.id === playerId && <Button size="small" variant="text" disabled={busy} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>แก้ชื่อ</Button>}
-                        {isHost && player.id !== playerId && <Button size="small" color="error" variant="text" disabled={busy || !connected} onClick={() => void act("lobby:kick", { playerId: player.id })}>ไล่ออก</Button>}
+                        {!player.connected && <span className="text-xs text-[#9f9486]">{en ? "Offline" : "ออฟไลน์"}</span>}
+                        <Chip size="small" label={player.ready ? en ? "Ready" : "พร้อม" : en ? "Waiting" : "รอ"} color={player.ready ? "success" : "default"} />
+                        {player.id === playerId && <Button size="small" variant="text" disabled={busy} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>{en ? "Rename" : "แก้ชื่อ"}</Button>}
+                        {isHost && player.id !== playerId && <Button size="small" color="error" variant="text" disabled={busy || !connected} onClick={() => void act("lobby:kick", { playerId: player.id })}>{en ? "Remove" : "ไล่ออก"}</Button>}
                       </div>
                     </div>
                   ))}
                 </div>
-                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label="ชื่อผู้เล่นใหม่" value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 24 } }} /><Button type="submit" variant="contained" disabled={busy || !connected || draftName.trim().length < 2}>บันทึกชื่อ</Button><Button variant="text" onClick={() => setEditingName(false)}>ยกเลิก</Button></form>}
+                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 24 } }} /><Button type="submit" variant="contained" disabled={busy || !connected || draftName.trim().length < 2}>{en ? "Save name" : "บันทึกชื่อ"}</Button><Button variant="text" onClick={() => setEditingName(false)}>{en ? "Cancel" : "ยกเลิก"}</Button></form>}
                 <Button className="mt-6!" variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
-                  {self?.ready ? "ยกเลิกความพร้อม" : "พร้อมแล้ว"}
+                  {self?.ready ? en ? "Not ready" : "ยกเลิกความพร้อม" : en ? "Ready" : "พร้อมแล้ว"}
                 </Button>
-                <p className="mt-2 text-xs text-[#c6bdb1]">ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม</p>
+                <p className="mt-2 text-xs text-[#c6bdb1]">{en ? "Everyone's character is assigned when the game begins." : "ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม"}</p>
               </>}
             </Paper>
           </section>
 
           <aside className="space-y-6">
             <Paper className="border! border-[#d9b66f]/20! bg-[#211c1c]/95! p-5! sm:p-7!">
-              <h2 className="font-serif text-xl">ตั้งค่าห้อง</h2>
-              <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">เจ้าของห้องตั้งค่าจำนวนผู้เล่นและเวลาพูดคุยก่อนเริ่มเกม</p>
+              <h2 className="font-serif text-xl">{en ? "Room settings" : "ตั้งค่าห้อง"}</h2>
+              <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "The host sets the player limit and discussion time before the game starts." : "เจ้าของห้องตั้งค่าจำนวนผู้เล่นและเวลาพูดคุยก่อนเริ่มเกม"}</p>
               {view && <div className="mt-5 space-y-4">
                 <Stack spacing={2}>
-                  <TextField size="small" select fullWidth label="จำนวนผู้เล่นสูงสุด" value={isHost ? playerLimit : view.playerLimit} onChange={(event) => setPlayerLimit(Number(event.target.value))} disabled={!isHost || busy}>
-                    {[5, 6, 7, 8, 9, 10].map((count) => <MenuItem key={count} value={count}>{count} คน</MenuItem>)}
+                  <TextField size="small" select fullWidth label={en ? "Maximum players" : "จำนวนผู้เล่นสูงสุด"} value={isHost ? playerLimit : view.playerLimit} onChange={(event) => setPlayerLimit(Number(event.target.value))} disabled={!isHost || busy}>
+                    {[5, 6, 7, 8, 9, 10].map((count) => <MenuItem key={count} value={count}>{count} {en ? "players" : "คน"}</MenuItem>)}
                   </TextField>
-                  <TextField size="small" type="number" fullWidth label="เวลาพูดคุย (วินาที)" value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy} slotProps={{ htmlInput: { min: 30, max: 600 } }} />
-                  {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds })}>บันทึกการตั้งค่า</Button>}
+                  <TextField size="small" type="number" fullWidth label={en ? "Discussion time (seconds)" : "เวลาพูดคุย (วินาที)"} value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy} slotProps={{ htmlInput: { min: 30, max: 600 } }} />
+                  {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds })}>{en ? "Save settings" : "บันทึกการตั้งค่า"}</Button>}
                 </Stack>
               </div>}
             </Paper>
             <Paper className="border! border-[#d9b66f]/20! bg-[#211c1c]/95! p-5! sm:p-7!">
-              <h2 className="font-serif text-xl">สถานะเกม</h2>
-              <p className="mt-3 text-sm leading-7 text-[#c6bdb1]">ต้องมีผู้เล่นอย่างน้อย 5 คน และทุกคนกดพร้อม</p>
-              <p className="mt-4 text-sm text-[#d9b66f]">{view?.canStart ? "ทุกคนพร้อมแล้ว" : "รอผู้เล่นและความพร้อม"}</p>
-              {isHost && view?.canStart && <Button className="mt-4!" fullWidth variant="contained" disabled={busy || !connected} onClick={() => void (async () => { setBusy(true); const response = await requestLobby<{ version: number }>(socketRef.current!, "game:start", { actionId: createActionId(), expectedVersion: view.version }); if (!response.ok) setError(lobbyErrorMessage(response.error)); setBusy(false); })()}>เริ่มเกม</Button>}
+              <h2 className="font-serif text-xl">{en ? "Game status" : "สถานะเกม"}</h2>
+              <p className="mt-3 text-sm leading-7 text-[#c6bdb1]">{en ? "At least five players must join, and everyone must be ready." : "ต้องมีผู้เล่นอย่างน้อย 5 คน และทุกคนกดพร้อม"}</p>
+              <p className="mt-4 text-sm text-[#d9b66f]">{view?.canStart ? en ? "Everyone is ready" : "ทุกคนพร้อมแล้ว" : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
+              {isHost && view?.canStart && <Button className="mt-4!" fullWidth variant="contained" disabled={busy || !connected} onClick={() => void (async () => { setBusy(true); const response = await requestLobby<{ version: number }>(socketRef.current!, "game:start", { actionId: createActionId(), expectedVersion: view.version }); if (!response.ok) setError(lobbyErrorMessage(response.error, language)); setBusy(false); })()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
             </Paper>
           </aside>
         </div>

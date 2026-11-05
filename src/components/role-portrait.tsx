@@ -1,5 +1,8 @@
+"use client";
+
 import Image from "next/image";
 import type { Role } from "@/types/game";
+import { useLanguage } from "@/components/language-switcher";
 
 export const roleNames: Record<Role, string> = {
   ELECTRICIAN: "ช่างไฟ",
@@ -12,6 +15,12 @@ export const roleNames: Record<Role, string> = {
   PHOTOGRAPHER: "ช่างภาพ",
   ACCOMPLICE: "ผู้สมรู้ร่วมคิด",
   KILLER: "นักฆ่า",
+};
+
+export const roleNamesEn: Record<Role, string> = {
+  ELECTRICIAN: "Electrician", LOCKSMITH: "Locksmith", HOUSEKEEPER: "Housekeeper",
+  WINDOW_CLEANER: "Window Cleaner", WITNESS: "Witness", DETECTIVE: "Detective",
+  RECEPTIONIST: "Receptionist", PHOTOGRAPHER: "Photographer", ACCOMPLICE: "Accomplice", KILLER: "Assassin",
 };
 
 const portraits: Record<Role, string> = {
@@ -28,7 +37,8 @@ const portraits: Record<Role, string> = {
 };
 
 export function RolePortrait({ role, className = "", sizes = "96px" }: { role: Role; className?: string; sizes?: string }) {
+  const en = useLanguage() === "en";
   return <div className={`relative shrink-0 overflow-hidden bg-[#271c2b] ${className}`}>
-    <Image src={portraits[role]} alt={`ภาพตัวละคร${roleNames[role]}`} fill sizes={sizes} className="object-cover object-top" />
+    <Image src={portraits[role]} alt={en ? `Portrait of ${roleNamesEn[role]}` : `ภาพตัวละคร${roleNames[role]}`} fill sizes={sizes} className="object-cover object-top" />
   </div>;
 }

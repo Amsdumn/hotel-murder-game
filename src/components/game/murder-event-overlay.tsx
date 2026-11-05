@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/components/language-switcher";
 
 function playSuspense(): void {
   try {
@@ -21,6 +22,7 @@ function playSuspense(): void {
 }
 
 export function MurderEventOverlay({ sequence, muted }: { sequence: number; muted: boolean }) {
+  const en = useLanguage() === "en";
   const [endedSequence, setEndedSequence] = useState(0);
   useEffect(() => {
     if (!sequence) return;
@@ -33,9 +35,9 @@ export function MurderEventOverlay({ sequence, muted }: { sequence: number; mute
   if (!sequence || sequence <= endedSequence) return null;
   return <div className="murder-event-overlay fixed inset-0 z-50 flex items-center justify-center bg-[#09070b] px-6 text-center text-[#f4efe8]" role="alert" aria-live="assertive">
     <div className="murder-event-message max-w-2xl">
-      <p className="mb-5 text-sm tracking-[.3em] text-[#c8a46b]">คืนนี้ใครฆ่า...</p>
-      <p className="font-serif text-3xl leading-relaxed sm:text-5xl">มีเหตุฆาตกรรมเกิดขึ้นภายในโรงแรม...</p>
-      <p className="mt-6 text-lg text-[#c8a46b] sm:text-2xl">แต่ไม่มีใครรู้ว่าเหยื่อคือใคร</p>
+      <p className="mb-5 text-sm tracking-[.3em] text-[#c8a46b]">{en ? "WHO KILLED TONIGHT?" : "คืนนี้ใครฆ่า..."}</p>
+      <p className="font-serif text-3xl leading-relaxed sm:text-5xl">{en ? "A murder has occurred in the hotel..." : "มีเหตุฆาตกรรมเกิดขึ้นภายในโรงแรม..."}</p>
+      <p className="mt-6 text-lg text-[#c8a46b] sm:text-2xl">{en ? "But nobody knows who the victim is" : "แต่ไม่มีใครรู้ว่าเหยื่อคือใคร"}</p>
     </div>
   </div>;
 }

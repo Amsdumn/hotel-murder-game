@@ -1,0 +1,17 @@
+import { describe, expect, it } from "vitest";
+import { gameMessage } from "./game-copy";
+
+describe("game message translation", () => {
+  it("translates room and skill results without changing their numbers", () => {
+    expect(gameMessage("พบร่องรอยปริศนาในห้อง 101, 203, 704", "en")).toBe("Mysterious clues found in rooms 101, 203, 704");
+    expect(gameMessage("ชั้น 3 มีผู้เล่นที่ยังมีชีวิต 2 คน", "en")).toBe("Floor 3 has 2 living players");
+    expect(gameMessage("ทิศทางชั้นนักฆ่า: ABOVE", "en")).toBe("Assassin's floor: above");
+    expect(gameMessage("ล็อกห้อง 103 แล้ว", "th")).toBe("ล็อกห้อง 103 แล้ว");
+  });
+  it("translates public events and preserves private player names", () => {
+    expect(gameMessage("เปิดห้อง 202 · มีผู้พัก", "en")).toBe("Room 202 opened · occupied");
+    expect(gameMessage("รอบ 3: เริ่มช่วงพูดคุย", "en")).toBe("Turn 3: discussion begins");
+    expect(gameMessage("ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 5 Alex", "en")).toBe("Turn 3 photograph: the Assassin is player 5 Alex");
+    expect(gameMessage("ใช้สกิล: ล็อกห้อง 103 แล้ว", "en")).toBe("Skill: Room 103 is locked");
+  });
+});

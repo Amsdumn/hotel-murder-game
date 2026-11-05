@@ -2,6 +2,7 @@
 
 import { io, type Socket } from "socket.io-client";
 import type { LobbyAck, LobbyErrorCode, LobbyIdentity, LobbyView } from "@/types/lobby";
+import type { Language } from "@/lib/language";
 import { createActionId } from "@/lib/action-id";
 
 export interface GuestProfile { id: string; displayName: string }
@@ -89,4 +90,19 @@ const messages: Record<LobbyErrorCode, string> = {
   SERVER_UNAVAILABLE: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองอีกครั้ง",
 };
 
-export function lobbyErrorMessage(code: LobbyErrorCode): string { return messages[code]; }
+const englishMessages: Record<LobbyErrorCode, string> = {
+  RATE_LIMITED: "Too many requests. Please wait a moment and try again",
+  INVALID_INPUT: "Please check the information you entered",
+  LOBBY_NOT_FOUND: "Game room not found",
+  LOBBY_FULL: "This game room is full",
+  STALE_STATE: "The room changed. Please try again",
+  DUPLICATE_ACTION: "This action was already completed",
+  CODE_COLLISION: "Could not create a room code. Please try again",
+  INVALID_SESSION: "Your room access expired. Please join again",
+  FORBIDDEN: "You cannot perform this action",
+  SKILL_EXPIRED: "Your skill time has expired. Wait for the next phase",
+  VOTE_EXPIRED: "Voting has ended. The room is opening",
+  SERVER_UNAVAILABLE: "Cannot connect to the server. Please try again",
+};
+
+export function lobbyErrorMessage(code: LobbyErrorCode, language: Language = "th"): string { return language === "en" ? englishMessages[code] : messages[code]; }
