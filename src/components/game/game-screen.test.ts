@@ -140,7 +140,7 @@ describe("game privacy and turn UI", () => {
     expect(render(null)).not.toContain('aria-label="โหวตห้อง');
   });
 
-  it("shows each voter's room and the count directly on voted rooms", () => {
+  it("shows vote counts on rooms and voter names in public history", () => {
     const state: PublicGameState = {
       ...publicState, phase: "VOTING", players: [
         { id: "a", displayName: "Guest A", seatIndex: 0 },
@@ -148,16 +148,18 @@ describe("game privacy and turn UI", () => {
         { id: "c", displayName: "Guest C", seatIndex: 2 },
       ],
       votes: [{ playerId: "a", roomNumber: 101 }, { playerId: "b", roomNumber: 101 }, { playerId: "c", roomNumber: 103 }],
+      publicHistory: [{ type: "VOTE_CAST", message: "Guest A โหวตห้อง 101" }],
       publicRooms: [{ roomNumber: 101, state: "UNKNOWN" }, { roomNumber: 102, state: "UNKNOWN" }, { roomNumber: 103, state: "UNKNOWN" }],
     };
     const board = renderToStaticMarkup(createElement(HotelBoard, { state, selfId: "a" }));
     expect(board).toContain("2 โหวต");
-    expect(board).toContain("Guest A โหวตห้อง 101");
-    expect(board).toContain("Guest B โหวตห้อง 101");
-    expect(board).toContain("Guest C โหวตห้อง 103");
-    expect(board).toContain("คุณโหวตห้อง 101");
+    expect(board).not.toContain("Guest A");
+    expect(board).not.toContain("Guest B");
+    expect(board).not.toContain("Guest C");
+    expect(board).not.toContain("คุณโหวตห้อง 101");
     const screen = renderToStaticMarkup(createElement(GameScreen, { state, privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }) }));
     expect(screen).toContain("คุณโหวตห้อง 101 แล้ว");
+    expect(screen).toContain("Guest A โหวตห้อง 101");
   });
 
   it("only makes eligible runoff rooms clickable on the board", () => {

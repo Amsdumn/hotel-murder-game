@@ -52,6 +52,7 @@ export type PublicGameEvent =
   | { type: "MURDER_OCCURRED"; message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม"; turn: number }
   | { type: "PHASE_CHANGED"; phase: "SKILL_PHASE" | "DISCUSSION" | "VOTING" | "RESOLUTION"; turn: number }
   | { type: "RUNOFF_STARTED"; turn: number }
+  | { type: "VOTE_CAST"; turn: number; playerName: string; roomNumber: number }
   | { type: "ROOM_OPENED"; roomNumber: number; occupancy: "EMPTY" | "OCCUPIED"; gameEnded: boolean }
   | { type: "GAME_FINISHED"; winner: Team };
 
@@ -83,6 +84,7 @@ export function publicEventMessage(event: PublicGameEvent): string {
   if (event.type === "ROOM_OPENED") return `เปิดห้อง ${event.roomNumber} · ${event.occupancy === "EMPTY" ? "ห้องว่าง" : "มีผู้พัก"}`;
   if (event.type === "GAME_FINISHED") return `ฝ่าย${event.winner === "INNOCENT" ? "ผู้บริสุทธิ์" : "ฆาตกร"}ชนะ`;
   if (event.type === "RUNOFF_STARTED") return `รอบ ${event.turn}: เริ่มโหวตตัดสิน`;
+  if (event.type === "VOTE_CAST") return `${event.playerName} โหวตห้อง ${event.roomNumber}`;
   const phase = event.phase === "SKILL_PHASE" ? "ใช้สกิล" : event.phase === "DISCUSSION" ? "พูดคุย" : event.phase === "VOTING" ? "ลงคะแนน" : "เฉลยผลการเปิดห้อง";
   return `รอบ ${event.turn}: เริ่มช่วง${phase}`;
 }

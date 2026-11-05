@@ -35,6 +35,7 @@ function dynamic(message: string): string | null {
   if ((match = message.match(/^ผลตรวจห้อง (\d+): (INNOCENT|MURDERER|EMPTY)$/))) return `Room ${match[1]}: ${({ INNOCENT: "Innocent", MURDERER: "Murderer", EMPTY: "empty" } as Record<string, string>)[match[2]]}`;
   if ((match = message.match(/^ผู้เล่นที่เลือกอยู่ชั้น (\d+)$/))) return `The selected player is on floor ${match[1]}`;
   if ((match = message.match(/^ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น (\d+) (.+)$/))) return `Turn 3 photograph: the Assassin is player ${match[1]} ${match[2]}`;
+  if ((match = message.match(/^(.+) โหวตห้อง (\d+)$/))) return `${match[1]} voted for room ${match[2]}`;
   if ((match = message.match(/^โหวต(ตัดสิน)?ห้อง (\d+)$/))) return `${match[1] ? "Runoff vote" : "Vote"} for room ${match[2]}`;
   if ((match = message.match(/^ลอบสังหารห้อง (\d+): (สำเร็จ|ไม่สำเร็จ)$/))) return `Assassinate room ${match[1]}: ${match[2] === "สำเร็จ" ? "succeeded" : "failed"}`;
   return null;

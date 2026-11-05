@@ -219,7 +219,7 @@ describe("viewer-specific action history", () => {
     expect(restored?.privateState.actionHistory).toEqual(projectPrivatePlayerState(result.state, "a").actionHistory);
   });
 
-  it("stores each accepted vote only in that voter's history", async () => {
+  it("stores each accepted vote in the voter's history and public activity", async () => {
     const store = new MemoryLobbyStore();
     await store.createLobby(record("VOTING"));
     const result = await new GameService(store).vote("ABC234", "b", {
@@ -230,5 +230,6 @@ describe("viewer-specific action history", () => {
     ]);
     expect(projectPrivatePlayerState(result.state, "a").actionHistory).toEqual([]);
     expect(projectPublicState(result.state).votes).toEqual([{ playerId: "b", roomNumber: 102 }]);
+    expect(projectPublicState(result.state).publicHistory).toContainEqual({ type: "VOTE_CAST", message: "B โหวตห้อง 102" });
   });
 });

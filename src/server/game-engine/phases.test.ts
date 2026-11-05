@@ -63,12 +63,12 @@ describe("server-owned phases", () => {
     expect(finished.state).toMatchObject({ phase: "FINISHED", winner: "MURDERER" });
   });
 
-  it("keeps voting progress anonymous and resolves a runoff tie", () => {
+  it("records each vote publicly and resolves a runoff tie", () => {
     let state = game({ phase: "VOTING" });
     for (const [id, room] of [["a", 101], ["b", 102], ["c", 101], ["d", 102], ["e", 103]] as const) {
       const result = castRoomVote(state, id, room);
       state = result.state;
-      expect(JSON.stringify(result.publicEvents)).not.toMatch(/playerId|actorId|roomNumber|voter|eligible|living/i);
+      expect(result.publicEvents[0]).toMatchObject({ type: "VOTE_CAST", playerName: state.players.find((player) => player.id === id)?.displayName, roomNumber: room });
     }
     expect(state.phase).toBe("VOTING");
     expect(state.runoffRooms).toEqual([101, 102]);

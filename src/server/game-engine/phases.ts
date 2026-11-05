@@ -73,8 +73,11 @@ export function castRoomVote(state: GameEngineState, playerId: string, roomNumbe
   if (state.phaseDeadlineAt !== undefined && now >= state.phaseDeadlineAt) throw new Error("Voting deadline has passed");
   if (state.runoffRooms?.length && !state.runoffRooms.includes(roomNumber)) throw new Error("Room is not in the runoff");
   const submitted = submitVote(state, playerId, roomNumber);
-  if (!submitted.complete) return { state: submitted.state, publicEvents: [], privateEvents: [] };
-  return resolveBallot(submitted.state, now, chooseTie);
+  const voteEvent: PublicGameEvent = { type: "VOTE_CAST", turn: state.turn, playerName: state.players.find((player) => player.id === playerId)!.displayName, roomNumber };
+  const voted = { ...submitted.state, publicHistory: [...(submitted.state.publicHistory ?? []), voteEvent] };
+  if (!submitted.complete) return { state: voted, publicEvents: [voteEvent], privateEvents: [] };
+  const resolved = resolveBallot(voted, now, chooseTie);
+  return { ...resolved, publicEvents: [voteEvent, ...resolved.publicEvents] };
 }
 
 export function projectGameResult(state: GameEngineState): GameResultState {
