@@ -2,7 +2,7 @@ import type { Role } from "@/types/game";
 
 export const roleSkillDescriptions: Record<Role, string> = {
   ELECTRICIAN: "ดับไฟหนึ่งชั้นในเทิร์นที่ใช้สกิล ผู้เล่นบนชั้นนั้นใช้สกิลไม่ได้ ใช้ได้หนึ่งครั้งโดยต้องเว้นหนึ่งเทิร์นก่อนใช้ซ้ำ",
-  LOCKSMITH: "ล็อกห้องหนึ่งห้องในรอบนั้น นักฆ่าลอบสังหารห้องที่ล็อกไม่ได้ แต่ยังโหวตเปิดห้องนั้นได้",
+  LOCKSMITH: "ล็อกห้องหนึ่งห้องในรอบนั้น และห้ามเลือกห้องที่เคยล็อกในรอบก่อนอีก นักฆ่าลอบสังหารห้องที่ล็อกไม่ได้ แต่ยังโหวตเปิดห้องนั้นได้",
   HOUSEKEEPER: "เลือกหนึ่งชั้น แล้วทราบจำนวนผู้เล่นที่ยังมีชีวิตบนชั้นนั้นเป็นข้อมูลส่วนตัว",
   WINDOW_CLEANER: "เลือกแนวห้อง 01, 02 หรือ 03 แล้วทราบจำนวนผู้เล่นที่ยังมีชีวิตในแนวนั้นตลอดเจ็ดชั้น",
   WITNESS: "เลือกหนึ่งชั้น หากมีห้องที่พบร่องรอยปริศนาบนชั้นนั้น จะทราบว่านักฆ่าอยู่ชั้นสูงกว่า ต่ำกว่า หรือชั้นเดียวกัน",
@@ -15,7 +15,7 @@ export const roleSkillDescriptions: Record<Role, string> = {
 
 export const roleSkillDescriptionsEn: Record<Role, string> = {
   ELECTRICIAN: "Black out one floor for this turn. Players on that floor cannot use their skills. After using it, wait one full turn before using it again.",
-  LOCKSMITH: "Lock one room for the turn. The Assassin cannot kill in that room, but players may still vote to open it.",
+  LOCKSMITH: "Protect one room per turn. A room protected in an earlier turn cannot be chosen again. The Assassin cannot kill in the locked room, but players may still vote to open it.",
   HOUSEKEEPER: "Choose a floor and privately learn how many living players are there.",
   WINDOW_CLEANER: "Choose room column 01, 02, or 03 and learn how many living players are in that column across all seven floors.",
   WITNESS: "Choose a floor. If it contains a mysterious clue, learn whether the Assassin is above, below, or on the same floor.",

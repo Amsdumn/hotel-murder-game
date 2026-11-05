@@ -31,6 +31,7 @@ export interface GameEngineState {
   crimeRooms: number[];
   openedRooms: number[];
   lockedRooms: number[];
+  locksmithUsedRooms?: number[];
   darkFloors?: number[];
   electricianLastUsedTurn?: Record<string, number>;
   activePlayerId: string | null;

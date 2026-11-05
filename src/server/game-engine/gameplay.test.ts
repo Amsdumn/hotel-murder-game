@@ -234,6 +234,20 @@ describe("gameplay setup and skills", () => {
     }
   });
 
+  it("lets the Locksmith protect one new room per turn without repeating a prior room", () => {
+    const initial = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 31000, choose()).state;
+    const locksmith = initial.players[0];
+    const rooms = HOTEL_ROOMS.filter((room) => !initial.crimeRooms.includes(room) && !initial.players.some((player) => player.roomNumber === room));
+    const firstTurn = { ...initial, activePlayerId: locksmith.id, usedSkillPlayerIds: [], players: initial.players.map((player) => player.id === locksmith.id ? { ...player, role: "LOCKSMITH" as const, team: "INNOCENT" as const } : player) };
+    const first = performSkill(firstTurn, locksmith.id, rooms[0], 1000, 180);
+    expect(first.state.locksmithUsedRooms).toEqual([rooms[0]]);
+    const secondTurn = { ...first.state, phase: "SKILL_PHASE" as const, turn: 2, activePlayerId: locksmith.id, usedSkillPlayerIds: [], lockedRooms: [] };
+    expect(() => performSkill(secondTurn, locksmith.id, rooms[0], 2000, 180)).toThrow("Room was already protected");
+    const second = performSkill(secondTurn, locksmith.id, rooms[1], 2000, 180);
+    expect(second.state.locksmithUsedRooms).toEqual([rooms[0], rooms[1]]);
+    expect(projectPrivatePlayerState(second.state, locksmith.id).locksmithUsedRooms).toEqual([rooms[0], rooms[1]]);
+  });
+
   it("rejects a floor or column when every room in it is already marked", () => {
     const initial = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 31000, choose()).state;
     const actor = initial.players[0];

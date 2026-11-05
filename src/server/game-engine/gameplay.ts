@@ -28,7 +28,7 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   const rooms = shuffle(HOTEL_ROOMS, choose);
   const avatars = shuffle(AVATAR_ORDER, choose);
   const players: EnginePlayer[] = seats.map((seat, index) => ({ id: seat.id, displayName: seat.displayName, seatIndex: seat.seatIndex, avatarId: avatars[index], role: roles[index], team: roles[index] === "KILLER" || roles[index] === "ACCOMPLICE" ? "MURDERER" : "INNOCENT", roomNumber: rooms[index], isAlive: true }));
-  const initial: GameEngineState = { code, version, phase: "ROLE_REVEAL", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], darkFloors: [], electricianLastUsedTurn: {}, activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, privateActionHistory: {}, publicHistory: [], phaseDeadlineAt: now + PROLOGUE_DURATION_MS };
+  const initial: GameEngineState = { code, version, phase: "ROLE_REVEAL", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], locksmithUsedRooms: [], darkFloors: [], electricianLastUsedTurn: {}, activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, privateActionHistory: {}, publicHistory: [], phaseDeadlineAt: now + PROLOGUE_DURATION_MS };
   return { state: initial, publicEvents: [], privateEvents: [] };
 }
 
@@ -112,7 +112,8 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
       message = `ดับไฟชั้น ${floor} แล้วในเทิร์นนี้`;
     } else if (actor.role === "LOCKSMITH") {
       const room = requireSelectableRoom(state, target);
-      next = { ...next, lockedRooms: [...new Set([...next.lockedRooms, room])] };
+      if (state.locksmithUsedRooms?.includes(room)) throw new Error("Room was already protected");
+      next = { ...next, lockedRooms: [...new Set([...next.lockedRooms, room])], locksmithUsedRooms: [...(next.locksmithUsedRooms ?? []), room] };
       message = `ล็อกห้อง ${room} แล้ว`;
     } else if (actor.role === "HOUSEKEEPER") {
       const floor = requireSelectableArea(state, target, "floor");

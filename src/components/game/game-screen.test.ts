@@ -206,6 +206,19 @@ describe("game privacy and turn UI", () => {
     expect(html).not.toContain('aria-label="โหวตห้อง');
   });
 
+  it("does not offer rooms already protected by the Locksmith as skill targets", () => {
+    const state = { ...publicState, publicRooms: [{ roomNumber: 101, state: "UNKNOWN" as const }, { roomNumber: 102, state: "UNKNOWN" as const }] };
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state,
+      privateState: { ...privateState, role: "LOCKSMITH", team: "INNOCENT", canUseSkill: true, locksmithUsedRooms: [101], skillDeadlineAt: Date.now() + 60_000 },
+      teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).not.toContain('aria-label="เลือกห้อง 101 เป็นเป้าหมายสกิล');
+    expect(html).toContain('aria-label="เลือกห้อง 102 เป็นเป้าหมายสกิล');
+    expect(html).toContain("เคยล็อกแล้ว");
+  });
+
   it("explains room skill targets without an inline confirm button", () => {
     const render = (role: PrivatePlayerState["role"], selectedRoom: number | null) => renderToStaticMarkup(createElement(SkillPanel, {
       privateState: { ...privateState, role }, state: publicState, selectedRoom,

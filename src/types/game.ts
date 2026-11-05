@@ -55,6 +55,7 @@ export interface PrivatePlayerState {
   isAlive: boolean;
   mode: "PLAYER" | "SPECTATOR";
   canUseSkill: boolean;
+  locksmithUsedRooms?: number[];
   skillBlockReason?: "BLACKOUT" | "COOLDOWN";
   skillDeadlineAt?: number;
   canVote: boolean;

@@ -159,7 +159,7 @@ function usesColumnTarget(role: Role): boolean {
 
 export const skillActionInstructions: Record<Role, string> = {
   ELECTRICIAN: "แตะชั้นหรือห้องบนชั้นที่ต้องการดับไฟ แล้วกดยืนยันสกิลด้านล่าง",
-  LOCKSMITH: "แตะห้องบนแผนผังเพื่อเลือกห้องที่จะล็อก แล้วกดยืนยันสกิลด้านล่าง",
+  LOCKSMITH: "แตะห้องที่ยังไม่เคยล็อกบนแผนผัง แล้วกดยืนยันสกิลด้านล่าง",
   HOUSEKEEPER: "แตะชั้นหรือห้องบนชั้นที่ต้องการตรวจจำนวนผู้พัก แล้วกดยืนยันสกิลด้านล่าง",
   WINDOW_CLEANER: "แตะแนวห้อง 01, 02 หรือ 03 บนแผนผัง แล้วกดยืนยันสกิลด้านล่าง",
   WITNESS: "แตะชั้นหรือห้องบนชั้นที่ต้องการตามรอย แล้วกดยืนยันสกิลด้านล่าง",
@@ -172,7 +172,7 @@ export const skillActionInstructions: Record<Role, string> = {
 
 const skillActionInstructionsEn: Record<Role, string> = {
   ELECTRICIAN: "Select a floor or room on that floor to black out, then confirm below.",
-  LOCKSMITH: "Select a room on the hotel map to lock, then confirm below.",
+  LOCKSMITH: "Select a room you have not protected before on the hotel map, then confirm below.",
   HOUSEKEEPER: "Select a floor or a room on that floor to count its guests, then confirm below.",
   WINDOW_CLEANER: "Select column 01, 02, or 03 on the hotel map, then confirm below.",
   WITNESS: "Select a floor or room on that floor to follow a clue, then confirm below.",
@@ -183,7 +183,7 @@ const skillActionInstructionsEn: Record<Role, string> = {
   KILLER: "Select a room on the hotel map to assassinate its occupant, then confirm below.",
 };
 
-export function HotelBoard({ state, selfId, onVote, onSkillRoomSelect, onSkillFloorSelect, onSkillColumnSelect, selectedSkillRoom = null, selectedSkillFloor = null, selectedSkillColumn = null, voteBusy = false }: { state: PublicGameState; selfId?: string; onVote?: (roomNumber: number) => void; onSkillRoomSelect?: (roomNumber: number) => void; onSkillFloorSelect?: (floor: number) => void; onSkillColumnSelect?: (column: number) => void; selectedSkillRoom?: number | null; selectedSkillFloor?: number | null; selectedSkillColumn?: number | null; voteBusy?: boolean }) {
+export function HotelBoard({ state, selfId, onVote, onSkillRoomSelect, onSkillFloorSelect, onSkillColumnSelect, unavailableSkillRooms = [], selectedSkillRoom = null, selectedSkillFloor = null, selectedSkillColumn = null, voteBusy = false }: { state: PublicGameState; selfId?: string; onVote?: (roomNumber: number) => void; onSkillRoomSelect?: (roomNumber: number) => void; onSkillFloorSelect?: (floor: number) => void; onSkillColumnSelect?: (column: number) => void; unavailableSkillRooms?: number[]; selectedSkillRoom?: number | null; selectedSkillFloor?: number | null; selectedSkillColumn?: number | null; voteBusy?: boolean }) {
   const en = useLanguage() === "en";
   const rooms = new Map(state.publicRooms.map((room) => [room.roomNumber, room]));
   return <Paper component="section" className="border! border-[#353440]! bg-[#191a22]! p-5! sm:p-6!">
@@ -201,8 +201,9 @@ export function HotelBoard({ state, selfId, onVote, onSkillRoomSelect, onSkillFl
           const marked = room.state === "CRIME_SCENE" || room.state === "MURDERED" || room.state === "OPENED_MURDERED";
           const opened = room.state.startsWith("OPENED_");
           const eligible = room.state === "UNKNOWN";
+          const usedByLocksmith = unavailableSkillRooms.includes(room.roomNumber);
           const canVote = eligible && !!onVote && (!state.runoffRooms?.length || state.runoffRooms.includes(room.roomNumber));
-          const canSelectSkill = eligible && !!onSkillRoomSelect;
+          const canSelectSkill = eligible && !!onSkillRoomSelect && !usedByLocksmith;
           const canSelect = eligible && (canVote || canSelectSkill || !!onSkillFloorSelect || !!onSkillColumnSelect);
           const selected = canSelect && (canSelectSkill && selectedSkillRoom === room.roomNumber || !!onSkillFloorSelect && selectedSkillFloor === floor || !!onSkillColumnSelect && selectedSkillColumn === column);
           const roomVotes = state.phase === "VOTING" ? (state.votes ?? []).filter((vote) => vote.roomNumber === room.roomNumber) : [];
@@ -211,6 +212,7 @@ export function HotelBoard({ state, selfId, onVote, onSkillRoomSelect, onSkillFl
           const content = <>
             <span className="font-mono text-sm font-semibold text-[#f4efe8] sm:text-base">{room.roomNumber}</span>
             <span className={`mt-1 text-[10px] leading-tight sm:text-xs ${marked ? "text-[#efb3b7]" : "text-[#b0b0bc]"}`}>{label}</span>
+            {usedByLocksmith && <span className="mt-1 text-[10px] font-semibold text-[#e3c88e] sm:text-xs">{en ? "Previously protected" : "เคยล็อกแล้ว"}</span>}
             {roomVotes.length > 0 && <span className="mt-2 rounded-md bg-[#e3c88e] px-2 py-1 text-xs font-bold text-[#211923]">{en ? `${roomVotes.length} votes` : `${roomVotes.length} โหวต`}</span>}
           </>;
           return canSelect ? <button key={room.roomNumber} type="button" aria-label={en ? canSelectSkill ? `Select room ${room.roomNumber} as skill target: ${label}` : onSkillFloorSelect ? `Select floor ${floor} through room ${room.roomNumber}` : onSkillColumnSelect ? `Select column 0${column} through room ${room.roomNumber}` : `Vote for room ${room.roomNumber}: ${label}` : canSelectSkill ? `เลือกห้อง ${room.roomNumber} เป็นเป้าหมายสกิล ${label}` : onSkillFloorSelect ? `เลือกชั้น ${floor} ผ่านห้อง ${room.roomNumber}` : onSkillColumnSelect ? `เลือกแนวห้อง 0${column} ผ่านห้อง ${room.roomNumber}` : `โหวตห้อง ${room.roomNumber} ${label}`} aria-pressed={canSelectSkill || onSkillFloorSelect || onSkillColumnSelect ? selected : undefined} className={className} disabled={voteBusy} onClick={() => canSelectSkill ? onSkillRoomSelect(room.roomNumber) : onSkillFloorSelect ? onSkillFloorSelect(floor) : onSkillColumnSelect ? onSkillColumnSelect(column) : onVote?.(room.roomNumber)}>{content}</button>
@@ -315,6 +317,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const floorSkillActive = !!privateState?.canUseSkill && usesFloorTarget(privateState.role);
   const columnSkillActive = !!privateState?.canUseSkill && usesColumnTarget(privateState.role);
   const selectedBoardTarget = skillBoardSelection?.turn === state.turn && skillBoardSelection.playerId === privateState?.playerId
+    && !(privateState?.role === "LOCKSMITH" && skillBoardSelection.kind === "room" && privateState.locksmithUsedRooms?.includes(skillBoardSelection.target))
     && state.publicRooms.some((room) => room.state === "UNKNOWN" && (skillBoardSelection.kind === "room" ? room.roomNumber === skillBoardSelection.target : skillBoardSelection.kind === "floor" ? Math.floor(room.roomNumber / 100) === skillBoardSelection.target : room.roomNumber % 100 === skillBoardSelection.target))
     ? skillBoardSelection : null;
   const selectedSkillRoom = selectedBoardTarget?.kind === "room" ? selectedBoardTarget.target : null;
@@ -352,7 +355,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {privateState?.privateResults.some((message) => message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") || message.startsWith("ภาพถ่ายเทิร์นที่ 3:")) && !showSecret && <Alert severity="info" className="mb-5!">{en ? "A new private investigation result is available. Open your private information to view it." : "มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู"}</Alert>}
     {state.phase !== "SKILL_PHASE" && privateState?.skillBlockReason && <Alert severity="warning" className="mb-5!">{privateState.skillBlockReason === "BLACKOUT" ? en ? "Your floor is dark. You cannot use your skill this turn." : "ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้" : en ? "Your Electrician skill is cooling down this turn." : "สกิลช่างไฟกำลังพักหนึ่งรอบ รอบนี้ใช้สกิลไม่ได้"}</Alert>}
     {privateState?.canUseSkill && skillDeadlineAt !== undefined && <p className="mb-5 text-sm text-[#e7ce98]" role="timer" aria-live="off">{skillSecondsLeft === null ? en ? "Checking skill time…" : "กำลังตรวจเวลาใช้สกิล…" : skillSecondsLeft > 0 ? en ? `${skillSecondsLeft} seconds left to use your skill` : `เวลาใช้สกิลเหลือ ${skillSecondsLeft} วินาที` : en ? "Skill time expired. Waiting for the next phase." : "หมดเวลาใช้สกิลแล้ว กำลังรอขั้นตอนถัดไป"}</p>}
-    {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} selfId={privateState?.playerId} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} onSkillRoomSelect={roomSkillActive ? (roomNumber) => selectBoardTarget("room", roomNumber) : undefined} onSkillFloorSelect={floorSkillActive ? (floor) => selectBoardTarget("floor", floor) : undefined} onSkillColumnSelect={columnSkillActive ? (column) => selectBoardTarget("column", column) : undefined} selectedSkillRoom={selectedSkillRoom} selectedSkillFloor={selectedSkillFloor} selectedSkillColumn={selectedSkillColumn} voteBusy={busy || !connected || voteExpired || ((roomSkillActive || floorSkillActive || columnSkillActive) && skillSecondsLeft === 0)} /><div className="space-y-5">
+    {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-[1.3fr_.8fr]"><HotelBoard state={state} selfId={privateState?.playerId} unavailableSkillRooms={privateState?.role === "LOCKSMITH" ? privateState.locksmithUsedRooms : undefined} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} onSkillRoomSelect={roomSkillActive ? (roomNumber) => selectBoardTarget("room", roomNumber) : undefined} onSkillFloorSelect={floorSkillActive ? (floor) => selectBoardTarget("floor", floor) : undefined} onSkillColumnSelect={columnSkillActive ? (column) => selectBoardTarget("column", column) : undefined} selectedSkillRoom={selectedSkillRoom} selectedSkillFloor={selectedSkillFloor} selectedSkillColumn={selectedSkillColumn} voteBusy={busy || !connected || voteExpired || ((roomSkillActive || floorSkillActive || columnSkillActive) && skillSecondsLeft === 0)} /><div className="space-y-5">
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
       <PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : undefined} />
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
