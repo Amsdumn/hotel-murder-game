@@ -11,6 +11,7 @@ import type { GameResultState, PrivatePlayerState, PrivateTeamState, PublicGameS
 import type { LobbyAck } from "@/types/lobby";
 import { MurderEventOverlay } from "./murder-event-overlay";
 import { PrivateRoomScene } from "./private-room-scene";
+import { ReceptionistRegister } from "./receptionist-register";
 import { avatarById, type AvatarId } from "@/lib/avatars";
 
 export function PublicGuests({ players, selfId, selectedPlayerId, onSelectPlayer }: { players: PublicGameState["players"]; selfId?: string; selectedPlayerId?: string | null; onSelectPlayer?: (playerId: string) => void }) {
@@ -86,7 +87,7 @@ export function PrivateInfoPanel({ privateState, teamState, players, open, onTog
       <PrivateRoomScene role={privateState.role} roomNumber={privateState.roomNumber} team={privateState.team} isAlive={privateState.isAlive} isActive={privateState.canUseSkill} avatarId={players.find((player) => player.id === privateState.playerId)?.avatarId} />
       {teamState && <section><h3 className="font-semibold text-[#d8bc86]">ฝ่ายฆาตกร</h3>{teamState.teammates.map((mate) => <p className="mt-2 text-sm" key={mate.playerId}>{players.find((player) => player.id === mate.playerId)?.displayName} · {roleNames[mate.role]} · ห้อง {mate.roomNumber}</p>)}</section>}
       {privateState.actionHistory.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ประวัติการกระทำของคุณ</h3><ol className="mt-2 space-y-2 text-sm text-[#d6d2dc]">{privateState.actionHistory.map((entry, index) => <li key={`${entry.turn}-${index}`}>รอบ {entry.turn} · {entry.message}</li>)}</ol></section>}
-      {privateState.privateResults.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ผลสืบสวนส่วนตัว</h3><ul className="mt-2 space-y-2 text-sm">{privateState.privateResults.map((message, index) => <li key={index}>{message}</li>)}</ul></section>}
+      {privateState.privateResults.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">ผลสืบสวนส่วนตัว</h3><div className="mt-2 space-y-3">{privateState.privateResults.map((message, index) => privateState.role === "RECEPTIONIST" && message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") ? <ReceptionistRegister key={index} message={message} players={players} /> : <p key={index} className="text-sm leading-7">{message}</p>)}</div></section>}
     </div>}
   </Paper>;
 }
