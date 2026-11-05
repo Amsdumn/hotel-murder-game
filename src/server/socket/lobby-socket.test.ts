@@ -205,10 +205,10 @@ describe("Socket.IO lobby", () => {
     expect(JSON.stringify(event)).not.toContain(victim.id);
     const updatedPublic = await publicState;
     expect(updatedPublic.publicRooms.find((room) => room.roomNumber === victim.roomNumber)?.state).toBe("MURDERED");
-    expect(JSON.stringify(updatedPublic.players)).not.toContain(String(victim.roomNumber));
+    expect(updatedPublic.players[victimIndex]?.avatarId).toBe(victim.avatarId);
     expect(projectPublicState(controlled.gameState).phaseDeadlineAt).toBeUndefined();
     expect(JSON.stringify(updatedPublic.publicHistory?.filter((entry) => entry.type === "MURDER_OCCURRED"))).not.toContain(String(victim.roomNumber));
-    expect(updatedPublic.players.every((player) => Object.keys(player).sort().join(",") === "displayName,id,seatIndex")).toBe(true);
+    expect(updatedPublic.players.every((player) => !Object.hasOwn(player, "roomNumber") && !Object.hasOwn(player, "role") && !Object.hasOwn(player, "team") && !Object.hasOwn(player, "isAlive"))).toBe(true);
     expect(await deathEvent).toMatchObject({ type: "DEATH_NOTICE", recipientPlayerId: victim.id });
     members[victimIndex].disconnect();
     const replacement = client();
