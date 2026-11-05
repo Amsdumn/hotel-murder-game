@@ -10,11 +10,21 @@ describe("lobby entry rate limits", () => {
     expect(limiter.allow("192.0.2.1", "create", 601000)).toBe(true);
   });
 
-  it("limits join attempts separately from creation and does not count resume", () => {
+  it("limits join attempts separately from creation", () => {
     const limiter = new LobbyJoinRateLimiter();
     for (let attempt = 0; attempt < 20; attempt += 1) expect(limiter.allow("192.0.2.1", "join", 1000)).toBe(true);
     expect(limiter.allow("192.0.2.1", "join", 1000)).toBe(false);
     expect(limiter.allow("192.0.2.1", "create", 1000)).toBe(true);
     expect(limiter.allow("192.0.2.1", "join", 61000)).toBe(true);
+  });
+
+  it("limits public reads and token recovery independently per address", () => {
+    const limiter = new LobbyJoinRateLimiter();
+    for (const [action, maximum] of [["list", 60], ["preview", 30], ["resume", 30]] as const) {
+      for (let attempt = 0; attempt < maximum; attempt += 1) expect(limiter.allow("192.0.2.1", action, 1000)).toBe(true);
+      expect(limiter.allow("192.0.2.1", action, 1000)).toBe(false);
+      expect(limiter.allow("192.0.2.2", action, 1000)).toBe(true);
+      expect(limiter.allow("192.0.2.1", action, 61000)).toBe(true);
+    }
   });
 });

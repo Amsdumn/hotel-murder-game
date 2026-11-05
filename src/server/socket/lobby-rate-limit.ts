@@ -2,9 +2,9 @@ export class LobbyJoinRateLimiter {
   private readonly attempts = new Map<string, number[]>();
   private calls = 0;
 
-  allow(address: string, action: "create" | "join", now = Date.now()): boolean {
+  allow(address: string, action: "create" | "join" | "list" | "preview" | "resume", now = Date.now()): boolean {
     const windowMs = action === "create" ? 10 * 60_000 : 60_000;
-    const maximum = action === "create" ? 5 : 20;
+    const maximum = action === "create" ? 5 : action === "join" ? 20 : action === "list" ? 60 : 30;
     const key = `${action}:${address}`;
     const recent = (this.attempts.get(key) ?? []).filter((time) => time > now - windowMs);
     const allowed = recent.length < maximum;

@@ -98,10 +98,16 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
   io.on("connection", (socket) => {
     socket.emit("server:ready", { status: "ready" });
     socket.on("lobby:list", (ack: unknown) => {
-      void respond(ack, () => service.listRooms());
+      void respond(ack, () => {
+        if (!lobbyEntryLimits.allow(socket.handshake.address, "list")) throw new LobbyError("RATE_LIMITED");
+        return service.listRooms();
+      });
     });
     socket.on("lobby:preview", (code: unknown, ack: unknown) => {
-      void respond(ack, () => service.preview(code));
+      void respond(ack, () => {
+        if (!lobbyEntryLimits.allow(socket.handshake.address, "preview")) throw new LobbyError("RATE_LIMITED");
+        return service.preview(code);
+      });
     });
     socket.on("lobby:create", (input: unknown, ack: unknown) => {
       void respond(ack, async () => {
@@ -127,6 +133,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
     socket.on("lobby:resume", (input: unknown, ack: unknown) => {
       void respond(ack, async () => {
         if (bindings.has(socket.id)) throw new LobbyError("FORBIDDEN");
+        if (!lobbyEntryLimits.allow(socket.handshake.address, "resume")) throw new LobbyError("RATE_LIMITED");
         const request = input as { code?: unknown; token?: unknown } | null;
         const identity = await service.resume(request?.code, request?.token);
         bind(socket, identity);

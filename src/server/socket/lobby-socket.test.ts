@@ -38,6 +38,17 @@ async function setup() {
 }
 
 describe("Socket.IO lobby", () => {
+  it("limits unauthenticated room reads before querying the store", async () => {
+    const { client } = await setup();
+    const visitor = client();
+    for (let attempt = 0; attempt < 60; attempt += 1) expect((await visitor.emitWithAck("lobby:list")).ok).toBe(true);
+    expect(await visitor.emitWithAck("lobby:list")).toEqual({ ok: false, error: "RATE_LIMITED" });
+    for (let attempt = 0; attempt < 30; attempt += 1) expect((await visitor.emitWithAck("lobby:preview", "ABC234")).error).toBe("LOBBY_NOT_FOUND");
+    expect(await visitor.emitWithAck("lobby:preview", "ABC234")).toEqual({ ok: false, error: "RATE_LIMITED" });
+    for (let attempt = 0; attempt < 30; attempt += 1) expect((await visitor.emitWithAck("lobby:resume", { code: "ABC234", token: "0".repeat(64) })).error).toBe("INVALID_SESSION");
+    expect(await visitor.emitWithAck("lobby:resume", { code: "ABC234", token: "0".repeat(64) })).toEqual({ ok: false, error: "RATE_LIMITED" });
+  }, 15000);
+
   it("limits room creation and join attempts per address without blocking resume", async () => {
     const { client } = await setup();
     const created = [];
