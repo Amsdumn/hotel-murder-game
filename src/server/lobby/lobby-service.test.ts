@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { LobbyService } from "./lobby-service";
 import { MemoryLobbyStore } from "./test-memory-store";
 
@@ -68,6 +68,25 @@ describe("LobbyService", () => {
     expect(await store.findLobby(created.code)).toBeNull();
     expect(await store.findSessionByPlayerId(created.playerId)).toBeNull();
     expect(await service.listRooms()).toEqual([]);
+  });
+
+  it("removes finished rooms ten minutes after their last update when nobody is connected", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(1_000_000);
+      const store = new MemoryLobbyStore();
+      const service = new LobbyService(store);
+      const created = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+      const record = (await store.findLobby(created.code))!;
+      await store.replaceLobby(created.code, record.version, { ...record, version: record.version + 1, phase: "FINISHED" });
+      expect(await service.cleanupUnusedRooms(999_999, () => false)).toEqual([]);
+      expect(await service.cleanupUnusedRooms(1_000_000, () => true)).toEqual([]);
+      expect(await service.cleanupUnusedRooms(1_000_000, () => false)).toEqual([created.code]);
+      expect(await store.findLobby(created.code)).toBeNull();
+      expect(await store.findSessionByPlayerId(created.playerId)).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("starts the idle period when the last player leaves a game in progress", async () => {

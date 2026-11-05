@@ -3,15 +3,22 @@ import type { ActiveLobbySummaryRecord, LobbyEventRecord, LobbyRecord, LobbyStor
 
 export class MemoryLobbyStore implements LobbyStore {
   private lobbies = new Map<string, LobbyRecord>();
+  private updatedAt = new Map<string, number>();
   private sessions = new Map<string, SessionRecord>();
   readonly events: LobbyEventRecord[] = [];
 
+  private isStale(record: LobbyRecord, cutoff: number): boolean {
+    return (record.emptySince ?? Infinity) <= cutoff || (record.phase === "FINISHED" && (this.updatedAt.get(record.code) ?? Infinity) <= cutoff);
+  }
+
   async listStaleLobbies(cutoff: number): Promise<string[]> {
-    return [...this.lobbies.values()].filter((item) => item.phase !== "FINISHED" && (item.emptySince ?? Infinity) <= cutoff).map((item) => item.code);
+    return [...this.lobbies.values()].filter((item) => this.isStale(item, cutoff)).map((item) => item.code);
   }
   async deleteStaleLobby(code: string, cutoff: number): Promise<boolean> {
-    if (!this.lobbies.has(code) || this.lobbies.get(code)?.phase === "FINISHED" || (this.lobbies.get(code)?.emptySince ?? Infinity) > cutoff) return false;
+    const room = this.lobbies.get(code);
+    if (!room || !this.isStale(room, cutoff)) return false;
     this.lobbies.delete(code);
+    this.updatedAt.delete(code);
     for (const [id, session] of this.sessions) if (session.gameCode === code) this.sessions.delete(id);
     this.events.splice(0, this.events.length, ...this.events.filter((event) => event.gameCode !== code));
     return true;
@@ -27,12 +34,14 @@ export class MemoryLobbyStore implements LobbyStore {
     if ([...this.lobbies.values()].some((item) => item.creationActionId === record.creationActionId)) throw new LobbyError("DUPLICATE_ACTION");
     if (this.lobbies.has(record.code)) throw new LobbyError("CODE_COLLISION");
     this.lobbies.set(record.code, structuredClone(record));
+    this.updatedAt.set(record.code, Date.now());
   }
-  async deleteLobby(code: string): Promise<void> { this.lobbies.delete(code); }
+  async deleteLobby(code: string): Promise<void> { this.lobbies.delete(code); this.updatedAt.delete(code); }
   async findLobby(code: string): Promise<LobbyRecord | null> { return structuredClone(this.lobbies.get(code) ?? null); }
   async replaceLobby(code: string, expectedVersion: number, next: LobbyRecord): Promise<boolean> {
     if (this.lobbies.get(code)?.version !== expectedVersion) return false;
     this.lobbies.set(code, structuredClone(next));
+    this.updatedAt.set(code, Date.now());
     return true;
   }
   async createSession(record: SessionRecord): Promise<void> { this.sessions.set(record.id, structuredClone(record)); }

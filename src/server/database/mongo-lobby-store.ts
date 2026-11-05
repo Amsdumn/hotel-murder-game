@@ -28,13 +28,19 @@ function ensureRoomLimitRemoved(): Promise<void> {
 export class MongoLobbyStore implements LobbyStore {
   async listStaleLobbies(cutoff: number): Promise<string[]> {
     await connectDatabase();
-    const records = await GameModel.find({ phase: { $ne: "FINISHED" }, emptySince: { $lte: cutoff } }).select("code").lean().exec();
+    const records = await GameModel.find({ $or: [
+      { emptySince: { $lte: cutoff } },
+      { phase: "FINISHED", updatedAt: { $lte: new Date(cutoff) } },
+    ] }).select("code").lean().exec();
     return records.map((record) => record.code);
   }
 
   async deleteStaleLobby(code: string, cutoff: number): Promise<boolean> {
     await connectDatabase();
-    const removed = await GameModel.deleteOne({ code, phase: { $ne: "FINISHED" }, emptySince: { $lte: cutoff } }).exec();
+    const removed = await GameModel.deleteOne({ code, $or: [
+      { emptySince: { $lte: cutoff } },
+      { phase: "FINISHED", updatedAt: { $lte: new Date(cutoff) } },
+    ] }).exec();
     if (removed.deletedCount !== 1) return false;
     await Promise.all([PlayerSessionModel.deleteMany({ gameCode: code }).exec(), GameEventModel.deleteMany({ gameCode: code }).exec()]);
     return true;
