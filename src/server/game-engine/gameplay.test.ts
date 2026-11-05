@@ -258,9 +258,23 @@ describe("gameplay setup and skills", () => {
     expect(result.state.usedSkillPlayerIds).toContain(accomplice.id);
     expect(result.state.activePlayerId).toBe(killer.id);
     expect(projectPrivatePlayerState(result.state, accomplice.id).privateResults).toContain("ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก");
-    expect(projectPrivatePlayerState(result.state, killer.id).privateResults).toContain("ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก");
+    expect(projectPrivatePlayerState(result.state, killer.id).privateResults).toContain("ข้อมูลจากผู้สมรู้ร่วมคิด: ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก");
     expect(result.publicEvents).toEqual([]);
     expect(() => performSkill(state, accomplice.id, "unknown-player", 1000, 180)).toThrow("Invalid skill target");
     expect(() => performSkill(state, accomplice.id, accomplice.id, 1000, 180)).toThrow("Invalid skill target");
+  });
+
+  it("sends a living target's floor to the Assassin as an Accomplice report", () => {
+    const initial = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 31000, choose()).state;
+    const accomplice = initial.players.find((player) => player.role === "ACCOMPLICE")!;
+    const killer = initial.players.find((player) => player.role === "KILLER")!;
+    const target = initial.players.find((player) => player.team === "INNOCENT")!;
+    const state = { ...initial, activePlayerId: accomplice.id };
+    const result = performSkill(state, accomplice.id, target.id, 1000, 180);
+    const report = `ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น ${Math.floor(target.roomNumber / 100)}`;
+    expect(projectPrivatePlayerState(result.state, killer.id).privateResults).toContain(report);
+    expect(result.privateEvents).toContainEqual({ type: "SKILL_RESULT", recipientPlayerId: killer.id, message: report });
+    expect(projectPrivatePlayerState(result.state, accomplice.id).privateResults).toContain(`ผู้เล่นที่เลือกอยู่ชั้น ${Math.floor(target.roomNumber / 100)}`);
+    expect(JSON.stringify(result.publicEvents)).not.toContain(report);
   });
 });

@@ -43,6 +43,7 @@ function dynamic(message: string): string | null {
 
 export function gameMessage(message: string, language: Language): string {
   if (language === "th") return message;
+  if (message.startsWith("ข้อมูลจากผู้สมรู้ร่วมคิด: ")) return `Accomplice report: ${gameMessage(message.slice("ข้อมูลจากผู้สมรู้ร่วมคิด: ".length), language)}`;
   if (message.startsWith("ใช้สกิล: ")) return `Skill: ${gameMessage(message.slice("ใช้สกิล: ".length), language)}`;
   return exact[message] ?? dynamic(message) ?? message;
 }

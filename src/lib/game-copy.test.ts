@@ -14,5 +14,6 @@ describe("game message translation", () => {
     expect(gameMessage("ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 5 Alex", "en")).toBe("Turn 3 photograph: the Assassin is player 5 Alex");
     expect(gameMessage("ใช้สกิล: ล็อกห้อง 103 แล้ว", "en")).toBe("Skill: Room 103 is locked");
     expect(gameMessage("Alex โหวตห้อง 102", "en")).toBe("Alex voted for room 102");
+    expect(gameMessage("ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4", "en")).toBe("Accomplice report: The selected player is on floor 4");
   });
 });

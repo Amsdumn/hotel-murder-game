@@ -124,10 +124,13 @@ export function getFreshSkillResult(previous: PrivatePlayerState | null, current
 }
 
 export function SkillResultOverlay({ message, language }: { message: string; language: Language }) {
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#09070c]/95 px-5" role="alertdialog" aria-modal="true" aria-label={language === "en" ? "Skill result" : "ผลลัพธ์สกิล"}>
+  const fromAccomplice = message.startsWith("ข้อมูลจากผู้สมรู้ร่วมคิด: ");
+  const title = fromAccomplice ? language === "en" ? "Accomplice report" : "ข้อมูลจากผู้สมรู้ร่วมคิด" : language === "en" ? "Skill result" : "ผลลัพธ์สกิล";
+  const result = fromAccomplice ? message.slice("ข้อมูลจากผู้สมรู้ร่วมคิด: ".length) : message;
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#09070c]/95 px-5" role="alertdialog" aria-modal="true" aria-label={title}>
     <div className="w-full max-w-xl rounded-2xl border border-[#e3c88e]/70 bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)] p-7 text-center shadow-[0_20px_80px_rgba(0,0,0,.7)] sm:p-10">
-      <p className="text-xs font-semibold tracking-[.25em] text-[#e3c88e]">{language === "en" ? "SKILL RESULT" : "ผลลัพธ์สกิล"}</p>
-      <p className="mt-6 font-serif text-2xl leading-relaxed text-[#f4efe8] sm:text-3xl">{gameMessage(message, language)}</p>
+      <p className="text-xs font-semibold tracking-[.25em] text-[#e3c88e]">{title}</p>
+      <p className="mt-6 font-serif text-2xl leading-relaxed text-[#f4efe8] sm:text-3xl">{gameMessage(result, language)}</p>
     </div>
   </div>;
 }

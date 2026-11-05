@@ -28,6 +28,7 @@ describe("game privacy and turn UI", () => {
     expect(getFreshSkillResult(previous, { ...previous, actionHistory: [{ turn: 1, type: "VOTE", message: "โหวตห้อง 101" }] })).toBeNull();
     expect(getFreshSkillResult(previous, { ...previous, actionHistory: [{ turn: 1, type: "SKILL", message: "ใช้สกิล: พบผู้เล่น 2 คน" }] })).toBe("ใช้สกิล: พบผู้เล่น 2 คน");
     expect(getFreshSkillResult(previous, { ...previous, privateResults: ["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B"] })).toBe("ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B");
+    expect(getFreshSkillResult(previous, { ...previous, privateResults: ["ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4"] })).toBe("ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4");
   });
 
   it("renders the private result as a focused screen", () => {
@@ -35,6 +36,13 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain('role="alertdialog"');
     expect(html).toContain("ผลลัพธ์สกิล");
     expect(html).toContain("พบผู้เล่น 2 คน");
+  });
+  it("identifies an Accomplice report in the Assassin's centered dialog", () => {
+    const html = renderToStaticMarkup(createElement(SkillResultOverlay, { message: "ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4", language: "th" }));
+    expect(html).toContain('role="alertdialog"');
+    expect(html).toContain("ข้อมูลจากผู้สมรู้ร่วมคิด");
+    expect(html).toContain("ผู้เล่นที่เลือกอยู่ชั้น 4");
+    expect(html).not.toContain("ผลลัพธ์สกิล");
   });
   it("provides English phase guidance without exposing a hidden role", () => {
     expect(getTurnNotice(publicState, { ...privateState, canUseSkill: true }, "en")).toContain("Choose a target");
