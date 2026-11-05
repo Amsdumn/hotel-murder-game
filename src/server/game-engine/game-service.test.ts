@@ -71,7 +71,7 @@ describe("persisted server deadlines", () => {
     const service = new GameService(store);
     const snapshot = await service.snapshot("ABC234", "a");
     expect(snapshot?.publicState.publicRooms.find((room) => room.roomNumber === 101)?.state).toBe("UNKNOWN");
-    expect(snapshot?.privateState).toMatchObject({ playerId: "a", isAlive: true, canVote: true });
+    expect(snapshot?.privateState).toMatchObject({ version: 5, playerId: "a", isAlive: true, canVote: true });
     expect(snapshot?.privateState.deathNotice).toBeUndefined();
     const vote = await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 101 });
     expect(vote.state.votes.a).toBe(101);

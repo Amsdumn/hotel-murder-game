@@ -18,7 +18,7 @@ export class GameService {
     if (!record?.gameState || !record.players.some((player) => player.id === playerId)) return null;
     const state = record.gameState;
     const player = state.players.find((item) => item.id === playerId)!;
-    return { publicState: projectPublicState(state), privateState: projectPrivatePlayerState(state, playerId), teamState: player.isAlive && player.team === "MURDERER" ? projectMurdererTeamState(state, playerId) : null, result: state.phase === "FINISHED" ? projectGameResult(state) : null };
+    return { publicState: projectPublicState(state), privateState: projectPrivatePlayerState(state, playerId), teamState: { version: state.version, teamState: player.isAlive && player.team === "MURDERER" ? projectMurdererTeamState(state, playerId) : null }, result: state.phase === "FINISHED" ? projectGameResult(state) : null };
   }
 
   private async commit(record: LobbyRecord, actionId: string, outcome: EngineResult): Promise<EngineResult> {

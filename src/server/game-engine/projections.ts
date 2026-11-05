@@ -32,6 +32,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
     && !state.darkFloors?.includes(Math.floor(player.roomNumber / 100))
     && !(player.role === "ELECTRICIAN" && state.electricianLastUsedTurn?.[player.id] === state.turn - 1);
   return {
+    version: state.version,
     playerId: player.id,
     role: player.role,
     team: player.team,

@@ -9,7 +9,7 @@ import { roleNames } from "../role-portrait";
 
 const privateState: PrivatePlayerState = {
   playerId: "a", role: "KILLER", team: "MURDERER", roomNumber: 202,
-  isAlive: true, mode: "PLAYER", canUseSkill: false, canVote: false,
+  version: 4, isAlive: true, mode: "PLAYER", canUseSkill: false, canVote: false,
   privateResults: ["ลอบสังหารสำเร็จ"],
   actionHistory: [{ turn: 1, type: "SKILL", message: "ลอบสังหารห้อง 102: สำเร็จ" }],
 };

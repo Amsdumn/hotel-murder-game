@@ -8,6 +8,7 @@ import { projectGameResult } from "../game-engine/phases";
 import { projectMurdererTeamState, projectPrivatePlayerState, projectPublicState } from "../game-engine/projections";
 import type { EngineResult } from "../game-engine/state";
 import type { LobbyIdentity, LobbyView, LobbyAck } from "../../types/lobby";
+import { LobbyJoinRateLimiter } from "./lobby-rate-limit";
 
 function room(code: string): string { return `lobby:${code}`; }
 
@@ -30,6 +31,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
   const pendingDisconnects = new Map<string, ReturnType<typeof setTimeout>>();
   const lastPublicState = new Map<string, string>();
   const lastPrivateState = new Map<string, string>();
+  const lobbyEntryLimits = new LobbyJoinRateLimiter();
 
   function bind(socket: Socket, identity: LobbyIdentity): void {
     const pending = pendingDisconnects.get(identity.playerId);
@@ -56,12 +58,14 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
       const socketId = activeSockets.get(player.id);
       if (socketId) {
         const privateState = projectPrivatePlayerState(result.state, player.id);
-        const privateSignature = JSON.stringify(privateState);
+        const privateSignature = JSON.stringify({ ...privateState, version: 0 });
         if (lastPrivateState.get(player.id) !== privateSignature) {
           lastPrivateState.set(player.id, privateSignature);
           io.to(socketId).emit("game:private", privateState);
-          if (player.isAlive && player.team === "MURDERER") io.to(socketId).emit("game:team", projectMurdererTeamState(result.state, player.id));
-          else io.to(socketId).emit("game:team", null);
+          io.to(socketId).emit("game:team", {
+            version: result.state.version,
+            teamState: player.isAlive && player.team === "MURDERER" ? projectMurdererTeamState(result.state, player.id) : null,
+          });
         }
       }
     }
@@ -102,6 +106,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
     socket.on("lobby:create", (input: unknown, ack: unknown) => {
       void respond(ack, async () => {
         if (bindings.has(socket.id)) throw new LobbyError("FORBIDDEN");
+        if (!lobbyEntryLimits.allow(socket.handshake.address, "create")) throw new LobbyError("RATE_LIMITED");
         await sweepUnusedRooms();
         const identity = await service.create(input);
         bind(socket, identity);
@@ -112,6 +117,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
     socket.on("lobby:join", (input: unknown, ack: unknown) => {
       void respond(ack, async () => {
         if (bindings.has(socket.id)) throw new LobbyError("FORBIDDEN");
+        if (!lobbyEntryLimits.allow(socket.handshake.address, "join")) throw new LobbyError("RATE_LIMITED");
         const identity = await service.join(input);
         bind(socket, identity);
         publish(identity.view);

@@ -38,6 +38,25 @@ async function setup() {
 }
 
 describe("Socket.IO lobby", () => {
+  it("limits room creation and join attempts per address without blocking resume", async () => {
+    const { client } = await setup();
+    const created = [];
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const reply = await client().emitWithAck("lobby:create", { displayName: `Host ${attempt}`, actionId: crypto.randomUUID() });
+      expect(reply.ok).toBe(true);
+      created.push(reply);
+    }
+    expect(await client().emitWithAck("lobby:create", { displayName: "Extra Host", actionId: crypto.randomUUID() })).toEqual({ ok: false, error: "RATE_LIMITED" });
+
+    const visitor = client();
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      expect(await visitor.emitWithAck("lobby:join", { code: "ABC234", displayName: "Guest", actionId: crypto.randomUUID(), expectedVersion: 0 })).toEqual({ ok: false, error: "LOBBY_NOT_FOUND" });
+    }
+    expect(await visitor.emitWithAck("lobby:join", { code: "ABC234", displayName: "Guest", actionId: crypto.randomUUID(), expectedVersion: 0 })).toEqual({ ok: false, error: "RATE_LIMITED" });
+    expect(created[0].ok).toBe(true);
+    if (created[0].ok) expect((await client().emitWithAck("lobby:resume", { code: created[0].data.code, token: created[0].data.token })).ok).toBe(true);
+  });
+
   it("allows visitors to list active rooms without private player data", async () => {
     const { client } = await setup();
     const visitor = client();

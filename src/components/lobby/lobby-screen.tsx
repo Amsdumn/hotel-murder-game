@@ -7,9 +7,10 @@ import { Button, Chip, CircularProgress, MenuItem, Paper, Stack, TextField } fro
 import type { Socket } from "socket.io-client";
 import { connectLobbySocket, forgetLobbyIdentity, lobbyErrorMessage, readLobbyToken, requestLobby, saveGuestProfile, saveLobbyIdentity } from "@/lib/lobby-client";
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
-import type { GameResultState, PrivatePlayerState, PrivateTeamState, PublicGameState } from "@/types/game";
+import type { GameResultState, PrivatePlayerState, PublicGameState, VersionedTeamState } from "@/types/game";
 import { GameScreen } from "@/components/game/game-screen";
 import { createActionId } from "@/lib/action-id";
+import { acceptNewerGameState } from "@/lib/game-state-version";
 
 export function LobbyScreen({ code }: { code: string }) {
   const socketRef = useRef<Socket | null>(null);
@@ -22,7 +23,7 @@ export function LobbyScreen({ code }: { code: string }) {
   const [discussionSeconds, setDiscussionSeconds] = useState(180);
   const [gameState, setGameState] = useState<PublicGameState | null>(null);
   const [privateState, setPrivateState] = useState<PrivatePlayerState | null>(null);
-  const [teamState, setTeamState] = useState<PrivateTeamState | null>(null);
+  const [versionedTeamState, setVersionedTeamState] = useState<VersionedTeamState | null>(null);
   const [result, setResult] = useState<GameResultState | null>(null);
   const [murderSequence, setMurderSequence] = useState(0);
   const [editingName, setEditingName] = useState(false);
@@ -74,9 +75,9 @@ export function LobbyScreen({ code }: { code: string }) {
       setError(reason === "io server disconnect" ? "ห้องนี้ถูกเปิดจากแท็บหรืออุปกรณ์อื่น กรุณาเข้าร่วมใหม่จากหน้าแรก" : "การเชื่อมต่อขาด กำลังเชื่อมต่อใหม่…");
     };
     const onConnectError = () => setError("เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองอีกครั้ง…");
-    const onGameState = (next: PublicGameState) => setGameState(next);
-    const onPrivateState = (next: PrivatePlayerState) => setPrivateState(next);
-    const onTeamState = (next: PrivateTeamState | null) => setTeamState(next);
+    const onGameState = (next: PublicGameState) => setGameState((current) => acceptNewerGameState(current, next));
+    const onPrivateState = (next: PrivatePlayerState) => setPrivateState((current) => acceptNewerGameState(current, next));
+    const onTeamState = (next: VersionedTeamState) => setVersionedTeamState((current) => acceptNewerGameState(current, next));
     const onResult = (next: GameResultState) => setResult(next);
     const onGameEvent = (event: { type: string }) => { if (event.type === "MURDER_OCCURRED") setMurderSequence((value) => value + 1); };
     const onKicked = () => { forgetLobbyIdentity(code); setKicked(true); socket.disconnect(); };
@@ -128,7 +129,7 @@ export function LobbyScreen({ code }: { code: string }) {
 
   if (kicked) return <main className="flex min-h-screen items-center justify-center bg-[#12111c] px-5 text-[#f8f1e4]"><Paper className="max-w-md border! border-[#d9b66f]/30! bg-[#211c1c]! p-8! text-center"><h1 className="font-serif text-2xl">คุณถูกนำออกจากห้องนี้</h1><p className="mt-3 text-sm text-[#c6bdb1]">เจ้าของห้องนำคุณออกจากห้องพักก่อนเริ่มเกม</p><Button className="mt-6!" component={Link} href="/" variant="contained">กลับหน้าแรก</Button></Paper></main>;
 
-  if (gameState) return <GameScreen state={gameState} privateState={privateState} teamState={teamState} result={result} murderSequence={murderSequence} connected={connected} connectionMessage={error} onCommand={(event, payload, version) => {
+  if (gameState) return <GameScreen state={gameState} privateState={privateState} teamState={privateState?.isAlive ? versionedTeamState?.teamState ?? null : null} result={result} murderSequence={murderSequence} connected={connected} connectionMessage={error} onCommand={(event, payload, version) => {
     const socket = socketRef.current;
     if (!socket) return Promise.resolve({ ok: false, error: "SERVER_UNAVAILABLE" as const });
     return requestLobby<{ version: number }>(socket, event, { ...payload, actionId: createActionId(), expectedVersion: version });

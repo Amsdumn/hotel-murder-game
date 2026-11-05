@@ -41,6 +41,7 @@ export type LobbyErrorCode =
   | "FORBIDDEN"
   | "SKILL_EXPIRED"
   | "VOTE_EXPIRED"
+  | "RATE_LIMITED"
   | "SERVER_UNAVAILABLE";
 
 export type LobbyAck<T> = { ok: true; data: T } | { ok: false; error: LobbyErrorCode };

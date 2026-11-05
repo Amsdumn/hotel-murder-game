@@ -46,6 +46,7 @@ export interface PublicGameState {
 }
 
 export interface PrivatePlayerState {
+  version: number;
   playerId: string;
   role: Role;
   team: Team;
@@ -64,6 +65,11 @@ export interface PrivatePlayerState {
 export interface PrivateTeamState {
   teammates: Array<{ playerId: string; role: "KILLER" | "ACCOMPLICE"; roomNumber: number }>;
   privateResults: string[];
+}
+
+export interface VersionedTeamState {
+  version: number;
+  teamState: PrivateTeamState | null;
 }
 
 export interface GameResultState {
