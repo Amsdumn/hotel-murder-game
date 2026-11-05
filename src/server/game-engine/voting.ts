@@ -1,13 +1,13 @@
-import { isHotelRoom, killPlayer, type EngineResult, type GameEngineState } from "./state";
+import { isHotelRoom, isSelectableRoom, killPlayer, type EngineResult, type GameEngineState } from "./state";
 
-export function canVoteForRoom(roomNumber: number, crimeRooms: number[], openedRooms: number[]): boolean {
-  return isHotelRoom(roomNumber) && !crimeRooms.includes(roomNumber) && !openedRooms.includes(roomNumber);
+export function canVoteForRoom(roomNumber: number, crimeRooms: number[], openedRooms: number[], murderedRooms: number[] = []): boolean {
+  return isHotelRoom(roomNumber) && !crimeRooms.includes(roomNumber) && !openedRooms.includes(roomNumber) && !murderedRooms.includes(roomNumber);
 }
 
 export function submitVote(state: GameEngineState, playerId: string, roomNumber: number): { state: GameEngineState; complete: boolean } {
   const player = state.players.find((item) => item.id === playerId);
   if (state.phase !== "VOTING" || !player || !player.isAlive) throw new Error("Voting is not permitted");
-  if (!canVoteForRoom(roomNumber, state.crimeRooms, state.openedRooms)) throw new Error("Room is not eligible");
+  if (!isSelectableRoom(state, roomNumber)) throw new Error("Room is not eligible");
   const currentVotes = state.votes ?? {};
   if (Object.hasOwn(currentVotes, playerId)) throw new Error("Player has already voted");
   const votes = { ...currentVotes, [playerId]: roomNumber };
@@ -19,7 +19,7 @@ export function submitVote(state: GameEngineState, playerId: string, roomNumber:
 
 export function resolveVoteRoom(state: GameEngineState, roomNumber: number): EngineResult {
   if (state.phase !== "VOTING" && state.phase !== "RESOLUTION") throw new Error("Voting resolution is not permitted");
-  if (!canVoteForRoom(roomNumber, state.crimeRooms, state.openedRooms)) throw new Error("Room is not eligible");
+  if (!isSelectableRoom(state, roomNumber)) throw new Error("Room is not eligible");
   const occupant = state.players.find((player) => player.roomNumber === roomNumber);
   let next: GameEngineState = { ...state, openedRooms: [...state.openedRooms, roomNumber] };
   const privateEvents: EngineResult["privateEvents"] = [];

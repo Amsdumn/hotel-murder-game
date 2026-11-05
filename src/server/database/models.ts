@@ -7,6 +7,7 @@ const lobbyPlayerSchema = new Schema({
   seatIndex: { type: Number, required: true },
   ready: { type: Boolean, required: true },
   connected: { type: Boolean, required: true },
+  avatarId: { type: String, required: false },
 }, { _id: false });
 
 const gameSchema = new Schema<LobbyRecord>({

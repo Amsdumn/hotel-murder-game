@@ -4,6 +4,7 @@ export interface LobbyPlayerRecord {
   seatIndex: number;
   ready: boolean;
   connected: boolean;
+  avatarId?: import("../../lib/avatars").AvatarId | null;
 }
 
 export interface LobbyRecord {

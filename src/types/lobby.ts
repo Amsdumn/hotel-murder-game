@@ -40,6 +40,7 @@ export type LobbyErrorCode =
   | "INVALID_SESSION"
   | "FORBIDDEN"
   | "SKILL_EXPIRED"
+  | "VOTE_EXPIRED"
   | "SERVER_UNAVAILABLE";
 
 export type LobbyAck<T> = { ok: true; data: T } | { ok: false; error: LobbyErrorCode };

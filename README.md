@@ -1,6 +1,6 @@
 # Hotel Murder Online
 
-Phase 2 foundation for a real-time social deduction browser game. The app serves a Thai main menu and multiplayer lobby through a custom Next.js and Socket.IO server. Gameplay and role assignment begin in Phase 3.
+A real-time Thai social deduction browser game set in a seven-floor hotel. The custom Next.js and Socket.IO server runs the lobby, assigns hidden roles and rooms, resolves skills and voting, and sends each player only the information they may see. Players can inspect the twelve 3D anime characters on the main menu. Character identities stay hidden in the lobby and are randomly assigned when the game starts, independently of secret roles.
 
 ## Requirements
 
@@ -32,8 +32,9 @@ Run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. To run
 - `src/components`: MUI-backed UI components
 - `src/stores`: UI-only Zustand state
 - `src/types`: shared domain contracts
-- `src/server`: Mongoose lobby models, versioned lobby service, and Socket.IO handlers; game engine will be added in Phase 3
+- `src/server`: Mongoose lobby models, versioned lobby service, Socket.IO handlers, and server-authoritative game engine
 - `docs/IMPLEMENTATION_PLAN.md`: milestones and architecture
 - `docs/GAME_RULES.md`: authoritative game rules
+- `docs/CHARACTER_ART_GUIDE.md`: character portrait, full-body art, and theme conventions
 
 The full game aggregate must remain server-side. Public, player-private, murderer-team-private, and result data use separate projections before any browser emission.

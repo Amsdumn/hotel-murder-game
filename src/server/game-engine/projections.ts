@@ -7,9 +7,9 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     version: state.version,
     phase: state.phase,
     turn: state.turn,
-    players: state.players.map(({ id, displayName, seatIndex }) => ({ id, displayName, seatIndex })),
+    players: state.players.map(({ id, displayName, seatIndex, avatarId }) => ({ id, displayName, seatIndex, avatarId: avatarId ?? null })),
     phaseMessage: state.phase === "SKILL_PHASE" ? "กำลังดำเนินการสืบสวน..." : null,
-    ...((state.phase === "ROLE_REVEAL" || state.phase === "DISCUSSION") && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
+    ...(["ROLE_REVEAL", "DISCUSSION", "VOTING", "RESOLUTION"].includes(state.phase) && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
     publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
     publicRooms: HOTEL_ROOMS.map((roomNumber) => {
@@ -27,7 +27,10 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
   const player = state.players.find((item) => item.id === requesterId);
   if (!player) throw new Error("Player not found");
   const deathNotice = state.deathNotices?.[player.id];
-  const canUseSkill = player.isAlive && state.phase === "SKILL_PHASE" && state.activePlayerId === player.id && !state.usedSkillPlayerIds.includes(player.id);
+  const blockedAction = state.privateActionHistory?.[player.id]?.find((entry) => entry.turn === state.turn && entry.type === "SKILL" && (entry.message === "ใช้สกิลไม่ได้เนื่องจากไฟดับบนชั้นของคุณ" || entry.message === "สกิลช่างไฟกำลังพักหนึ่งเทิร์น"));
+  const canUseSkill = player.isAlive && player.role !== "RECEPTIONIST" && player.role !== "PHOTOGRAPHER" && state.phase === "SKILL_PHASE" && state.activePlayerId === player.id && !state.usedSkillPlayerIds.includes(player.id)
+    && !state.darkFloors?.includes(Math.floor(player.roomNumber / 100))
+    && !(player.role === "ELECTRICIAN" && state.electricianLastUsedTurn?.[player.id] === state.turn - 1);
   return {
     playerId: player.id,
     role: player.role,
@@ -36,6 +39,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
     isAlive: player.isAlive,
     mode: player.isAlive ? "PLAYER" : "SPECTATOR",
     canUseSkill,
+    ...(blockedAction ? { skillBlockReason: blockedAction.message.startsWith("ใช้สกิลไม่ได้") ? "BLACKOUT" as const : "COOLDOWN" as const } : {}),
     ...(canUseSkill && state.phaseDeadlineAt !== undefined ? { skillDeadlineAt: state.phaseDeadlineAt } : {}),
     canVote: player.isAlive && state.phase === "VOTING" && !Object.hasOwn(state.votes ?? {}, player.id),
     ...(deathNotice ? { deathNotice } : {}),

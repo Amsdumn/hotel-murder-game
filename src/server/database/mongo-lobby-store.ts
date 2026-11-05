@@ -80,7 +80,7 @@ export class MongoLobbyStore implements LobbyStore {
       code: record.code, ...(record.emptySince !== undefined ? { emptySince: record.emptySince } : {}), phase: record.phase, version: record.version,
       creationActionId: record.creationActionId, hostPlayerId: record.hostPlayerId,
       playerLimit: record.playerLimit, discussionSeconds: record.discussionSeconds,
-      players: record.players.map(({ id, displayName, seatIndex, ready, connected }) => ({ id, displayName, seatIndex, ready, connected })),
+      players: record.players.map(({ id, displayName, seatIndex, ready, connected, avatarId }) => ({ id, displayName, seatIndex, ready, connected, avatarId })),
       appliedActionIds: [...record.appliedActionIds],
       ...(record.gameState ? { gameState: record.gameState } : {}),
     } : null;
@@ -124,7 +124,10 @@ export class MongoLobbyStore implements LobbyStore {
 
   async listDueGames(now: number): Promise<LobbyRecord[]> {
     await connectDatabase();
-    const records = await GameModel.find({ phase: { $in: ["ROLE_REVEAL", "SKILL_PHASE", "DISCUSSION"] }, "gameState.phaseDeadlineAt": { $lte: now } }).select("code").lean().exec();
+    const records = await GameModel.find({ $or: [
+      { phase: { $in: ["ROLE_REVEAL", "SKILL_PHASE", "DISCUSSION", "VOTING", "RESOLUTION"] }, "gameState.phaseDeadlineAt": { $lte: now } },
+      { phase: "VOTING", "gameState.phaseDeadlineAt": { $exists: false } },
+    ] }).select("code").lean().exec();
     const games = await Promise.all(records.map((record) => this.findLobby(record.code)));
     return games.filter((game): game is LobbyRecord => game !== null);
   }

@@ -23,7 +23,44 @@ describe("server-owned phases", () => {
     expect(advanceTimedPhase(discussion, 180999).state.phase).toBe("DISCUSSION");
     const voting = advanceTimedPhase(discussion, 181000).state;
     expect(voting.phase).toBe("VOTING");
+    expect(voting.phaseDeadlineAt).toBe(241000);
     expect(voting.publicHistory).toContainEqual({ type: "PHASE_CHANGED", phase: "VOTING", turn: 1 });
+  });
+
+  it("resolves a partial ballot at its deadline and gives players time to see the opened room", () => {
+    const voting = game({ phase: "VOTING", phaseDeadlineAt: 1000, votes: { a: 101 } });
+    expect(advanceTimedPhase(voting, 999).state).toBe(voting);
+    const opened = advanceTimedPhase(voting, 1000, () => 0);
+    expect(opened.state.phase).toBe("RESOLUTION");
+    expect(opened.state.openedRooms).toEqual([101]);
+    expect(opened.state.phaseDeadlineAt).toBe(7000);
+    expect(advanceTimedPhase(opened.state, 6999).state).toBe(opened.state);
+    const next = advanceTimedPhase(opened.state, 7000);
+    expect(next.state).toMatchObject({ phase: "SKILL_PHASE", turn: 2, phaseDeadlineAt: 67000 });
+  });
+
+  it("opens a server-chosen eligible room when nobody votes and advances an empty runoff", () => {
+    const empty = advanceTimedPhase(game({ phase: "VOTING", phaseDeadlineAt: 1000 }), 1000, () => 0);
+    expect(empty.state.openedRooms).toEqual([101]);
+    const tie = advanceTimedPhase(game({ phase: "VOTING", phaseDeadlineAt: 1000, votes: { a: 101, b: 102 } }), 1000, () => 0);
+    expect(tie.state).toMatchObject({ phase: "VOTING", runoffRooms: [101, 102], phaseDeadlineAt: 61000 });
+    const runoff = advanceTimedPhase(tie.state, 61000, () => 1);
+    expect(runoff.state).toMatchObject({ phase: "RESOLUTION", openedRooms: [102] });
+  });
+
+  it("skips murdered rooms when a ballot has no votes", () => {
+    const state = game({ phase: "VOTING", phaseDeadlineAt: 1000, deathNotices: { a: { cause: "ASSASSINATION", turn: 1 } }, players: players.map((player) => player.id === "a" ? { ...player, isAlive: false } : player) });
+    const result = advanceTimedPhase(state, 1000, () => 0);
+    expect(result.state.openedRooms).toEqual([102]);
+  });
+
+  it("shows the fourth room result before announcing the murderer victory", () => {
+    const voting = game({ phase: "VOTING", turn: 4, phaseDeadlineAt: 1000, votes: { a: 101 } });
+    const opened = advanceTimedPhase(voting, 1000, () => 0);
+    expect(opened.state.phase).toBe("RESOLUTION");
+    expect(opened.state.winner).toBeNull();
+    const finished = advanceTimedPhase(opened.state, 7000);
+    expect(finished.state).toMatchObject({ phase: "FINISHED", winner: "MURDERER" });
   });
 
   it("keeps voting progress anonymous and resolves a runoff tie", () => {

@@ -43,7 +43,7 @@ describe("hidden deaths", () => {
     expect(result.privateEvents).toContainEqual(expect.objectContaining({ recipientPlayerId: "victim", type: "DEATH_NOTICE" }));
     const publicState = projectPublicState(result.state);
     expect(publicState.publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("MURDERED");
-    expect(publicState.players.find((player) => player.id === "victim")).toEqual({ id: "victim", displayName: "Victim", seatIndex: 1 });
+    expect(publicState.players.find((player) => player.id === "victim")).toEqual({ id: "victim", displayName: "Victim", seatIndex: 1, avatarId: null });
     expect(JSON.stringify(publicState.publicHistory)).not.toContain("victim");
   });
 
@@ -63,12 +63,18 @@ describe("hidden deaths", () => {
     }
   });
 
+  it("rejects a second action on a clue or murdered room in the assassination engine", () => {
+    expect(() => resolveAssassination(game({ crimeRooms: [301] }), 301)).toThrow("Room is not eligible");
+    const murdered = resolveAssassination(game(), 102).state;
+    expect(() => resolveAssassination({ ...murdered, usedSkillPlayerIds: [], activePlayerId: "killer" }, 102)).toThrow("Room is not eligible");
+  });
+
   it("keeps dead players in public roster without status or private data", () => {
     const result = resolveAssassination(game(), 102);
     const publicState = projectPublicState(result.state);
     expect(publicState.players).toHaveLength(5);
     expect(publicState.players.map((player) => player.id)).toContain("victim");
-    expect(publicState.players.every((player) => Object.keys(player).sort().join(",") === "displayName,id,seatIndex")).toBe(true);
+    expect(publicState.players.every((player) => Object.keys(player).sort().join(",") === "avatarId,displayName,id,seatIndex")).toBe(true);
     expect(JSON.stringify(publicState.players)).not.toMatch(/isAlive|isDead|deathReason|deathTurn|roomNumber|HOUSEKEEPER/);
     expect(publicState.publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("MURDERED");
     expect(publicState.phaseMessage).toBe("กำลังดำเนินการสืบสวน...");
@@ -91,6 +97,66 @@ describe("hidden deaths", () => {
     expect(result.state.activePlayerId).toBe("accomplice");
     expect(result.publicEvents).toEqual([]);
     expect(result.privateEvents).toEqual([{ type: "ACTION_REQUEST", recipientPlayerId: "accomplice" }]);
+  });
+
+  it("privately reveals every guest-room assignment to the living receptionist only on turn three", () => {
+    const receptionist = { id: "receptionist", displayName: "Receptionist", seatIndex: 5, role: "RECEPTIONIST" as const, team: "INNOCENT" as const, roomNumber: 303, isAlive: true };
+    const base = game({ players: [...game().players, receptionist], activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim"] });
+    const third = advanceSkillTurn({ ...base, turn: 3 }, "victim");
+    expect(third.state.activePlayerId).toBe("accomplice");
+    expect(third.state.usedSkillPlayerIds).toContain("receptionist");
+    expect(projectPrivatePlayerState({ ...base, turn: 3, activePlayerId: "receptionist" }, "receptionist").canUseSkill).toBe(false);
+    expect(third.privateEvents).toContainEqual(expect.objectContaining({ type: "SKILL_RESULT", recipientPlayerId: "receptionist", message: expect.stringContaining("Killer · ห้อง 202") }));
+    expect(projectPrivatePlayerState(third.state, "receptionist").privateResults.join(" ")).toContain("Victim · ห้อง 102");
+    expect(projectPrivatePlayerState(third.state, "innocent").privateResults.join(" ")).not.toContain("Victim · ห้อง 102");
+    expect(projectPrivatePlayerState(third.state, "accomplice").privateResults.join(" ")).not.toContain("Victim · ห้อง 102");
+    expect(JSON.stringify(projectPublicState(third.state))).not.toContain("Receptionist · ห้อง 303");
+    expect(third.publicEvents).toEqual([]);
+    for (const turn of [1, 2, 4]) {
+      const skipped = advanceSkillTurn({ ...base, turn }, "victim");
+      expect(skipped.state.activePlayerId).toBe("accomplice");
+      expect(projectPrivatePlayerState(skipped.state, "receptionist").privateResults).toEqual([]);
+    }
+  });
+
+  it("withholds the receptionist's register if they died or their floor lost power", () => {
+    const receptionist = { id: "receptionist", displayName: "Receptionist", seatIndex: 5, role: "RECEPTIONIST" as const, team: "INNOCENT" as const, roomNumber: 303, isAlive: true };
+    const players = [...game().players, receptionist];
+    for (const state of [game({ turn: 3, players: players.map((player) => player.id === "receptionist" ? { ...player, isAlive: false } : player) }), game({ turn: 3, players, darkFloors: [3] })]) {
+      const result = advanceSkillTurn({ ...state, activePlayerId: null }, "victim");
+      expect(result.privateEvents.some((event) => event.type === "SKILL_RESULT" && event.recipientPlayerId === "receptionist")).toBe(false);
+      expect(projectPrivatePlayerState(result.state, "receptionist").privateResults).toEqual([]);
+    }
+  });
+
+  it("reveals the killer's identity only to the living photographer on turn three", () => {
+    const photographer = { id: "photographer", displayName: "Photographer", seatIndex: 5, role: "PHOTOGRAPHER" as const, team: "INNOCENT" as const, roomNumber: 303, isAlive: true };
+    const base = game({ players: [...game().players, photographer], activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim"] });
+    const third = advanceSkillTurn({ ...base, turn: 3 }, "victim");
+    expect(third.state.activePlayerId).toBe("accomplice");
+    expect(third.state.usedSkillPlayerIds).toContain("photographer");
+    expect(projectPrivatePlayerState({ ...base, turn: 3, activePlayerId: "photographer" }, "photographer").canUseSkill).toBe(false);
+    expect(third.privateEvents).toContainEqual({ type: "SKILL_RESULT", recipientPlayerId: "photographer", message: "ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 5 Killer" });
+    expect(projectPrivatePlayerState(third.state, "photographer").privateResults).toContain("ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 5 Killer");
+    expect(projectPrivatePlayerState(third.state, "photographer").actionHistory).toContainEqual({ turn: 3, type: "SKILL", message: "ตรวจภาพถ่ายแล้ว" });
+    expect(projectPrivatePlayerState(third.state, "innocent").privateResults).toEqual([]);
+    expect(projectPrivatePlayerState(third.state, "accomplice").privateResults).toEqual([]);
+    expect(third.publicEvents).toEqual([]);
+    expect(JSON.stringify(projectPublicState(third.state))).not.toContain("ภาพถ่ายเทิร์นที่ 3");
+    for (const turn of [1, 2, 4]) {
+      const skipped = advanceSkillTurn({ ...base, turn }, "victim");
+      expect(projectPrivatePlayerState(skipped.state, "photographer").privateResults).toEqual([]);
+    }
+  });
+
+  it("withholds the photo result if the photographer died or their floor lost power", () => {
+    const photographer = { id: "photographer", displayName: "Photographer", seatIndex: 5, role: "PHOTOGRAPHER" as const, team: "INNOCENT" as const, roomNumber: 303, isAlive: true };
+    const players = [...game().players, photographer];
+    for (const state of [game({ turn: 3, players: players.map((player) => player.id === "photographer" ? { ...player, isAlive: false } : player) }), game({ turn: 3, players, darkFloors: [3] })]) {
+      const result = advanceSkillTurn({ ...state, activePlayerId: null }, "victim");
+      expect(result.privateEvents.some((event) => event.type === "SKILL_RESULT" && event.recipientPlayerId === "photographer")).toBe(false);
+      expect(projectPrivatePlayerState(result.state, "photographer").privateResults).toEqual([]);
+    }
   });
 
   it("gives the Witness a turn only after the Killer's room choice", () => {
@@ -125,12 +191,12 @@ describe("voting eligibility and results", () => {
     expect(result.state.players.find((player) => player.id === "victim")?.isAlive).toBe(false);
   });
 
-  it("keeps the murder label after that room is opened by voting", () => {
+  it("makes a murdered room ineligible for voting and opening", () => {
     const murdered = resolveAssassination(game(), 102).state;
-    expect(canVoteForRoom(102, murdered.crimeRooms, murdered.openedRooms)).toBe(true);
-    const opened = resolveVoteRoom({ ...murdered, phase: "VOTING" }, 102).state;
-    expect(projectPublicState(opened).publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("OPENED_MURDERED");
-    expect(canVoteForRoom(102, opened.crimeRooms, opened.openedRooms)).toBe(false);
+    expect(canVoteForRoom(102, murdered.crimeRooms, murdered.openedRooms, [102])).toBe(false);
+    expect(() => submitVote({ ...murdered, phase: "VOTING" }, "innocent", 102)).toThrow("Room is not eligible");
+    expect(() => resolveVoteRoom({ ...murdered, phase: "VOTING" }, 102)).toThrow("Room is not eligible");
+    expect(projectPublicState(murdered).publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("MURDERED");
   });
 
   it("ends the game immediately when voting kills the Killer", () => {

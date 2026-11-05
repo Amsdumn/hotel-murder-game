@@ -67,14 +67,15 @@ export class GameService {
     return this.commit(record, actionId, result);
   }
 
-  async vote(code: string, playerId: string, input: unknown): Promise<EngineResult> {
+  async vote(code: string, playerId: string, input: unknown, now = Date.now()): Promise<EngineResult> {
     const parsed = voteSchema.safeParse(input);
     if (!parsed.success) throw new LobbyError("INVALID_INPUT");
     for (let attempt = 0; attempt < 12; attempt += 1) {
       const { record, actionId } = await this.record(code, playerId, input, true);
       if (!record.gameState) throw new LobbyError("FORBIDDEN");
+      if (record.gameState.phase === "VOTING" && record.gameState.phaseDeadlineAt !== undefined && now >= record.gameState.phaseDeadlineAt) throw new LobbyError("VOTE_EXPIRED");
       let result: EngineResult;
-      try { result = castRoomVote(record.gameState, playerId, parsed.data.roomNumber); }
+      try { result = castRoomVote(record.gameState, playerId, parsed.data.roomNumber, undefined, now); }
       catch { throw new LobbyError("FORBIDDEN"); }
       result = { ...result, state: appendPrivateAction(result.state, playerId, {
         turn: record.gameState.turn, type: "VOTE",

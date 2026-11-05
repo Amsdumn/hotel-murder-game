@@ -181,7 +181,8 @@ export class LobbyService {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const { session, lobby } = await this.actor(playerId);
       if (lobby.phase !== "LOBBY") return project(lobby);
-      if (lobby.players.find((player) => player.id === playerId)?.connected === connected) return project(lobby);
+      const current = lobby.players.find((player) => player.id === playerId)!;
+      if (current.connected === connected) return project(lobby);
       const next: LobbyRecord = { ...lobby, version: lobby.version + 1, players: lobby.players.map((player) => player.id === playerId ? { ...player, connected } : player) };
       if (await this.store.replaceLobby(session.gameCode, lobby.version, next)) return project(next);
     }

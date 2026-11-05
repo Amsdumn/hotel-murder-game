@@ -1,8 +1,11 @@
 export const ROLE_ORDER = [
+  "ELECTRICIAN",
   "LOCKSMITH",
   "HOUSEKEEPER",
   "WINDOW_CLEANER",
   "DETECTIVE",
+  "RECEPTIONIST",
+  "PHOTOGRAPHER",
   "ACCOMPLICE",
   "KILLER",
   "WITNESS",
@@ -34,7 +37,7 @@ export interface PublicGameState {
   version: number;
   phase: GamePhase;
   turn: number;
-  players: Array<{ id: string; displayName: string; seatIndex: number }>;
+  players: Array<{ id: string; displayName: string; seatIndex: number; avatarId?: import("../lib/avatars").AvatarId | null }>;
   phaseMessage: "กำลังดำเนินการสืบสวน..." | null;
   publicRooms: Array<{ roomNumber: number; state: "UNKNOWN" | "CRIME_SCENE" | "MURDERED" | "OPENED_EMPTY" | "OPENED_OCCUPIED" | "OPENED_MURDERED" }>;
   phaseDeadlineAt?: number;
@@ -50,6 +53,7 @@ export interface PrivatePlayerState {
   isAlive: boolean;
   mode: "PLAYER" | "SPECTATOR";
   canUseSkill: boolean;
+  skillBlockReason?: "BLACKOUT" | "COOLDOWN";
   skillDeadlineAt?: number;
   canVote: boolean;
   deathNotice?: { cause: "INITIAL_CRIME" | "ASSASSINATION" | "VOTE"; turn: number };
@@ -65,6 +69,6 @@ export interface PrivateTeamState {
 export interface GameResultState {
   winner: Team;
   turnsPlayed: number;
-  players: Array<{ playerId: string; displayName: string; role: Role; team: Team; roomNumber: number; isAlive: boolean }>;
+  players: Array<{ playerId: string; displayName: string; avatarId?: import("../lib/avatars").AvatarId | null; role: Role; team: Team; roomNumber: number; isAlive: boolean }>;
   events: Array<{ type: string; message: string }>;
 }

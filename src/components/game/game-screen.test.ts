@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
-import { GameScreen, HotelBoard, PrivateInfoPanel, getTurnNotice } from "./game-screen";
+import { GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, getTurnNotice, skillActionInstructions } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
+import { roleSkillDescriptions } from "@/lib/role-skills";
+import { roleNames } from "../role-portrait";
 
 const privateState: PrivatePlayerState = {
   playerId: "a", role: "KILLER", team: "MURDERER", roomNumber: 202,
@@ -20,7 +22,13 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
-  it("shows story before the crime rooms and hides the hotel board during the prologue", () => {
+  it("calls the murderer-team assassin นักฆ่า while retaining the team name", () => {
+    expect(roleNames.KILLER).toBe("นักฆ่า");
+    const html = renderToStaticMarkup(createElement(RoleRevealCard, { privateState }));
+    expect(html).toContain("นักฆ่า · ห้อง 202");
+    expect(html).toContain("ฝ่ายฆาตกร");
+  });
+  it("offers a private role reveal during the prologue without exposing it before the player opens it", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, {
       state: { ...publicState, phase: "ROLE_REVEAL", phaseDeadlineAt: 16000, publicHistory: [], publicRooms: publicState.publicRooms.map((room) => ({ ...room, state: "UNKNOWN" as const })) },
       privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
@@ -28,9 +36,71 @@ describe("game privacy and turn UI", () => {
     }));
     expect(html).toContain("ก่อนเรื่องราวจะเริ่ม");
     expect(html).toContain("พายุ");
+    expect(html).toContain("เปิดดูบทบาทของฉัน");
+    expect(html).not.toContain("ห้อง 202");
+    const revealed = renderToStaticMarkup(createElement(RoleRevealCard, { privateState }));
+    expect(revealed).toContain("ฆาตกร");
+    expect(revealed).toContain("ห้อง 202");
+    expect(revealed).toContain(roleSkillDescriptions.KILLER);
     expect(html).not.toContain("แผนผัง");
-    expect(html).not.toContain("ข้อมูลลับ");
+    expect(html).not.toContain("ยืนยันสกิล");
     expect(html).not.toContain("ที่เกิดเหตุ");
+  });
+
+  it("shows a private blackout explanation and the voting and resolution clocks", () => {
+    expect(getTurnNotice(publicState, { ...privateState, skillBlockReason: "BLACKOUT" })).toContain("ไฟดับ");
+    const render = (phase: PublicGameState["phase"]) => renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase, phaseDeadlineAt: Date.now() + 60_000, publicHistory: [{ type: "ROOM_OPENED", message: "เปิดห้อง 101 · ห้องว่าง" }] },
+      privateState: { ...privateState, canVote: phase === "VOTING" }, teamState: null, result: null,
+      murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(render("VOTING")).toContain("เวลาลงคะแนน");
+    expect(render("RESOLUTION")).toContain("เปิดห้อง 101 · ห้องว่าง");
+    expect(render("RESOLUTION")).toContain("เริ่มรอบถัดไปใน");
+  });
+
+  it("floats the discussion clock at the top center of the viewport", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase: "DISCUSSION", phaseDeadlineAt: Date.now() + 60_000 },
+      privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain('class="fixed inset-x-0 top-3');
+    expect(html).toContain("เวลาพูดคุย");
+  });
+
+  it("keeps the personal blackout notice visible after the skill phase ends", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase: "DISCUSSION" },
+      privateState: { ...privateState, skillBlockReason: "BLACKOUT" }, teamState: null, result: null,
+      murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain("ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้");
+    expect(html).toContain("ช่วงพูดคุย");
+  });
+
+  it("prompts the receptionist to open the private panel when the third-turn register arrives", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, turn: 3 },
+      privateState: { ...privateState, role: "RECEPTIONIST", team: "INNOCENT", privateResults: ["ทะเบียนห้องพักเทิร์นที่ 3: Guest · ห้อง 202"] },
+      teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain("มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู");
+    expect(html).not.toContain("ทะเบียนห้องพักเทิร์นที่ 3:");
+  });
+  it("prompts the photographer to open the private photo result without exposing it publicly", () => {
+    for (const turn of [3, 4]) {
+      const html = renderToStaticMarkup(createElement(GameScreen, {
+        state: { ...publicState, turn },
+        privateState: { ...privateState, role: "PHOTOGRAPHER", team: "INNOCENT", privateResults: ["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 2 Guest B"] },
+        teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
+        onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+      }));
+      expect(html).toContain("มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู");
+      expect(html).not.toContain("นักฆ่าคือผู้เล่น 2 Guest B");
+    }
+    expect(roleNames.PHOTOGRAPHER).toBe("ช่างภาพ");
   });
   it("offers voting on the hotel board only to an eligible player", () => {
     const render = (viewer: PrivatePlayerState | null) => renderToStaticMarkup(createElement(GameScreen, {
@@ -40,7 +110,7 @@ describe("game privacy and turn UI", () => {
     }));
 
     expect(render({ ...privateState, canVote: true })).toContain('aria-label="โหวตห้อง 101');
-    expect(render({ ...privateState, canVote: true })).toContain('aria-label="โหวตห้อง 102');
+    expect(render({ ...privateState, canVote: true })).not.toContain('aria-label="โหวตห้อง 102');
     expect(render({ ...privateState, canVote: true })).not.toContain("ลงคะแนนเปิดห้อง");
     expect(render(privateState)).not.toContain('aria-label="โหวตห้อง');
     expect(render({ ...privateState, isAlive: false, mode: "SPECTATOR" })).not.toContain('aria-label="โหวตห้อง');
@@ -55,10 +125,116 @@ describe("game privacy and turn UI", () => {
     ] };
     const html = renderToStaticMarkup(createElement(HotelBoard, { state, onVote: () => {} }));
     expect(html).toContain('aria-label="โหวตห้อง 101');
-    expect(html).toContain('aria-label="โหวตห้อง 103');
+    expect(html).not.toContain('aria-label="โหวตห้อง 103');
     expect(html).not.toContain('aria-label="โหวตห้อง 102');
     expect(html).not.toContain('aria-label="โหวตห้อง 201');
     expect(html).not.toContain('aria-label="โหวตห้อง 202');
+  });
+
+  it("fades every opened room to 0.35 opacity", () => {
+    const state: PublicGameState = { ...publicState, publicRooms: [
+      { roomNumber: 101, state: "UNKNOWN" }, { roomNumber: 102, state: "OPENED_EMPTY" },
+      { roomNumber: 103, state: "OPENED_OCCUPIED" }, { roomNumber: 201, state: "OPENED_MURDERED" },
+    ] };
+    const html = renderToStaticMarkup(createElement(HotelBoard, { state }));
+    expect((html.match(/opacity-\[0\.35\]/g) ?? [])).toHaveLength(3);
+  });
+
+  it("excludes clue, opened, and murdered rooms from every room skill", () => {
+    const state: PublicGameState = { ...publicState, publicRooms: [
+      { roomNumber: 101, state: "UNKNOWN" }, { roomNumber: 102, state: "CRIME_SCENE" },
+      { roomNumber: 103, state: "OPENED_EMPTY" }, { roomNumber: 201, state: "MURDERED" },
+    ] };
+    const html = renderToStaticMarkup(createElement(HotelBoard, { state, onSkillRoomSelect: () => {}, selectedSkillRoom: 101 }));
+    expect(html).toContain('aria-label="เลือกห้อง 101 เป็นเป้าหมายสกิล');
+    for (const room of [102, 103, 201]) expect(html).not.toContain(`aria-label="เลือกห้อง ${room} เป็นเป้าหมายสกิล`);
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).not.toContain('aria-label="โหวตห้อง');
+  });
+
+  it("explains room skill targets without an inline confirm button", () => {
+    const render = (role: PrivatePlayerState["role"], selectedRoom: number | null) => renderToStaticMarkup(createElement(SkillPanel, {
+      privateState: { ...privateState, role }, state: publicState, selectedRoom,
+    }));
+    for (const role of ["LOCKSMITH", "DETECTIVE", "KILLER"] as const) {
+      expect(render(role, null)).toContain("แตะห้องบนแผนผังโรงแรม");
+      expect(render(role, null)).not.toContain("ยืนยันสกิล");
+      expect(render(role, null)).not.toContain('role="combobox"');
+      expect(render(role, 102)).toContain("เป้าหมาย: ห้อง 102");
+    }
+    expect(render("HOUSEKEEPER", null)).toContain("แตะเลขชั้นบนแผนผัง");
+  });
+
+  it("offers floor and column controls on the hotel board only for those skill targets", () => {
+    const state = { ...publicState, publicRooms: [...publicState.publicRooms, { roomNumber: 103, state: "UNKNOWN" as const }, { roomNumber: 201, state: "CRIME_SCENE" as const }, { roomNumber: 202, state: "UNKNOWN" as const }, { roomNumber: 203, state: "OPENED_EMPTY" as const }] };
+    const floorHtml = renderToStaticMarkup(createElement(HotelBoard, { state, onSkillFloorSelect: () => {}, selectedSkillFloor: 2 }));
+    expect(floorHtml).toContain('aria-label="เลือกชั้น 2 เป็นเป้าหมายสกิล"');
+    expect(floorHtml).not.toContain('aria-label="เลือกชั้น 7 เป็นเป้าหมายสกิล"');
+    expect(floorHtml).not.toContain('aria-label="เลือกชั้น 2 ผ่านห้อง 201"');
+    expect(floorHtml).toContain('aria-label="เลือกชั้น 2 ผ่านห้อง 202" aria-pressed="true"');
+    expect(floorHtml).toContain('aria-pressed="true"');
+    expect(floorHtml).not.toContain('aria-label="เลือกแนวห้อง');
+    expect(floorHtml).not.toContain('aria-label="โหวตห้อง');
+
+    const columnHtml = renderToStaticMarkup(createElement(HotelBoard, { state, onSkillColumnSelect: () => {}, selectedSkillColumn: 3 }));
+    expect(columnHtml).toContain('aria-label="เลือกแนวห้อง 01 เป็นเป้าหมายสกิล"');
+    expect(columnHtml).toContain('aria-label="เลือกแนวห้อง 03 เป็นเป้าหมายสกิล"');
+    expect(columnHtml).not.toContain('aria-label="เลือกแนวห้อง 03 ผ่านห้อง 203"');
+    expect(columnHtml).toContain('aria-label="เลือกแนวห้อง 03 ผ่านห้อง 103" aria-pressed="true"');
+    expect(columnHtml).toContain('aria-pressed="true"');
+    expect(columnHtml).not.toContain('aria-label="เลือกชั้น');
+    expect(columnHtml).not.toContain('aria-label="โหวตห้อง');
+  });
+
+  it("requires a board selection for floor and column skills", () => {
+    for (const role of ["ELECTRICIAN", "HOUSEKEEPER", "WITNESS"] as const) {
+      const empty = renderToStaticMarkup(createElement(SkillPanel, { privateState: { ...privateState, role }, state: publicState, selectedFloor: null }));
+      expect(empty).toContain("แตะเลขชั้นบนแผนผัง");
+      const selected = renderToStaticMarkup(createElement(SkillPanel, { privateState: { ...privateState, role }, state: publicState, selectedFloor: 4 }));
+      expect(selected).toContain("เป้าหมาย: ชั้น 4");
+    }
+    const windowCleaner = { ...privateState, role: "WINDOW_CLEANER" as const };
+    const empty = renderToStaticMarkup(createElement(SkillPanel, { privateState: windowCleaner, state: publicState, selectedColumn: null }));
+    expect(empty).toContain("แตะหัวแนวห้องบนแผนผัง");
+    const selected = renderToStaticMarkup(createElement(SkillPanel, { privateState: windowCleaner, state: publicState, selectedColumn: 2 }));
+    expect(selected).toContain("เป้าหมาย: แนวห้อง 02");
+  });
+
+  it("keeps confirmation fixed at the bottom and disabled until a target is selected", () => {
+    const empty = renderToStaticMarkup(createElement(SkillConfirmBar, { targetLabel: "ยังไม่ได้เลือกเป้าหมาย", canSubmit: false, onConfirm: () => {} }));
+    const selected = renderToStaticMarkup(createElement(SkillConfirmBar, { targetLabel: "ห้อง 102", canSubmit: true, onConfirm: () => {} }));
+    expect(empty).toContain('class="fixed inset-x-0 bottom-4');
+    expect(empty).toContain('disabled=""');
+    expect(selected).toContain("ยืนยันสกิล");
+    expect(selected).not.toContain('disabled=""');
+  });
+
+  it("allows selecting an accomplice target from guest cards without a default target", () => {
+    const players = [{ id: "a", displayName: "Self", seatIndex: 0 }, { id: "b", displayName: "Guest B", seatIndex: 1 }];
+    const html = renderToStaticMarkup(createElement(PublicGuests, { players, selfId: "a", selectedPlayerId: null, onSelectPlayer: () => {} }));
+    expect(html).toContain('aria-label="เลือกผู้เข้าพัก Guest B เป็นเป้าหมายสกิล"');
+    expect(html).not.toContain('aria-label="เลือกผู้เข้าพัก Self');
+    expect(html).toContain('aria-pressed="false"');
+    expect(renderToStaticMarkup(createElement(SkillPanel, { privateState: { ...privateState, role: "ACCOMPLICE" }, state: { ...publicState, players }, selectedPlayerId: null }))).toContain("แตะผู้เข้าพักในรายชื่อ");
+  });
+
+  it("provides a clear action instruction for every skill", () => {
+    for (const role of ROLE_ORDER) expect(skillActionInstructions[role]).toBeTruthy();
+    expect(skillActionInstructions.ACCOMPLICE).toContain("ผู้เข้าพัก");
+  });
+
+  it("shows the active player a prominent action prompt and bottom confirmation", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: publicState,
+      privateState: { ...privateState, canUseSkill: true, skillDeadlineAt: Date.now() + 60_000 },
+      teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain("เปิดข้อมูลลับเพื่อดูวิธีใช้สกิล");
+    expect(html).toContain("แสดงข้อมูลลับและวิธีใช้สกิล");
+    expect(html).toContain('aria-label="ยืนยันการใช้สกิล"');
+    expect(html).toContain("เปิดข้อมูลลับก่อนเลือกเป้าหมาย");
+    expect(html).not.toContain(skillActionInstructions.KILLER);
   });
 
   it("starts with private role, room, and action history hidden", () => {
@@ -72,10 +248,13 @@ describe("game privacy and turn UI", () => {
 
   it("shows the owner's ability under the room for every role", () => {
     const abilityPhrases = {
+      ELECTRICIAN: "ดับไฟหนึ่งชั้น",
       LOCKSMITH: "ล็อกห้องหนึ่งห้อง",
       HOUSEKEEPER: "จำนวนผู้เล่นที่ยังมีชีวิตบนชั้น",
       WINDOW_CLEANER: "แนวห้อง 01, 02 หรือ 03",
       WITNESS: "ชั้นสูงกว่า ต่ำกว่า หรือชั้นเดียวกัน",
+      RECEPTIONIST: "เทิร์นที่ 3",
+      PHOTOGRAPHER: "ภาพถ่าย",
       DETECTIVE: "ตรวจหนึ่งห้อง",
       ACCOMPLICE: "เลือกผู้เล่นหนึ่งคน",
       KILLER: "ลอบสังหารผู้พักที่ยังมีชีวิต",
@@ -104,13 +283,12 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("ยังมีชีวิต");
   });
 
-  it("shows morning outside the private room window only during the owner's skill turn", () => {
+  it("keeps the private room at night during the owner's skill turn", () => {
     const render = (viewer: PrivatePlayerState) => renderToStaticMarkup(createElement(PrivateInfoPanel, {
       privateState: viewer, teamState: null, players: publicState.players, open: true, onToggle: () => {},
     }));
-    expect(render(privateState)).not.toContain("hotel-room-morning.webp");
-    expect(render({ ...privateState, canUseSkill: true })).toContain("hotel-room-morning.webp");
-    expect(render({ ...privateState, isAlive: false, canUseSkill: false, mode: "SPECTATOR" })).not.toContain("hotel-room-morning.webp");
+    expect(render({ ...privateState, canUseSkill: true })).not.toContain("hotel-room-morning.webp");
+    expect(render({ ...privateState, canUseSkill: true })).toContain('data-skill-active="true"');
   });
 
   it("shows a circular role portrait and team status on the room frame", () => {
@@ -135,6 +313,21 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("detective-3d.webp");
     expect(html).toContain("ห้อง 703");
     expect(html).not.toContain("data-character-role=\"KILLER\"");
+    expect(html).not.toContain("killer-3d.webp");
+  });
+
+  it("uses the 3D anime cutouts for the electrician and receptionist", () => {
+    for (const [role, asset] of [["ELECTRICIAN", "marcus-johnson.webp"], ["RECEPTIONIST", "irina-volkova.webp"]] as const) {
+      const html = renderToStaticMarkup(createElement(PrivateRoomScene, { role, roomNumber: 301, team: "INNOCENT", isAlive: true }));
+      expect(html).toContain(asset);
+    }
+  });
+
+  it("shows the assigned public avatar in the private room regardless of secret role", () => {
+    const html = renderToStaticMarkup(createElement(PrivateRoomScene, { role: "KILLER", roomNumber: 301, team: "MURDERER", isAlive: true, avatarId: "irina-volkova" }));
+    expect(html).toContain("irina-volkova.webp");
+    expect(html).toContain("irina-volkova-portrait.webp");
+    expect(html).toContain("ความสามารถ · นักฆ่า");
     expect(html).not.toContain("killer-3d.webp");
   });
 

@@ -18,11 +18,11 @@
   z-index: -1;
 }
 
-.morningWindow {
+.skillGlow {
+  position: absolute;
+  inset: 0;
   z-index: 0;
-  object-fit: cover;
-  object-position: center;
-  clip-path: polygon(77% 0, 95% 0, 95% 39%, 77% 39%);
+  background: radial-gradient(circle at 59% 41%, #e8a85d42, transparent 23%);
   pointer-events: none;
 }
 

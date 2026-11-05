@@ -1,6 +1,6 @@
 import { randomInt } from "node:crypto";
 import { ROLE_ORDER } from "../../types/game";
-import { HOTEL_ROOMS, isHotelRoom, killPlayer, type EngineResult, type GameEngineState, type PrivateGameEvent } from "./state";
+import { appendPrivateAction, HOTEL_ROOMS, isHotelRoom, isSelectableRoom, killPlayer, type EngineResult, type GameEngineState, type PrivateGameEvent } from "./state";
 
 function chooseThreeRooms(emptyRooms: number[]): number[] {
   const available = [...emptyRooms];
@@ -29,6 +29,7 @@ export function resolveAssassination(state: GameEngineState, targetRoom: number)
     throw new Error("Skill action is not permitted");
   }
   if (!isHotelRoom(targetRoom)) throw new Error("Invalid target room");
+  if (!isSelectableRoom(state, targetRoom)) throw new Error("Room is not eligible");
 
   let next: GameEngineState = { ...state, usedSkillPlayerIds: [...state.usedSkillPlayerIds, killer.id] };
   let reason: "SUCCESS" | "EMPTY" | "LOCKED" | "ALREADY_DEAD" = "EMPTY";
@@ -65,10 +66,55 @@ export function advanceSkillTurn(state: GameEngineState, afterPlayerId: string |
   });
   const previousIndex = afterPlayerId ? ordered.findIndex((player) => player.id === afterPlayerId) : -1;
   if (afterPlayerId && previousIndex < 0) throw new Error("Unknown previous actor");
-  const nextActor = ordered.slice(previousIndex + 1).find((player) => player.isAlive && !state.usedSkillPlayerIds.includes(player.id));
+  let next = state;
+  const privateEvents: PrivateGameEvent[] = [];
+  const nextActor = ordered.slice(previousIndex + 1).find((player) => {
+    if (!player.isAlive || next.usedSkillPlayerIds.includes(player.id)) return false;
+    const dark = next.darkFloors?.includes(Math.floor(player.roomNumber / 100));
+    const coolingDown = player.role === "ELECTRICIAN" && next.electricianLastUsedTurn?.[player.id] === next.turn - 1;
+    if (dark || coolingDown) {
+      next = appendPrivateAction({ ...next, usedSkillPlayerIds: [...next.usedSkillPlayerIds, player.id] }, player.id, { turn: next.turn, type: "SKILL", message: dark ? "ใช้สกิลไม่ได้เนื่องจากไฟดับบนชั้นของคุณ" : "สกิลช่างไฟกำลังพักหนึ่งเทิร์น" });
+      return false;
+    }
+    if (player.role === "RECEPTIONIST") {
+      next = { ...next, usedSkillPlayerIds: [...next.usedSkillPlayerIds, player.id] };
+      if (next.turn === 3) {
+        const register = [...next.players].sort((left, right) => left.seatIndex - right.seatIndex)
+          .map((guest) => `ผู้เล่น ${guest.seatIndex + 1} ${guest.displayName} · ห้อง ${guest.roomNumber}`).join(", ");
+        const message = `ทะเบียนห้องพักเทิร์นที่ 3: ${register}`;
+        next = appendPrivateAction({
+          ...next,
+          privateResultMessages: {
+            ...next.privateResultMessages,
+            [player.id]: [...(next.privateResultMessages?.[player.id] ?? []), message],
+          },
+        }, player.id, { turn: next.turn, type: "SKILL", message: "เปิดทะเบียนห้องพักแล้ว" });
+        privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: player.id, message });
+      }
+      return false;
+    }
+    if (player.role === "PHOTOGRAPHER") {
+      next = { ...next, usedSkillPlayerIds: [...next.usedSkillPlayerIds, player.id] };
+      if (next.turn === 3) {
+        const killer = next.players.find((guest) => guest.role === "KILLER");
+        if (!killer) throw new Error("Killer is missing");
+        const message = `ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น ${killer.seatIndex + 1} ${killer.displayName}`;
+        next = appendPrivateAction({
+          ...next,
+          privateResultMessages: {
+            ...next.privateResultMessages,
+            [player.id]: [...(next.privateResultMessages?.[player.id] ?? []), message],
+          },
+        }, player.id, { turn: next.turn, type: "SKILL", message: "ตรวจภาพถ่ายแล้ว" });
+        privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: player.id, message });
+      }
+      return false;
+    }
+    return true;
+  });
   return {
-    state: { ...state, activePlayerId: nextActor?.id ?? null },
+    state: { ...next, activePlayerId: nextActor?.id ?? null },
     publicEvents: [],
-    privateEvents: nextActor ? [{ type: "ACTION_REQUEST", recipientPlayerId: nextActor.id }] : [],
+    privateEvents: [...privateEvents, ...(nextActor ? [{ type: "ACTION_REQUEST" as const, recipientPlayerId: nextActor.id }] : [])],
   };
 }

@@ -11,8 +11,8 @@ const notoSansThai = Noto_Sans_Thai({
 });
 
 export const metadata: Metadata = {
-  title: "โรงแรมปริศนา | เกมสืบสวนออนไลน์",
-  description: "เกมสืบสวนและจับฆาตกรออนไลน์ในโรงแรมปริศนา",
+  title: "คืนนี้ใครฆ่า... | เกมสืบสวนออนไลน์",
+  description: "เกมสืบสวนและจับฆาตกรออนไลน์ในคืนนี้ใครฆ่า...",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

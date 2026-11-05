@@ -3,6 +3,38 @@ import { LobbyService } from "./lobby-service";
 import { MemoryLobbyStore } from "./test-memory-store";
 
 describe("LobbyService", () => {
+  it("keeps character identities out of lobby views before game start", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    const guest = await service.join({ code: host.code, displayName: "Guest", actionId: crypto.randomUUID(), expectedVersion: host.view.version });
+    expect(JSON.stringify(host.view)).not.toMatch(/avatarId|adrian-blackwood|irina-volkova/);
+    expect(JSON.stringify(guest.view)).not.toMatch(/avatarId|adrian-blackwood|irina-volkova/);
+    const resumed = await service.resume(host.code, host.token);
+    expect(JSON.stringify(resumed.view)).not.toContain("avatarId");
+  });
+
+  it("hides even legacy stored avatars in every lobby projection", async () => {
+    const store = new MemoryLobbyStore();
+    const service = new LobbyService(store);
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    const record = (await store.findLobby(host.code))!;
+    await store.replaceLobby(host.code, record.version, { ...record, version: record.version + 1, players: record.players.map((player) => ({ ...player, avatarId: "adrian-blackwood" as const })) });
+    const resumed = await service.resume(host.code, host.token);
+    expect(JSON.stringify(resumed.view)).not.toContain("adrian-blackwood");
+    expect(JSON.stringify(await service.preview(host.code))).not.toContain("avatarId");
+  });
+
+  it("can fill ten seats without assigning visible characters", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    for (let index = 1; index < 10; index += 1) {
+      const view = await service.preview(host.code);
+      await service.join({ code: host.code, displayName: `Guest ${index}`, actionId: crypto.randomUUID(), expectedVersion: view.version });
+    }
+    const view = await service.preview(host.code);
+    expect(view.players).toHaveLength(10);
+    expect(JSON.stringify(view)).not.toContain("avatarId");
+  });
   it("removes rooms idle for ten minutes and their sessions, while preserving occupied rooms", async () => {
     const store = new MemoryLobbyStore();
     const service = new LobbyService(store);

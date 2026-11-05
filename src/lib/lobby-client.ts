@@ -84,6 +84,7 @@ const messages: Record<LobbyErrorCode, string> = {
   INVALID_SESSION: "สิทธิ์เข้าห้องหมดอายุ กรุณาเข้าร่วมใหม่",
   FORBIDDEN: "คุณไม่มีสิทธิ์ทำรายการนี้",
   SKILL_EXPIRED: "หมดเวลาใช้สกิลของคุณแล้ว รอขั้นตอนถัดไป",
+  VOTE_EXPIRED: "หมดเวลาลงคะแนนแล้ว กำลังเปิดห้อง",
   SERVER_UNAVAILABLE: "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาลองอีกครั้ง",
 };
 

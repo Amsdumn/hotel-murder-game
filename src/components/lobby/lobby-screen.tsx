@@ -129,7 +129,7 @@ export function LobbyScreen({ code }: { code: string }) {
       <div className="relative mx-auto max-w-5xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-[#d9b66f]/25 pb-5">
           <div>
-            <p className="text-sm tracking-[.22em] text-[#d9b66f]">โรงแรมปริศนา</p>
+            <p className="text-sm tracking-[.22em] text-[#d9b66f]">คืนนี้ใครฆ่า...</p>
             <h1 className="mt-2 font-serif text-3xl sm:text-4xl">ห้องพักก่อนเริ่มเกม</h1>
             <p className="mt-2 text-sm text-[#c6bdb1]">แขกทุกคนกำลังมารวมตัวกัน ก่อนความลับในโรงแรมจะเริ่มเปิดเผย</p>
           </div>
@@ -158,11 +158,13 @@ export function LobbyScreen({ code }: { code: string }) {
                 <div className="space-y-2">
                   {view.players.map((player) => (
                     <div key={player.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#d9b66f]/15 bg-[#2c2422] px-4 py-3">
-                      <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="min-w-0">
                         <span className="mr-3 text-[#a9977d]">{player.seatIndex + 1}.</span>
                         <span className="wrap-break-word">{player.displayName}</span>
                         {player.id === view.hostPlayerId && <span className="ml-2 text-xs text-[#d9b66f]">เจ้าของห้อง</span>}
                         {player.id === playerId && <span className="ml-2 text-xs text-[#c6bdb1]">คุณ</span>}
+                        </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
                         {!player.connected && <span className="text-xs text-[#9f9486]">ออฟไลน์</span>}
@@ -174,6 +176,7 @@ export function LobbyScreen({ code }: { code: string }) {
                 <Button className="mt-6!" variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
                   {self?.ready ? "ยกเลิกความพร้อม" : "พร้อมแล้ว"}
                 </Button>
+                <p className="mt-2 text-xs text-[#c6bdb1]">ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม</p>
               </>}
             </Paper>
           </section>
