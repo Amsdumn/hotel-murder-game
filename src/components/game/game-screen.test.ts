@@ -33,13 +33,14 @@ describe("game privacy and turn UI", () => {
 
   it("renders the private result as a focused screen", () => {
     const html = renderToStaticMarkup(createElement(SkillResultOverlay, { message: "ใช้สกิล: พบผู้เล่น 2 คน", language: "th" }));
-    expect(html).toContain('role="alertdialog"');
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain("MuiDialog");
     expect(html).toContain("ผลลัพธ์สกิล");
     expect(html).toContain("พบผู้เล่น 2 คน");
   });
   it("identifies an Accomplice report in the Assassin's centered dialog", () => {
     const html = renderToStaticMarkup(createElement(SkillResultOverlay, { message: "ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4", language: "th" }));
-    expect(html).toContain('role="alertdialog"');
+    expect(html).toContain('role="dialog"');
     expect(html).toContain("ข้อมูลจากผู้สมรู้ร่วมคิด");
     expect(html).toContain("ผู้เล่นที่เลือกอยู่ชั้น 4");
     expect(html).not.toContain("ผลลัพธ์สกิล");

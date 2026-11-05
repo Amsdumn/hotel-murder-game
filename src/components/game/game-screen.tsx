@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Alert, Button, Paper } from "@mui/material";
+import { Alert, Button, Dialog, DialogContent, DialogTitle, Paper } from "@mui/material";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { avatarEnglish } from "@/lib/avatar-translations";
 import { gameMessage } from "@/lib/game-copy";
@@ -127,12 +127,10 @@ export function SkillResultOverlay({ message, language }: { message: string; lan
   const fromAccomplice = message.startsWith("ข้อมูลจากผู้สมรู้ร่วมคิด: ");
   const title = fromAccomplice ? language === "en" ? "Accomplice report" : "ข้อมูลจากผู้สมรู้ร่วมคิด" : language === "en" ? "Skill result" : "ผลลัพธ์สกิล";
   const result = fromAccomplice ? message.slice("ข้อมูลจากผู้สมรู้ร่วมคิด: ".length) : message;
-  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#09070c]/95 px-5" role="alertdialog" aria-modal="true" aria-label={title}>
-    <div className="w-full max-w-xl rounded-2xl border border-[#e3c88e]/70 bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)] p-7 text-center shadow-[0_20px_80px_rgba(0,0,0,.7)] sm:p-10">
-      <p className="text-xs font-semibold tracking-[.25em] text-[#e3c88e]">{title}</p>
-      <p className="mt-6 font-serif text-2xl leading-relaxed text-[#f4efe8] sm:text-3xl">{gameMessage(result, language)}</p>
-    </div>
-  </div>;
+  return <Dialog open keepMounted disablePortal fullWidth maxWidth="sm" aria-labelledby="skill-result-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" } }}>
+    <DialogTitle id="skill-result-title" className="pt-7! text-center! text-sm! font-semibold! tracking-[.2em]! text-[#e3c88e]!">{title}</DialogTitle>
+    <DialogContent className="px-7! pb-10! text-center! font-serif! text-2xl! leading-relaxed! sm:text-3xl!">{gameMessage(result, language)}</DialogContent>
+  </Dialog>;
 }
 
 export function GameResultScreen({ result }: { result: GameResultState }) {
