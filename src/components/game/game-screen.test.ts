@@ -140,6 +140,26 @@ describe("game privacy and turn UI", () => {
     expect(render(null)).not.toContain('aria-label="โหวตห้อง');
   });
 
+  it("shows each voter's room and the count directly on voted rooms", () => {
+    const state: PublicGameState = {
+      ...publicState, phase: "VOTING", players: [
+        { id: "a", displayName: "Guest A", seatIndex: 0 },
+        { id: "b", displayName: "Guest B", seatIndex: 1 },
+        { id: "c", displayName: "Guest C", seatIndex: 2 },
+      ],
+      votes: [{ playerId: "a", roomNumber: 101 }, { playerId: "b", roomNumber: 101 }, { playerId: "c", roomNumber: 103 }],
+      publicRooms: [{ roomNumber: 101, state: "UNKNOWN" }, { roomNumber: 102, state: "UNKNOWN" }, { roomNumber: 103, state: "UNKNOWN" }],
+    };
+    const board = renderToStaticMarkup(createElement(HotelBoard, { state, selfId: "a" }));
+    expect(board).toContain("2 โหวต");
+    expect(board).toContain("Guest A โหวตห้อง 101");
+    expect(board).toContain("Guest B โหวตห้อง 101");
+    expect(board).toContain("Guest C โหวตห้อง 103");
+    expect(board).toContain("คุณโหวตห้อง 101");
+    const screen = renderToStaticMarkup(createElement(GameScreen, { state, privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }) }));
+    expect(screen).toContain("คุณโหวตห้อง 101 แล้ว");
+  });
+
   it("only makes eligible runoff rooms clickable on the board", () => {
     const state: PublicGameState = { ...publicState, phase: "VOTING", runoffRooms: [101, 103], publicRooms: [
       { roomNumber: 101, state: "UNKNOWN" }, { roomNumber: 102, state: "UNKNOWN" },

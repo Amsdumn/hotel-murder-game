@@ -229,6 +229,6 @@ describe("viewer-specific action history", () => {
       { turn: 1, type: "VOTE", message: "โหวตห้อง 102" },
     ]);
     expect(projectPrivatePlayerState(result.state, "a").actionHistory).toEqual([]);
-    expect(JSON.stringify(projectPublicState(result.state))).not.toContain("โหวตห้อง 102");
+    expect(projectPublicState(result.state).votes).toEqual([{ playerId: "b", roomNumber: 102 }]);
   });
 });

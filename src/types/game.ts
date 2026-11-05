@@ -43,6 +43,7 @@ export interface PublicGameState {
   phaseDeadlineAt?: number;
   publicHistory?: Array<{ type: string; message: string }>;
   runoffRooms?: number[];
+  votes?: Array<{ playerId: string; roomNumber: number }>;
 }
 
 export interface PrivatePlayerState {

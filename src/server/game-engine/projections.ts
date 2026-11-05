@@ -12,6 +12,7 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     ...(["ROLE_REVEAL", "DISCUSSION", "VOTING", "RESOLUTION"].includes(state.phase) && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
     publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
+    ...(state.phase === "VOTING" ? { votes: Object.entries(state.votes ?? {}).map(([playerId, roomNumber]) => ({ playerId, roomNumber })) } : {}),
     publicRooms: HOTEL_ROOMS.map((roomNumber) => {
       if (state.crimeRooms.includes(roomNumber)) return { roomNumber, state: "CRIME_SCENE" as const };
       const murdered = state.players.some((player) => player.roomNumber === roomNumber && state.deathNotices?.[player.id]?.cause === "ASSASSINATION");
