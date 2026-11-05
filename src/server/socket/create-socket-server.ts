@@ -152,6 +152,36 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
         return view;
       });
     });
+    socket.on("lobby:rename", (input: unknown, ack: unknown) => {
+      void respond(ack, async () => {
+        const binding = bindings.get(socket.id);
+        if (!binding) throw new LobbyError("INVALID_SESSION");
+        const view = await service.rename(binding.playerId, input);
+        publish(view);
+        return view;
+      });
+    });
+    socket.on("lobby:kick", (input: unknown, ack: unknown) => {
+      void respond(ack, async () => {
+        const binding = bindings.get(socket.id);
+        if (!binding) throw new LobbyError("INVALID_SESSION");
+        const targetId = (input as { playerId?: unknown } | null)?.playerId;
+        const view = await service.kick(binding.playerId, input);
+        if (typeof targetId === "string") {
+          const targetSocketId = activeSockets.get(targetId);
+          if (targetSocketId) {
+            const targetSocket = io.sockets.sockets.get(targetSocketId);
+            targetSocket?.emit("lobby:kicked");
+            bindings.delete(targetSocketId);
+            activeSockets.delete(targetId);
+            targetSocket?.leave(room(binding.code));
+            targetSocket?.disconnect(true);
+          }
+        }
+        publish(view);
+        return view;
+      });
+    });
     socket.on("game:start", (input: unknown, ack: unknown) => {
       void respond(ack, async () => {
         const binding = bindings.get(socket.id);

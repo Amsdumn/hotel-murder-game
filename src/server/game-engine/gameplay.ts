@@ -69,6 +69,18 @@ function addPrivateResult(state: GameEngineState, recipientId: string, message: 
   return { ...state, privateResultMessages: { ...state.privateResultMessages, [recipientId]: [...(state.privateResultMessages?.[recipientId] ?? []), message] } };
 }
 
+function resolvePendingAssassination(state: GameEngineState): EngineResult {
+  const target = state.pendingAssassinationRoom;
+  const killer = state.players.find((player) => player.role === "KILLER");
+  if (target === undefined || !killer) return { state, publicEvents: [], privateEvents: [] };
+  const resolved = resolveAssassination({ ...state, activePlayerId: killer.id, usedSkillPlayerIds: state.usedSkillPlayerIds.filter((id) => id !== killer.id), pendingAssassinationRoom: undefined }, target);
+  const result = resolved.privateEvents.find((event) => event.type === "ASSASSINATION_RESULT");
+  let next: GameEngineState = { ...resolved.state, activePlayerId: state.activePlayerId, usedSkillPlayerIds: state.usedSkillPlayerIds, pendingAssassinationRoom: undefined };
+  if (result?.type === "ASSASSINATION_RESULT") next = addPrivateResult(next, killer.id, result.success ? "ลอบสังหารสำเร็จ" : "ลอบสังหารไม่สำเร็จ");
+  if (resolved.publicEvents.length) next = { ...next, publicHistory: [...(state.publicHistory ?? []), ...resolved.publicEvents] };
+  return { state: next, publicEvents: resolved.publicEvents, privateEvents: resolved.privateEvents };
+}
+
 export function performSkill(state: GameEngineState, playerId: string, target: unknown, now: number, discussionSeconds: number): EngineResult {
   const actor = state.players.find((player) => player.id === playerId);
   if (state.phase !== "SKILL_PHASE" || state.activePlayerId !== playerId || !actor?.isAlive || state.usedSkillPlayerIds.includes(playerId)) throw new Error("Skill is not permitted");
@@ -78,13 +90,20 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
   const privateEvents: PrivateGameEvent[] = [];
   let publicEvents: EngineResult["publicEvents"] = [];
   if (actor.role === "KILLER") {
-    const assassination = resolveAssassination(state, requireSelectableRoom(state, target));
-    next = assassination.state;
-    privateEvents.push(...assassination.privateEvents);
-    publicEvents = assassination.publicEvents;
-    const result = assassination.privateEvents.find((event) => event.type === "ASSASSINATION_RESULT");
-    if (result?.type === "ASSASSINATION_RESULT") next = addPrivateResult(next, playerId, result.success ? "ลอบสังหารสำเร็จ" : "ลอบสังหารไม่สำเร็จ");
-    if (publicEvents.length) next = { ...next, publicHistory: [...(state.publicHistory ?? []), ...publicEvents] };
+    const room = requireSelectableRoom(state, target);
+    const occupant = state.players.find((player) => player.roomNumber === room && player.isAlive);
+    const witness = state.players.find((player) => player.role === "WITNESS" && player.isAlive && !state.usedSkillPlayerIds.includes(player.id) && !state.darkFloors?.includes(Math.floor(player.roomNumber / 100)));
+    if (occupant && witness && !state.lockedRooms.includes(room)) {
+      next = addPrivateResult({ ...state, usedSkillPlayerIds: [...state.usedSkillPlayerIds, playerId], pendingAssassinationRoom: room }, playerId, "เลือกเป้าหมายแล้ว กำลังประมวลผล");
+    } else {
+      const assassination = resolveAssassination(state, room);
+      next = assassination.state;
+      privateEvents.push(...assassination.privateEvents);
+      publicEvents = assassination.publicEvents;
+      const result = assassination.privateEvents.find((event) => event.type === "ASSASSINATION_RESULT");
+      if (result?.type === "ASSASSINATION_RESULT") next = addPrivateResult(next, playerId, result.success ? "ลอบสังหารสำเร็จ" : "ลอบสังหารไม่สำเร็จ");
+      if (publicEvents.length) next = { ...next, publicHistory: [...(state.publicHistory ?? []), ...publicEvents] };
+    }
   } else {
     let message: string;
     if (actor.role === "ELECTRICIAN") {
@@ -124,6 +143,12 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
     next = addPrivateResult({ ...next, usedSkillPlayerIds: [...next.usedSkillPlayerIds, playerId] }, playerId, message);
     privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: playerId, message });
   }
+  if (actor.role === "WITNESS" && next.pendingAssassinationRoom !== undefined) {
+    const resolved = resolvePendingAssassination(next);
+    next = resolved.state;
+    publicEvents.push(...resolved.publicEvents);
+    privateEvents.push(...resolved.privateEvents);
+  }
   if (next.phase === "FINISHED") return { state: next, publicEvents, privateEvents };
   const following = advanceSkillTurn(next, playerId);
   next = following.state;
@@ -142,10 +167,12 @@ export function advanceTimedSkill(state: GameEngineState, now: number, discussio
   const skipped = state.activePlayerId;
   const usedSkillPlayerIds = [...state.usedSkillPlayerIds, skipped];
   const timedOut = appendPrivateAction({ ...state, usedSkillPlayerIds }, skipped, { turn: state.turn, type: "SKILL", message: "หมดเวลาใช้สกิล" });
-  const advanced = advanceSkillTurn(timedOut, skipped);
+  const resolved = state.players.find((player) => player.id === skipped)?.role === "WITNESS" ? resolvePendingAssassination(timedOut) : { state: timedOut, publicEvents: [], privateEvents: [] };
+  if (resolved.state.phase === "FINISHED") return resolved;
+  const advanced = advanceSkillTurn(resolved.state, skipped);
   if (!advanced.state.activePlayerId) {
     const discussion = beginDiscussion(advanced.state, now, discussionSeconds);
-    return { ...discussion, privateEvents: [...advanced.privateEvents, ...discussion.privateEvents] };
+    return { state: discussion.state, publicEvents: [...resolved.publicEvents, ...discussion.publicEvents], privateEvents: [...resolved.privateEvents, ...advanced.privateEvents, ...discussion.privateEvents] };
   }
-  return { state: { ...advanced.state, phaseDeadlineAt: now + 60_000 }, publicEvents: [], privateEvents: advanced.privateEvents };
+  return { state: { ...advanced.state, phaseDeadlineAt: now + 60_000 }, publicEvents: resolved.publicEvents, privateEvents: [...resolved.privateEvents, ...advanced.privateEvents] };
 }

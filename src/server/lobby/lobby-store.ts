@@ -39,7 +39,7 @@ export interface LobbyEventRecord {
   gameCode: string;
   actorId: string;
   actionId: string;
-  kind: "LOBBY_CREATED" | "PLAYER_JOINED" | "READY_CHANGED" | "CONFIG_CHANGED";
+  kind: "LOBBY_CREATED" | "PLAYER_JOINED" | "READY_CHANGED" | "CONFIG_CHANGED" | "PLAYER_RENAMED" | "PLAYER_KICKED";
   payload: Record<string, string | number | boolean>;
 }
 

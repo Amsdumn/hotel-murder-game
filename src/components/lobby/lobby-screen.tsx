@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button, Chip, CircularProgress, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import type { Socket } from "socket.io-client";
-import { connectLobbySocket, lobbyErrorMessage, readLobbyToken, requestLobby, saveLobbyIdentity } from "@/lib/lobby-client";
+import { connectLobbySocket, forgetLobbyIdentity, lobbyErrorMessage, readLobbyToken, requestLobby, saveGuestProfile, saveLobbyIdentity } from "@/lib/lobby-client";
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
 import type { GameResultState, PrivatePlayerState, PrivateTeamState, PublicGameState } from "@/types/game";
 import { GameScreen } from "@/components/game/game-screen";
@@ -25,6 +25,9 @@ export function LobbyScreen({ code }: { code: string }) {
   const [teamState, setTeamState] = useState<PrivateTeamState | null>(null);
   const [result, setResult] = useState<GameResultState | null>(null);
   const [murderSequence, setMurderSequence] = useState(0);
+  const [editingName, setEditingName] = useState(false);
+  const [draftName, setDraftName] = useState("");
+  const [kicked, setKicked] = useState(false);
 
   useEffect(() => {
     const socket = connectLobbySocket(false);
@@ -76,12 +79,14 @@ export function LobbyScreen({ code }: { code: string }) {
     const onTeamState = (next: PrivateTeamState | null) => setTeamState(next);
     const onResult = (next: GameResultState) => setResult(next);
     const onGameEvent = (event: { type: string }) => { if (event.type === "MURDER_OCCURRED") setMurderSequence((value) => value + 1); };
+    const onKicked = () => { forgetLobbyIdentity(code); setKicked(true); socket.disconnect(); };
     socket.on("lobby:state", onState);
     socket.on("game:state", onGameState);
     socket.on("game:private", onPrivateState);
     socket.on("game:team", onTeamState);
     socket.on("game:result", onResult);
     socket.on("game:event", onGameEvent);
+    socket.on("lobby:kicked", onKicked);
     socket.on("connect", onConnect);
     socket.on("connect_error", onConnectError);
     socket.on("disconnect", onDisconnect);
@@ -95,6 +100,7 @@ export function LobbyScreen({ code }: { code: string }) {
       socket.off("game:team", onTeamState);
       socket.off("game:result", onResult);
       socket.off("game:event", onGameEvent);
+      socket.off("lobby:kicked", onKicked);
       socket.off("connect", onConnect);
       socket.off("connect_error", onConnectError);
       socket.off("disconnect", onDisconnect);
@@ -103,19 +109,24 @@ export function LobbyScreen({ code }: { code: string }) {
     };
   }, [code]);
 
-  async function act(event: "lobby:ready" | "lobby:configure", payload: Record<string, unknown>) {
+  async function act(event: "lobby:ready" | "lobby:configure" | "lobby:rename" | "lobby:kick", payload: Record<string, unknown>) {
     const socket = socketRef.current;
     if (!socket || !view) return;
     setBusy(true);
     setError("");
     const result = await requestLobby<LobbyView>(socket, event, { ...payload, actionId: createActionId(), expectedVersion: view.version });
-    if (result.ok) setView(result.data);
+    if (result.ok) {
+      setView(result.data);
+      if (event === "lobby:rename") { saveGuestProfile(String(payload.displayName).trim()); setEditingName(false); }
+    }
     else setError(lobbyErrorMessage(result.error));
     setBusy(false);
   }
 
   const self = view?.players.find((player) => player.id === playerId);
   const isHost = view?.hostPlayerId === playerId;
+
+  if (kicked) return <main className="flex min-h-screen items-center justify-center bg-[#12111c] px-5 text-[#f8f1e4]"><Paper className="max-w-md border! border-[#d9b66f]/30! bg-[#211c1c]! p-8! text-center"><h1 className="font-serif text-2xl">คุณถูกนำออกจากห้องนี้</h1><p className="mt-3 text-sm text-[#c6bdb1]">เจ้าของห้องนำคุณออกจากห้องพักก่อนเริ่มเกม</p><Button className="mt-6!" component={Link} href="/" variant="contained">กลับหน้าแรก</Button></Paper></main>;
 
   if (gameState) return <GameScreen state={gameState} privateState={privateState} teamState={teamState} result={result} murderSequence={murderSequence} connected={connected} connectionMessage={error} onCommand={(event, payload, version) => {
     const socket = socketRef.current;
@@ -169,10 +180,13 @@ export function LobbyScreen({ code }: { code: string }) {
                       <div className="flex shrink-0 items-center gap-2">
                         {!player.connected && <span className="text-xs text-[#9f9486]">ออฟไลน์</span>}
                         <Chip size="small" label={player.ready ? "พร้อม" : "รอ"} color={player.ready ? "success" : "default"} />
+                        {player.id === playerId && <Button size="small" variant="text" disabled={busy} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>แก้ชื่อ</Button>}
+                        {isHost && player.id !== playerId && <Button size="small" color="error" variant="text" disabled={busy || !connected} onClick={() => void act("lobby:kick", { playerId: player.id })}>ไล่ออก</Button>}
                       </div>
                     </div>
                   ))}
                 </div>
+                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label="ชื่อผู้เล่นใหม่" value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 24 } }} /><Button type="submit" variant="contained" disabled={busy || !connected || draftName.trim().length < 2}>บันทึกชื่อ</Button><Button variant="text" onClick={() => setEditingName(false)}>ยกเลิก</Button></form>}
                 <Button className="mt-6!" variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
                   {self?.ready ? "ยกเลิกความพร้อม" : "พร้อมแล้ว"}
                 </Button>

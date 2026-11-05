@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
-import { GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, getTurnNotice, skillActionInstructions } from "./game-screen";
+import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, getTurnNotice, skillActionInstructions } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
 import { roleSkillDescriptions } from "@/lib/role-skills";
 import { roleNames } from "../role-portrait";
@@ -22,6 +22,11 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("provides a home button after the result", () => {
+    const html = renderToStaticMarkup(createElement(GameResultScreen, { result: { winner: "INNOCENT", turnsPlayed: 2, players: [], events: [] } }));
+    expect(html).toContain("กลับหน้าแรก");
+    expect(html).toContain('href="/"');
+  });
   it("calls the murderer-team assassin นักฆ่า while retaining the team name", () => {
     expect(roleNames.KILLER).toBe("นักฆ่า");
     const html = renderToStaticMarkup(createElement(RoleRevealCard, { privateState }));
@@ -230,11 +235,11 @@ describe("game privacy and turn UI", () => {
       teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
       onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
     }));
-    expect(html).toContain("เปิดข้อมูลลับเพื่อดูวิธีใช้สกิล");
-    expect(html).toContain("แสดงข้อมูลลับและวิธีใช้สกิล");
+    expect(html).toContain(skillActionInstructions.KILLER);
+    expect(html).toContain('aria-label="เลือกห้อง 101 เป็นเป้าหมายสกิล');
     expect(html).toContain('aria-label="ยืนยันการใช้สกิล"');
-    expect(html).toContain("เปิดข้อมูลลับก่อนเลือกเป้าหมาย");
-    expect(html).not.toContain(skillActionInstructions.KILLER);
+    expect(html).toContain("ยังไม่ได้เลือกเป้าหมาย");
+    expect(html).not.toContain("แสดงข้อมูลลับและวิธีใช้สกิล");
   });
 
   it("starts with private role, room, and action history hidden", () => {

@@ -15,6 +15,37 @@ function choose() {
 }
 
 describe("gameplay setup and skills", () => {
+  it("lets a living witness act before a successful assassination resolves", () => {
+    const base = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;
+    const players: GameEngineState["players"] = [
+      { id: "victim", displayName: "Victim", seatIndex: 0, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 101, isAlive: true },
+      { id: "killer", displayName: "Killer", seatIndex: 1, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
+      { id: "witness", displayName: "Witness", seatIndex: 2, role: "WITNESS", team: "INNOCENT", roomNumber: 301, isAlive: true },
+    ];
+    const state: GameEngineState = { ...base, phase: "SKILL_PHASE", players, crimeRooms: [103], activePlayerId: "killer", usedSkillPlayerIds: ["victim"] };
+    const chosen = performSkill(state, "killer", 301, 1000, 180);
+    expect(chosen.state.activePlayerId).toBe("witness");
+    expect(chosen.state.players.find((player) => player.id === "witness")?.isAlive).toBe(true);
+    expect(chosen.publicEvents).toEqual([]);
+    const witnessed = performSkill(chosen.state, "witness", 1, 2000, 180);
+    expect(projectPrivatePlayerState(witnessed.state, "witness").privateResults).toContain("ทิศทางชั้นนักฆ่า: ABOVE");
+    expect(witnessed.state.players.find((player) => player.id === "witness")?.isAlive).toBe(false);
+    expect(witnessed.publicEvents).toContainEqual({ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: 1 });
+  });
+
+  it("resolves a queued assassination when the witness times out", () => {
+    const base = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;
+    const players: GameEngineState["players"] = [
+      { id: "victim", displayName: "Victim", seatIndex: 0, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 101, isAlive: true },
+      { id: "killer", displayName: "Killer", seatIndex: 1, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
+      { id: "witness", displayName: "Witness", seatIndex: 2, role: "WITNESS", team: "INNOCENT", roomNumber: 301, isAlive: true },
+    ];
+    const state: GameEngineState = { ...base, phase: "SKILL_PHASE", players, crimeRooms: [103], activePlayerId: "killer", usedSkillPlayerIds: ["victim"] };
+    const chosen = performSkill(state, "killer", 101, 1000, 180);
+    const timedOut = advanceTimedSkill({ ...chosen.state, phaseDeadlineAt: 2000 }, 2000, 180);
+    expect(timedOut.state.players.find((player) => player.id === "victim")?.isAlive).toBe(false);
+    expect(timedOut.publicEvents).toContainEqual({ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: 1 });
+  });
   it("keeps assigned avatars public without changing secret role assignment", () => {
     const withAvatars = lobbyPlayers.map((player) => ({ ...player, avatarId: "irina-volkova" as const }));
     const first = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;

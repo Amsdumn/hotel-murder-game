@@ -10,6 +10,8 @@ const createSchema = z.object({ displayName: nameSchema, actionId: actionIdSchem
 const joinSchema = createSchema.extend({ code: codeSchema, expectedVersion: z.number().int().nonnegative() });
 const readySchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), ready: z.boolean() });
 const configSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerLimit: z.number().int().min(5).max(10), discussionSeconds: z.number().int().min(30).max(600) });
+const renameSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), displayName: nameSchema });
+const kickSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerId: z.uuid() });
 
 export class LobbyError extends Error {
   constructor(public readonly code: LobbyErrorCode) { super(code); }
@@ -164,6 +166,33 @@ export class LobbyService {
     const next: LobbyRecord = { ...lobby, version: lobby.version + 1, playerLimit, discussionSeconds, appliedActionIds: [...lobby.appliedActionIds, actionId] };
     if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
     await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "CONFIG_CHANGED", payload: { playerLimit, discussionSeconds } });
+    return project(next);
+  }
+
+  async rename(playerId: string, input: unknown): Promise<LobbyView> {
+    const { actionId, expectedVersion, displayName } = parse(renameSchema, input);
+    const { session, lobby } = await this.actor(playerId);
+    if (lobby.phase !== "LOBBY") throw new LobbyError("FORBIDDEN");
+    if (lobby.appliedActionIds.includes(actionId)) throw new LobbyError("DUPLICATE_ACTION");
+    if (lobby.version !== expectedVersion) throw new LobbyError("STALE_STATE");
+    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, players: lobby.players.map((player) => player.id === playerId ? { ...player, displayName } : player), appliedActionIds: [...lobby.appliedActionIds, actionId] };
+    if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
+    await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "PLAYER_RENAMED", payload: { displayName } });
+    return project(next);
+  }
+
+  async kick(playerId: string, input: unknown): Promise<LobbyView> {
+    const { actionId, expectedVersion, playerId: targetId } = parse(kickSchema, input);
+    const { session, lobby } = await this.actor(playerId);
+    if (lobby.phase !== "LOBBY" || lobby.hostPlayerId !== playerId) throw new LobbyError("FORBIDDEN");
+    if (targetId === playerId || !lobby.players.some((player) => player.id === targetId)) throw new LobbyError("INVALID_INPUT");
+    if (lobby.appliedActionIds.includes(actionId)) throw new LobbyError("DUPLICATE_ACTION");
+    if (lobby.version !== expectedVersion) throw new LobbyError("STALE_STATE");
+    const targetSession = await this.store.findSessionByPlayerId(targetId);
+    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, players: lobby.players.filter((player) => player.id !== targetId).map((player, seatIndex) => ({ ...player, seatIndex })), appliedActionIds: [...lobby.appliedActionIds, actionId] };
+    if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
+    if (targetSession) await this.store.deleteSession(targetSession.id);
+    await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "PLAYER_KICKED", payload: { playerId: targetId } });
     return project(next);
   }
 

@@ -41,7 +41,7 @@ const gameEventSchema = new Schema<LobbyEventRecord>({
   gameCode: { type: String, required: true },
   actorId: { type: String, required: true },
   actionId: { type: String, required: true },
-  kind: { type: String, required: true, enum: ["LOBBY_CREATED", "PLAYER_JOINED", "READY_CHANGED", "CONFIG_CHANGED"] },
+  kind: { type: String, required: true, enum: ["LOBBY_CREATED", "PLAYER_JOINED", "READY_CHANGED", "CONFIG_CHANGED", "PLAYER_RENAMED", "PLAYER_KICKED"] },
   payload: { type: Schema.Types.Mixed, required: true },
 }, { timestamps: true });
 gameEventSchema.index({ gameCode: 1, actorId: 1, actionId: 1 }, { unique: true });

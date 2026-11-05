@@ -35,6 +35,7 @@ export interface GameEngineState {
   electricianLastUsedTurn?: Record<string, number>;
   activePlayerId: string | null;
   usedSkillPlayerIds: string[];
+  pendingAssassinationRoom?: number;
   votes: Record<string, number>;
   winner: Team | null;
   deathNotices: Record<string, DeathNotice>;

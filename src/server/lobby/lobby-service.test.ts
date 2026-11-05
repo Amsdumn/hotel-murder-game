@@ -3,6 +3,28 @@ import { LobbyService } from "./lobby-service";
 import { MemoryLobbyStore } from "./test-memory-store";
 
 describe("LobbyService", () => {
+  it("lets a guest rename only themself before game start", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    const guest = await service.join({ code: host.code, displayName: "Guest", actionId: crypto.randomUUID(), expectedVersion: host.view.version });
+    const renamed = await service.rename(guest.playerId, { displayName: "New Guest", actionId: crypto.randomUUID(), expectedVersion: guest.view.version });
+    expect(renamed.players.find((player) => player.id === guest.playerId)?.displayName).toBe("New Guest");
+    expect(renamed.players.find((player) => player.id === host.playerId)?.displayName).toBe("Host");
+    await expect(service.rename(guest.playerId, { displayName: " ", actionId: crypto.randomUUID(), expectedVersion: renamed.version })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
+
+  it("allows only the host to kick another guest and invalidates their session", async () => {
+    const store = new MemoryLobbyStore();
+    const service = new LobbyService(store);
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    const guest = await service.join({ code: host.code, displayName: "Guest", actionId: crypto.randomUUID(), expectedVersion: host.view.version });
+    await expect(service.kick(guest.playerId, { playerId: host.playerId, actionId: crypto.randomUUID(), expectedVersion: guest.view.version })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.kick(host.playerId, { playerId: host.playerId, actionId: crypto.randomUUID(), expectedVersion: guest.view.version })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    const kicked = await service.kick(host.playerId, { playerId: guest.playerId, actionId: crypto.randomUUID(), expectedVersion: guest.view.version });
+    expect(kicked.players.map((player) => player.id)).toEqual([host.playerId]);
+    expect(await store.findSessionByPlayerId(guest.playerId)).toBeNull();
+    await expect(service.resume(host.code, guest.token)).rejects.toMatchObject({ code: "INVALID_SESSION" });
+  });
   it("keeps character identities out of lobby views before game start", async () => {
     const service = new LobbyService(new MemoryLobbyStore());
     const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
