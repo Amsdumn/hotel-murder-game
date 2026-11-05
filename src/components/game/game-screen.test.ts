@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
-import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, getFreshSkillResult, getTurnNotice, skillActionInstructions } from "./game-screen";
+import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, getFreshSkillResults, getTurnNotice, skillActionInstructions } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
 import { roleSkillDescriptions } from "@/lib/role-skills";
 import { roleNames } from "../role-portrait";
@@ -24,11 +24,12 @@ const publicState: PublicGameState = {
 describe("game privacy and turn UI", () => {
   it("shows only a newly received private skill result", () => {
     const previous = { ...privateState, actionHistory: [], privateResults: [] };
-    expect(getFreshSkillResult(null, privateState)).toBeNull();
-    expect(getFreshSkillResult(previous, { ...previous, actionHistory: [{ turn: 1, type: "VOTE", message: "โหวตห้อง 101" }] })).toBeNull();
-    expect(getFreshSkillResult(previous, { ...previous, actionHistory: [{ turn: 1, type: "SKILL", message: "ใช้สกิล: พบผู้เล่น 2 คน" }] })).toBe("ใช้สกิล: พบผู้เล่น 2 คน");
-    expect(getFreshSkillResult(previous, { ...previous, privateResults: ["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B"] })).toBe("ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B");
-    expect(getFreshSkillResult(previous, { ...previous, privateResults: ["ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4"] })).toBe("ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4");
+    expect(getFreshSkillResults(null, privateState)).toEqual([]);
+    expect(getFreshSkillResults(previous, { ...previous, actionHistory: [{ turn: 1, type: "VOTE", message: "โหวตห้อง 101" }] })).toEqual([]);
+    expect(getFreshSkillResults(previous, { ...previous, actionHistory: [{ turn: 1, type: "SKILL", message: "ใช้สกิล: พบผู้เล่น 2 คน" }] })).toEqual(["ใช้สกิล: พบผู้เล่น 2 คน"]);
+    expect(getFreshSkillResults(previous, { ...previous, privateResults: ["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B"] })).toEqual(["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือ Guest B"]);
+    expect(getFreshSkillResults(previous, { ...previous, privateResults: ["ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4"] })).toEqual(["ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4"]);
+    expect(getFreshSkillResults(previous, { ...previous, privateResults: ["ผลแรก", "ผลถัดมา"] })).toEqual(["ผลแรก", "ผลถัดมา"]);
   });
 
   it("renders the private result as a focused screen", () => {

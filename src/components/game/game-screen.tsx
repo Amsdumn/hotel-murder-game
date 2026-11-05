@@ -115,12 +115,12 @@ export function PrivateInfoPanel({ privateState, teamState, players, open, onTog
   </Paper>;
 }
 
-export function getFreshSkillResult(previous: PrivatePlayerState | null, current: PrivatePlayerState | null): string | null {
-  if (!previous || !current || previous.playerId !== current.playerId) return null;
-  if (current.privateResults.length > previous.privateResults.length) return current.privateResults.at(-1) ?? null;
-  if (current.actionHistory.length <= previous.actionHistory.length) return null;
-  const action = current.actionHistory.at(-1);
-  return action?.type === "SKILL" && action.message !== "หมดเวลาใช้สกิล" ? action.message : null;
+export function getFreshSkillResults(previous: PrivatePlayerState | null, current: PrivatePlayerState | null): string[] {
+  if (!previous || !current || previous.playerId !== current.playerId) return [];
+  if (current.privateResults.length > previous.privateResults.length) return current.privateResults.slice(previous.privateResults.length);
+  return current.actionHistory.slice(previous.actionHistory.length)
+    .filter((action) => action.type === "SKILL" && action.message !== "หมดเวลาใช้สกิล")
+    .map((action) => action.message);
 }
 
 export function SkillResultOverlay({ message, language }: { message: string; language: Language }) {
@@ -288,17 +288,20 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const [error, setError] = useState("");
   const [showSecret, setShowSecret] = useState(false);
   const previousPrivateState = useRef<PrivatePlayerState | null>(privateState);
-  const [skillResult, setSkillResult] = useState<{ message: string; version: number } | null>(null);
+  const nextSkillResultId = useRef(0);
+  const [skillResultQueue, setSkillResultQueue] = useState<Array<{ id: number; message: string }>>([]);
+  const skillResult = skillResultQueue[0] ?? null;
+  const activeSkillResultId = skillResult?.id;
   useEffect(() => {
-    const freshResult = getFreshSkillResult(previousPrivateState.current, privateState);
+    const freshResults = getFreshSkillResults(previousPrivateState.current, privateState);
     previousPrivateState.current = privateState;
-    if (freshResult && privateState) setSkillResult({ message: freshResult, version: privateState.version });
+    if (freshResults.length) setSkillResultQueue((queue) => [...queue, ...freshResults.map((message) => ({ id: ++nextSkillResultId.current, message }))]);
   }, [privateState]);
   useEffect(() => {
-    if (!skillResult) return;
-    const timeout = window.setTimeout(() => setSkillResult(null), 3000);
+    if (activeSkillResultId === undefined) return;
+    const timeout = window.setTimeout(() => setSkillResultQueue((queue) => queue.slice(1)), 3000);
     return () => window.clearTimeout(timeout);
-  }, [skillResult]);
+  }, [activeSkillResultId]);
   const [skillBoardSelection, setSkillBoardSelection] = useState<{ turn: number; playerId: string; kind: "room" | "floor" | "column"; target: number } | null>(null);
   const [skillPlayerSelection, setSkillPlayerSelection] = useState<{ turn: number; playerId: string; targetId: string } | null>(null);
   const [clockNow, setClockNow] = useState<number | null>(null);
