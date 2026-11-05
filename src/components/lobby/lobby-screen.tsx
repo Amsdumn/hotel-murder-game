@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button, Chip, CircularProgress, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import type { Socket } from "socket.io-client";
-import { connectLobbySocket, forgetLobbyIdentity, lobbyErrorMessage, readLobbyToken, requestLobby, saveGuestProfile, saveLobbyIdentity } from "@/lib/lobby-client";
+import { acceptNewerLobbyState, connectLobbySocket, forgetLobbyIdentity, lobbyErrorMessage, readLobbyToken, requestLobby, saveGuestProfile, saveLobbyIdentity } from "@/lib/lobby-client";
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
 import type { GameResultState, PrivatePlayerState, PublicGameState, VersionedTeamState } from "@/types/game";
 import { GameScreen } from "@/components/game/game-screen";
@@ -41,7 +41,7 @@ export function LobbyScreen({ code }: { code: string }) {
     let disposed = false;
     let resuming = false;
     let retryTimer: number | null = null;
-    const onState = (next: LobbyView) => setView(next);
+    const onState = (next: LobbyView) => setView((current) => acceptNewerLobbyState(current, next));
     const onConnect = async () => {
       if (disposed || resuming) return;
       if (retryTimer !== null) {
@@ -67,7 +67,7 @@ export function LobbyScreen({ code }: { code: string }) {
         }
         setConnected(true);
         setPlayerId(result.data.playerId);
-        setView(result.data.view);
+        setView((current) => acceptNewerLobbyState(current, result.data.view));
         setPlayerLimit(result.data.view.playerLimit);
         setDiscussionSeconds(result.data.view.discussionSeconds);
         setError("");
@@ -122,7 +122,7 @@ export function LobbyScreen({ code }: { code: string }) {
     setError("");
     const result = await requestLobby<LobbyView>(socket, event, { ...payload, actionId: createActionId(), expectedVersion: view.version });
     if (result.ok) {
-      setView(result.data);
+      setView((current) => acceptNewerLobbyState(current, result.data));
       if (event === "lobby:rename") { saveGuestProfile(String(payload.displayName).trim()); setEditingName(false); }
     }
     else setError(lobbyErrorMessage(result.error, language));

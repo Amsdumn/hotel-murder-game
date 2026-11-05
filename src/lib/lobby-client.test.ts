@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Socket } from "socket.io-client";
-import { forgetLobbyIdentity, joinOrResumeLobby, readGuestProfile, readLobbyToken, saveGuestProfile, saveLobbyIdentity } from "./lobby-client";
+import { acceptNewerLobbyState, forgetLobbyIdentity, joinOrResumeLobby, readGuestProfile, readLobbyToken, saveGuestProfile, saveLobbyIdentity } from "./lobby-client";
 import type { LobbyIdentity } from "@/types/lobby";
 
 function memoryStorage(): Storage {
@@ -22,6 +22,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("browser guest identity", () => {
+  it("keeps the latest lobby version when broadcasts or acknowledgements arrive out of order", () => {
+    const latest = { code: "ABC234", version: 3, players: ["Host", "Guest"] };
+    expect(acceptNewerLobbyState(latest, { code: "ABC234", version: 2, players: ["Host"] })).toBe(latest);
+    expect(acceptNewerLobbyState(latest, { code: "ABC234", version: 4, players: ["Host", "Guest", "Third"] }).version).toBe(4);
+    expect(acceptNewerLobbyState(latest, { code: "XYZ234", version: 0, players: ["Other"] }).code).toBe("XYZ234");
+  });
+
   it("keeps a room token after tab storage is cleared and removes it only when forgotten", () => {
     const identity = { code: "ABC234", playerId: "player-1", token: "a".repeat(64), view: {} } as LobbyIdentity;
     saveLobbyIdentity(identity);

@@ -7,6 +7,10 @@ import { createActionId } from "@/lib/action-id";
 
 export interface GuestProfile { id: string; displayName: string }
 
+export function acceptNewerLobbyState<T extends { code: string; version: number }>(current: T | null, incoming: T): T {
+  return current && current.code === incoming.code && current.version > incoming.version ? current : incoming;
+}
+
 const profileKey = "hotel-guest-profile";
 const lobbyKey = (code: string) => `hotel-lobby:${code.toUpperCase()}`;
 
