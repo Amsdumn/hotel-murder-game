@@ -22,6 +22,18 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("places guests above the hotel map in an equal-width game column", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: publicState, privateState, teamState: null, result: null,
+      murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain("lg:grid-cols-2");
+    expect(html.indexOf(">ผู้เข้าพัก</h2>")).toBeGreaterThan(-1);
+    expect(html.indexOf(">ผู้เข้าพัก</h2>")).toBeLessThan(html.indexOf(">แผนผัง</p>"));
+    expect(html.indexOf(">แผนผัง</p>")).toBeLessThan(html.indexOf("ข้อมูลลับ · เฉพาะคุณ"));
+  });
+
   it("shows only a newly received private skill result", () => {
     const previous = { ...privateState, actionHistory: [], privateResults: [] };
     expect(getFreshSkillResults(null, privateState)).toEqual([]);
