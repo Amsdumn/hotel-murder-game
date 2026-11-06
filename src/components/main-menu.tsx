@@ -98,47 +98,66 @@ export function MainMenu() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#10101b] text-[#f8f1e4]">
       <audio ref={homeAudioRef} src={HOME_AMBIENCE_SRC} loop preload="auto" className="hidden" />
-      <div className="pointer-events-none absolute inset-0"><Image src="/art/hotel-night.webp" alt="" fill priority sizes="100vw" className="object-cover object-[62%_center]" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,11,23,.97)_0%,rgba(13,11,23,.86)_35%,rgba(13,11,23,.26)_75%),linear-gradient(0deg,rgba(13,11,23,.9),transparent_48%)]" /></div>
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-6 sm:px-10 lg:px-14">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d9b66f]/20 pb-5">
+      {/* // Sound Effect by <a href="https://pixabay.com/users/simplesound-53070346/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=443327">SimpleSound</a> from <a href="https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=443327">Pixabay</a> */}
+      <div className="pointer-events-none absolute inset-0">
+        <Image src="/art/hotel-night.webp" alt="" fill priority sizes="100vw" className="object-cover object-[62%_center]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,11,23,.97)_0%,rgba(13,11,23,.86)_35%,rgba(13,11,23,.26)_75%),linear-gradient(0deg,rgba(13,11,23,.9),transparent_48%)]" />
+      </div>
+      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-3 sm:px-10 lg:px-14">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d9b66f]/20 pb-2">
           <div className="flex items-center gap-3 text-[#e7ce98]">
             <span aria-hidden="true" className="text-2xl">✧</span>
-            <span className="text-sm font-bold tracking-[0.12em]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."}</span>
+            <span className="text-sm font-bold tracking-[0.12em]">
+              {en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."}
+            </span>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             {profileName && <span className="flex max-w-full items-center gap-1 rounded-full border border-[#d9b66f]/30 px-3 py-1 text-xs text-[#e7ce98]">{en ? "Player" : "ผู้เล่น"}: <span className="min-w-0 max-w-[150px] truncate" title={profileName}>{profileName}</span></span>}
             <LanguageSwitcher />
             <SoundToggleButton muted={muted} onChange={(next) => { setMuted(next); if (!next) primeGameAudio(); }} />
-            <Button color="primary" variant="text" size="small" onClick={() => setAboutOpen(true)}>{en ? "How to play" : "วิธีเล่น"}</Button>
+            <Button color="primary" variant="text" size="small" onClick={() => setAboutOpen(true)}>
+              {en ? "How to play" : "วิธีเล่น"}
+            </Button>
           </div>
         </header>
 
-        <div className="grid flex-1 items-center gap-12 py-12 lg:grid-cols-[1.05fr_.95fr] lg:py-16">
+        <div className="grid flex-1 items-center gap-12 py-2 lg:grid-cols-[1.05fr_.95fr] lg:py-4">
           <section className="relative z-10 max-w-xl">
             <Chip label={en ? "WHO IS MURDERED · ONLINE MYSTERY" : "WHO IS MURDERED · เกมสืบสวนออนไลน์"} color="primary" variant="outlined" size="small" className="mb-6! bg-[#171324]/70!" />
-            <p className="mb-6 text-sm tracking-[0.34em] text-[#e5bd82]">{en ? "WELCOME TO THE HOTEL" : "ยินดีต้อนรับสู่โรงแรม"}</p>
+            <p className="mb-6 text-sm text-[#e5bd82]">
+              {en ? "WELCOME TO THE HOTEL" : "ยินดีต้อนรับสู่โรงแรม"}
+            </p>
             <h1 className="font-serif text-5xl font-semibold leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
-              {en ? "Who Killed" : "คืนนี้"}<br /><span className="text-[#d9b66f]">{en ? "Tonight?" : "ใครฆ่า..."}</span>
+              {en ? "Who Killed" : "คืนนี้"}<br />
+              <span className="text-[#d9b66f]">
+                {en ? "Tonight?" : "ใครฆ่า..."}
+              </span>
             </h1>
-            <p className="mt-5 max-w-lg text-base leading-8 text-[#c6bdb1] sm:text-lg">
+            <p className="mt-5 max-w-lg text-base leading-6 text-[#c6bdb1] sm:text-lg">
               {en ? "Every guest has a secret. One is the Assassin. Uncover the truth before the final night." : "แขกทุกคนมีความลับ หนึ่งคนคือนักฆ่า ร่วมสืบหาความจริงก่อนจะถึงคืนสุดท้าย"}
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button variant="contained" size="large" onClick={() => openEntry("create")} className="px-8! py-3!">{en ? "Create room" : "สร้างห้องเกม"}</Button>
+              <Button variant="contained" size="large" onClick={() => openEntry("create")} className="px-8! py-3!">
+                {en ? "Create room" : "สร้างห้องเกม"}
+              </Button>
               {/* <Button variant="outlined" size="large" onClick={() => openEntry("join")} className="px-8! py-3!">เข้าร่วมห้อง</Button> */}
             </div>
             {/* <p className="mt-5 text-sm text-[#c9b8ae]">รองรับผู้เล่น 5–10 คน · ใช้เวลาสูงสุด 4 รอบ</p> */}
             <ActiveRooms onJoin={(code) => openEntry("join", code)} />
           </section>
 
-          <section aria-label={en ? "Hotel characters" : "ตัวละครในโรงแรม"} className="relative mx-auto w-full max-w-xl lg:mt-20">
+          <section aria-label={en ? "Hotel characters" : "ตัวละครในโรงแรม"} className="relative mx-auto w-full max-w-xl">
             <div className="absolute -inset-8 rounded-full bg-[#8c3b47]/20 blur-3xl" />
             <AvatarGallery onSelect={setSelectedAvatar} />
-            <p className="relative mt-4 text-center text-xs tracking-[.25em] text-[#e5bd82]">{en ? "12 CHARACTERS · UP TO 27 ROOMS · UNTOLD SECRETS" : "12 ตัวละคร · สูงสุด 27 ห้อง · ความลับที่ไม่มีใครบอก"}</p>
-            <p className="relative mt-2 text-center text-xs text-[#c6bdb1]">{en ? "Select a portrait to read their story. Characters are assigned when the game begins." : "แตะภาพเพื่ออ่านเรื่องราว ระบบจะสุ่มตัวละครเมื่อเริ่มเกม"}</p>
+            <p className="relative mt-4 text-center text-[#e5bd82]">
+              {en ? "12 CHARACTERS · UP TO 27 ROOMS · UNTOLD SECRETS" : "12 ตัวละคร · สูงสุด 27 ห้อง · ความลับที่ไม่มีใครบอก"}
+            </p>
+            <p className="relative mt-2 text-center text-xs text-[#c6bdb1]">
+              {en ? "Select a portrait to read their story. Characters are assigned when the game begins." : "แตะภาพเพื่ออ่านเรื่องราว ระบบจะสุ่มตัวละครเมื่อเริ่มเกม"}
+            </p>
           </section>
         </div>
-        <footer className="border-t border-[#d9b66f]/20 pt-5 text-center text-xs text-[#8f8579] sm:text-left">
+        <footer className="border-t border-[#d9b66f]/20 pt-3 text-center text-xs text-[#8f8579] sm:text-left">
           {en ? "A secret lies behind every door." : "ความลับอยู่หลังประตูทุกบาน"}
         </footer>
       </div>

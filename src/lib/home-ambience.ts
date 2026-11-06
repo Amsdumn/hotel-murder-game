@@ -1,5 +1,4 @@
 export const HOME_AMBIENCE_SRC = "/sound-effect/sound-bg-horror-trailer.mp3";
-// Sound Effect by <a href="https://pixabay.com/users/simplesound-53070346/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=443327">SimpleSound</a> from <a href="https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=443327">Pixabay</a>
 
 export function startHomeAmbience(audio: HTMLAudioElement): () => void {
   audio.loop = true;
