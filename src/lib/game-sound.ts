@@ -26,7 +26,7 @@ export function getGameSoundEvent(previous: GameSoundSnapshot | null, current: G
 
 let audioContext: AudioContext | null = null;
 
-export function getAudioContext(): AudioContext | null {
+function getAudioContext(): AudioContext | null {
   if (typeof window === "undefined" || !window.AudioContext) return null;
   try { return audioContext ?? (audioContext = new window.AudioContext()); } catch { return null; }
 }
