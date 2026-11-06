@@ -17,7 +17,7 @@ Use the ไทย / EN control on the menu, lobby, or game screen to change the 
 2. Copy `.env.example` to `.env.local` and adjust `PORT` and `BIND_HOST` for your environment. `BIND_HOST=0.0.0.0` lets the server accept connections on the LAN; the unrelated machine `HOSTNAME` variable is ignored.
 3. Choose a development database:
    - **Installed MongoDB:** Start MongoDB on `127.0.0.1:27017`, then run `npm run dev:local`.
-   - **Docker MongoDB:** Run `npm run dev:docker`. This starts the `mongo` Compose service and connects to its localhost port `27018`. Run `npm run db:down` to stop it; the named volume retains its data.
+   - **Docker MongoDB:** Run `npm run db:up` if MongoDB is not already available on `127.0.0.1:27018`, then run `npm run dev:docker`. The latter connects to the existing container without trying to start another one on the same port. Run `npm run db:down` to stop this project's Compose service; the named volume retains its data.
    - **Other database:** Set `MONGODB_MODE=custom` and `MONGODB_URI` in `.env.local`, then run `npm run dev`. Existing `.env.local` files with only `MONGODB_URI` continue to use that URI.
 4. Open the `Local` URL printed by the server. Share a printed `Network` URL with friends on the same LAN. If their browser cannot reach it, allow the Node.js process through the host firewall on private networks.
 
