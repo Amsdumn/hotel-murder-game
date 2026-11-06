@@ -1,6 +1,6 @@
 # Hotel Murder Online
 
-A real-time Thai and English social deduction browser game set in a seven-floor hotel. The custom Next.js and Socket.IO server runs the lobby, assigns hidden roles and rooms, resolves skills and voting, and sends each player only the information they may see. Players can inspect the twelve 3D anime characters on the main menu. Character identities stay hidden in the lobby and are randomly assigned when the game starts, independently of secret roles.
+A real-time Thai and English social deduction browser game set in a hotel with 5–9 floors based on the player count. The custom Next.js and Socket.IO server runs the lobby, assigns hidden roles and rooms, resolves skills and voting, and sends each player only the information they may see. Players can inspect the twelve 3D anime characters on the main menu. Character identities stay hidden in the lobby and are randomly assigned when the game starts, independently of secret roles.
 
 Use the ไทย / EN control on the menu, lobby, or game screen to change the interface language. The choice is stored in that browser and restored after refresh or reconnect. Players in the same room can use different interface languages; game state and privacy rules stay the same.
 
