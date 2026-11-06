@@ -106,6 +106,18 @@ describe("game privacy and turn UI", () => {
     expect(html).not.toContain('aria-label="เลือกผู้เข้าพัก Dead');
   });
 
+  it("keeps a dead guest's online indicator above the faded card content", () => {
+    const html = renderToStaticMarkup(createElement(PublicGuests, {
+      players: [{ id: "b", displayName: "Dead", seatIndex: 1, isAlive: false }],
+      onlinePlayerIds: ["b"],
+    }));
+    const card = html.match(/<div aria-disabled="true" class="([^"]+)">([\s\S]*?)<\/div><\/div><\/div>/);
+    expect(card).not.toBeNull();
+    expect(card?.[1]).not.toMatch(/opacity-50|grayscale/);
+    expect(card?.[2]).toContain("opacity-50 grayscale");
+    expect(card?.[2]).toMatch(/aria-label="ออนไลน์"[^>]*class="[^"]*z-10/);
+  });
+
   it("renders the room map for the active game's floor count", () => {
     const renderMap = (floors: number) => renderToStaticMarkup(createElement(HotelBoard, {
       state: {
@@ -166,6 +178,21 @@ describe("game privacy and turn UI", () => {
     const html = renderToStaticMarkup(createElement(GameResultScreen, { result: { winner: "INNOCENT", turnsPlayed: 2, players: [], events: [] } }));
     expect(html).toContain("กลับหน้าแรก");
     expect(html).toContain('href="/"');
+  });
+  it("shows team color bars and keeps the final event heading above a 300px scroll area", () => {
+    const html = renderToStaticMarkup(createElement(GameResultScreen, { result: {
+      winner: "INNOCENT", turnsPlayed: 2,
+      players: [
+        { playerId: "a", displayName: "Guest A", role: "DETECTIVE", team: "INNOCENT", roomNumber: 101, isAlive: true },
+        { playerId: "b", displayName: "Guest B", role: "KILLER", team: "MURDERER", roomNumber: 102, isAlive: false },
+      ],
+      events: [{ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม" }],
+    } }));
+    expect(html).toMatch(/Guest A[\s\S]*?bg-blue-500/);
+    expect(html).toMatch(/Guest B[\s\S]*?bg-red-500/);
+    expect(html).toContain('h-[300px]');
+    expect(html).toMatch(/id="final-event-history-title"[^>]*>เหตุการณ์สำคัญ<\/h3>/);
+    expect(html).toMatch(/aria-labelledby="final-event-history-title"[^>]*overflow-y-auto/);
   });
   it("calls the murderer-team assassin นักฆ่า while retaining the team name", () => {
     expect(roleNames.KILLER).toBe("นักฆ่า");
