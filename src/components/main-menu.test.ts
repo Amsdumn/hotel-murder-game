@@ -10,7 +10,9 @@ import { AvatarDetail, AvatarGallery, MainMenu } from "./main-menu";
 describe("homepage avatars", () => {
   it("shows a bilingual control for homepage ambience", () => {
     const html = renderToStaticMarkup(createElement(MainMenu));
-    expect(html).toContain('aria-label="เปิดเสียงบรรยากาศ"');
+    expect(html).toContain('aria-label="เปิดเสียง"');
+    expect(html).toContain('aria-pressed="false"');
+    expect(html).not.toContain('autoplay=""');
   });
   it("shows a clickable 3D anime portrait for all twelve story characters", () => {
     const html = renderToStaticMarkup(createElement(AvatarGallery, { onSelect: () => {} }));
