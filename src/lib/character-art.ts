@@ -6,6 +6,7 @@ export const fullBodyArt: Record<Role, string> = {
   HOUSEKEEPER: "/art/characters/housekeeper-3d.webp",
   WINDOW_CLEANER: "/art/characters/window-cleaner-3d.webp",
   DETECTIVE: "/art/characters/detective-3d.webp",
+  LAWYER: "/art/characters/lawyer-3d.webp",
   FORMER_POLICE: "/art/characters/former-police-3d.webp",
   RECEPTIONIST: "/art/avatars/irina-volkova.webp",
   PHOTOGRAPHER: "/art/characters/photographer-3d.webp",

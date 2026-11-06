@@ -14,8 +14,12 @@ export function chooseLocalBotCommand(state: PublicGameState, player: PrivatePla
   if (!player.isAlive) return null;
   const rooms = state.publicRooms.filter((room) => room.state === "UNKNOWN").map((room) => room.roomNumber);
   if (state.phase === "SKILL_PHASE" && player.canUseSkill) {
-    let target: number | number[] | string | undefined;
+    let target: number | number[] | string | string[] | undefined;
     if (player.role === "ACCOMPLICE") target = state.players.find((guest) => guest.id !== player.playerId && guest.isAlive !== false)?.id;
+    else if (player.role === "LAWYER") {
+      const guests = state.players.filter((guest) => guest.id !== player.playerId && guest.isAlive !== false).slice(0, 2).map((guest) => guest.id);
+      target = guests.length === 2 ? guests : undefined;
+    }
     else if (["ELECTRICIAN", "HOUSEKEEPER", "WITNESS"].includes(player.role)) target = rooms.length ? Math.floor(rooms[0] / 100) : undefined;
     else if (player.role === "WINDOW_CLEANER") target = rooms.length ? rooms[0] % 100 : undefined;
     else if (player.role === "KILLER" && state.players.length === 5 && state.turn === 2) target = rooms.length >= 2 ? rooms.slice(0, 2) : undefined;

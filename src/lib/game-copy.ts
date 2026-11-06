@@ -11,6 +11,8 @@ const exact: Record<string, string> = {
   "ไม่พบเบาะแสทิศทาง": "No directional clue found",
   "ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก": "No floor information for the selected player",
   "หมดเวลาใช้สกิล": "Skill time expired",
+  "ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน": "The two guests are on the same team",
+  "ผู้เข้าพักทั้งสองอยู่คนละฝ่าย": "The two guests are on different teams",
   "ใช้สกิลไม่ได้เนื่องจากไฟดับบนชั้นของคุณ": "You cannot use your skill because your floor is dark",
   "สกิลช่างไฟกำลังพักหนึ่งเทิร์น": "The Electrician skill is cooling down this turn",
   "เปิดทะเบียนห้องพักแล้ว": "Room register opened",

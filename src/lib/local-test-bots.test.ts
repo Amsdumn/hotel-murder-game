@@ -25,6 +25,11 @@ describe("local test bots", () => {
     const fivePlayerState = { ...state, turn: 2, players: [...state.players, ...Array.from({ length: 3 }, (_, i) => ({ id: `extra-${i}`, displayName: "Extra", seatIndex: i + 2 }))] };
     expect(chooseLocalBotCommand(fivePlayerState, killer)).toEqual({ event: "game:skill", payload: { target: [101, 102] } });
   });
+  it("selects two other living guests for a Lawyer bot", () => {
+    const lawyer = { ...privateState, role: "LAWYER" as const };
+    const guests = { ...state, players: [...state.players, { id: "dead", displayName: "Dead", seatIndex: 2, isAlive: false }, { id: "third", displayName: "Third", seatIndex: 3, isAlive: true }] };
+    expect(chooseLocalBotCommand(guests, lawyer)).toEqual({ event: "game:skill", payload: { target: ["other", "third"] } });
+  });
   it("votes only for an eligible unowned room and does not vote twice", () => {
     const voter = { ...privateState, canUseSkill: false, canVote: true, roomNumber: 101 };
     const voting = { ...state, phase: "VOTING" as const };

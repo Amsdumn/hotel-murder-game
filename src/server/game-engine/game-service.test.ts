@@ -22,6 +22,17 @@ function record(phase: "ROLE_REVEAL" | "DISCUSSION" | "SKILL_PHASE" | "VOTING"):
 }
 
 describe("persisted server deadlines", () => {
+  it("accepts a Lawyer pair through the game command and keeps the result private", async () => {
+    const store = new MemoryLobbyStore();
+    const lobby = record("SKILL_PHASE");
+    lobby.gameState!.players = lobby.gameState!.players.map((player) => player.id === "a" ? { ...player, role: "LAWYER" } : player);
+    await store.createLobby(lobby);
+    const service = new GameService(store);
+    const result = await service.skill("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, target: ["d", "e"] }, 500);
+    expect((await service.snapshot("ABC234", "a"))?.privateState.privateResults).toContain("ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน");
+    expect((await service.snapshot("ABC234", "b"))?.privateState.privateResults).toEqual([]);
+    expect(JSON.stringify(projectPublicState(result.state))).not.toContain("ผู้เข้าพักทั้งสอง");
+  });
   it("accepts public chat only from living players during discussion and restores it", async () => {
     const store = new MemoryLobbyStore();
     await store.createLobby(record("DISCUSSION"));

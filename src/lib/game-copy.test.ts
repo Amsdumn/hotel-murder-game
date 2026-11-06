@@ -42,4 +42,8 @@ describe("game message translation", () => {
       expect(gameMessage(thai, "en")).toBe(english);
     }
   });
+  it("localizes Lawyer comparisons without naming either team", () => {
+    expect(gameMessage("ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน", "en")).toBe("The two guests are on the same team");
+    expect(gameMessage("ผู้เข้าพักทั้งสองอยู่คนละฝ่าย", "en")).toBe("The two guests are on different teams");
+  });
 });

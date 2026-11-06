@@ -26,6 +26,10 @@ const roleNotes: Record<Role, Record<Language, RoleNote>> = {
     th: { action: "แตะห้องบนแผนผัง แล้วกดยืนยัน", note: "ถ้ามีผู้พักที่ยังมีชีวิต จะรู้เพียงฝ่ายผู้บริสุทธิ์หรือฆาตกร ไม่รู้ชื่อหรือบทบาท; หากไม่มีจะได้ผลว่าห้องว่าง" },
     en: { action: "Select a room on the map, then confirm.", note: "If a living player occupies it, learn only their team, not their name or role. Otherwise, the result says empty." },
   },
+  LAWYER: {
+    th: { action: "แตะการ์ดผู้เข้าพักคนอื่นที่ยังมีชีวิตสองคน แล้วกดยืนยัน", note: "ผลส่วนตัวบอกเพียงว่าทั้งสองอยู่ฝ่ายเดียวกันหรือคนละฝ่าย ไม่บอกชื่อฝ่ายหรือบทบาท ผู้ตายและตัวเองเลือกไม่ได้" },
+    en: { action: "Select two other living guest cards, then confirm.", note: "The private result says only same team or different teams. It does not name a team or role. You cannot select yourself or a dead guest." },
+  },
   FORMER_POLICE: {
     th: { action: "ไม่ต้องกดใช้สกิล ระบบให้คำใบ้ส่วนตัวอัตโนมัติเมื่อถึงคิวในแต่ละเทิร์น", note: "คำใบ้เกี่ยวกับตัวละครสาธารณะของนักฆ่า: เพศ → ช่วงอายุ → สีผมและโทนสีผิว → ประเทศเกิด หากตายหรือไฟดับก่อนถึงคิวจะพลาดคำใบ้เทิร์นนั้น" },
     en: { action: "No action is needed. Receive a private clue automatically on your slot each turn.", note: "Clues describe the Assassin's public character: gender → age range → hair color and broad skin tone → country of birth. Death or blackout before your slot makes you miss that turn's clue." },

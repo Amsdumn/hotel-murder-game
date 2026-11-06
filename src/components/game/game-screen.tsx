@@ -22,17 +22,17 @@ import { PhotographerResult } from "./photographer-result";
 import { FloatingGameChat } from "./game-chat";
 import { avatarById, type AvatarId } from "@/lib/avatars";
 
-export function PublicGuests({ players, selfId, selectedPlayerId, onSelectPlayer, onlinePlayerIds = [] }: { players: PublicGameState["players"]; selfId?: string; selectedPlayerId?: string | null; onSelectPlayer?: (playerId: string) => void; onlinePlayerIds?: string[] }) {
+export function PublicGuests({ players, selfId, selectedPlayerId, selectedPlayerIds = [], selectionCount = 1, onSelectPlayer, onlinePlayerIds = [] }: { players: PublicGameState["players"]; selfId?: string; selectedPlayerId?: string | null; selectedPlayerIds?: string[]; selectionCount?: 1 | 2; onSelectPlayer?: (playerId: string) => void; onlinePlayerIds?: string[] }) {
   const en = useLanguage() === "en";
   return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!">
     <h2 className="font-serif text-xl">{en ? "Guests" : "ผู้เข้าพัก"}</h2>
-    <p className="mt-1 text-xs text-[#a9a5af]">{onSelectPlayer ? en ? "Select a guest as your skill target" : "แตะผู้เข้าพักหนึ่งคนเพื่อเลือกเป้าหมายสกิล" : en ? "A character does not reveal a role or team" : "อวาตาร์ไม่บอกบทบาทหรือฝ่าย"}</p>
+    <p className="mt-1 text-xs text-[#a9a5af]">{onSelectPlayer ? selectionCount === 2 ? en ? "Select two living guests as skill targets" : "แตะผู้เข้าพักที่ยังมีชีวิตสองคนเพื่อเลือกเป้าหมายสกิล" : en ? "Select a guest as your skill target" : "แตะผู้เข้าพักหนึ่งคนเพื่อเลือกเป้าหมายสกิล" : en ? "A character does not reveal a role or team" : "อวาตาร์ไม่บอกบทบาทหรือฝ่าย"}</p>
     <div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">{players.map((player) => {
       const avatar = avatarById(player.avatarId);
       const dead = player.isAlive === false;
       const online = onlinePlayerIds.includes(player.id);
       const selectable = !!onSelectPlayer && player.id !== selfId && !dead;
-      const selected = selectable && selectedPlayerId === player.id;
+      const selected = selectable && (selectedPlayerId === player.id || selectedPlayerIds.includes(player.id));
       const content = <><div className={`flex min-w-0 items-center gap-2 ${dead ? "opacity-50 grayscale" : ""}`}>{avatar && <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md"><Image src={avatar.portrait} alt="" fill sizes="48px" className="object-cover object-top" /></div>}<div className="min-w-0"><p className="max-w-[150px] truncate text-sm" title={player.displayName}>{player.displayName}</p><p className="truncate text-xs text-[#c8a46b]">{dead ? en ? "Dead" : "เสียชีวิต" : avatar ? en ? avatarEnglish[avatar.id].name : avatar.name : en ? "Guest" : "ผู้เข้าพัก"}</p></div></div><span aria-label={online ? en ? "Online" : "ออนไลน์" : en ? "Offline" : "ออฟไลน์"} title={online ? en ? "Online" : "ออนไลน์" : en ? "Offline" : "ออฟไลน์"} className={`absolute right-2 top-2 z-10 h-2.5 w-2.5 rounded-full ring-2 ring-[#1d1d26] ${online ? "bg-emerald-400" : "bg-[#777683]"}`} /></>;
       const className = `relative flex items-center gap-2 rounded-lg border p-2 pr-7 text-left ${dead ? "border-[#c8a46b]/10 bg-[#25252b]" : selected ? "border-[#f2d79c] bg-[#4a3942] ring-2 ring-[#f2d79c]" : selectable ? "cursor-pointer border-[#c8a46b]/50 bg-[#29202b] ring-1 ring-[#c8a46b]/50 transition-colors" : "border-[#c8a46b]/15 bg-[#29202b]"}`;
       return onSelectPlayer && player.id !== selfId ? <button key={player.id} type="button" aria-label={dead ? en ? `${player.displayName} is dead` : `${player.displayName} เสียชีวิต` : en ? `Select guest ${player.displayName} as skill target` : `เลือกผู้เข้าพัก ${player.displayName} เป็นเป้าหมายสกิล`} aria-pressed={selected} disabled={dead} className={`${className} ${dead ? "cursor-not-allowed" : "hover:border-[#e3c88e] focus-visible:outline-2 focus-visible:outline-[#e3c88e]"}`} onClick={() => onSelectPlayer(player.id)}>{content}</button> : <div key={player.id} aria-disabled={dead || undefined} className={className}>{content}</div>;
@@ -178,9 +178,13 @@ function usesColumnTarget(role: Role): boolean {
   return role === "WINDOW_CLEANER";
 }
 
+export function selectLawyerTargets(current: string[], targetId: string): string[] {
+  return current.includes(targetId) ? current.filter((id) => id !== targetId) : [...current.slice(-1), targetId];
+}
+
 export function scrollToSkillTarget(role: Role, guests: HTMLElement | null, board: HTMLElement | null, isMobile: boolean): void {
   if (!isMobile) return;
-  const target = role === "ACCOMPLICE" ? guests : usesRoomTarget(role) || usesFloorTarget(role) || usesColumnTarget(role) ? board : null;
+  const target = role === "ACCOMPLICE" || role === "LAWYER" ? guests : usesRoomTarget(role) || usesFloorTarget(role) || usesColumnTarget(role) ? board : null;
   target?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -191,6 +195,7 @@ export const skillActionInstructions: Record<Role, string> = {
   WINDOW_CLEANER: "แตะแนวห้อง 01, 02 หรือ 03 บนแผนผัง แล้วกดยืนยันสกิลด้านล่าง",
   WITNESS: "แตะชั้นหรือห้องบนชั้นที่ต้องการตรวจเป้าหมายของนักฆ่าในรอบนี้ แล้วกดยืนยันสกิลด้านล่าง",
   DETECTIVE: "แตะห้องบนแผนผังที่ต้องการตรวจ แล้วกดยืนยันสกิลด้านล่าง",
+  LAWYER: "แตะการ์ดผู้เข้าพักคนอื่นที่ยังมีชีวิตสองคน แล้วกดยืนยันสกิลด้านล่าง",
   FORMER_POLICE: "เมื่อถึงคิวในแต่ละเทิร์น ระบบจะให้คำใบ้เกี่ยวกับตัวละครของนักฆ่าอัตโนมัติ ตรวจผลในข้อมูลลับ",
   RECEPTIONIST: "เทิร์นที่ 3 ระบบจะเปิดทะเบียนห้องพักให้คุณอัตโนมัติ ตรวจผลในข้อมูลลับ",
   PHOTOGRAPHER: "เทิร์นที่ 3 ระบบจะให้คุณตรวจภาพถ่ายและบอกว่าใครคือนักฆ่าแบบส่วนตัว ตรวจผลในข้อมูลลับ",
@@ -205,6 +210,7 @@ const skillActionInstructionsEn: Record<Role, string> = {
   WINDOW_CLEANER: "Select column 01, 02, or 03 on the hotel map, then confirm below.",
   WITNESS: "Select a floor or a room on it to check the Assassin's target this turn, then confirm below.",
   DETECTIVE: "Select a room on the hotel map to inspect, then confirm below.",
+  LAWYER: "Select two other living guest cards, then confirm below.",
   FORMER_POLICE: "On your slot each turn, receive an automatic clue about the Assassin's public character. Read it in your private information.",
   RECEPTIONIST: "In turn 3, your private room register opens automatically. Read it in your private information.",
   PHOTOGRAPHER: "In turn 3, your photograph privately reveals the Assassin. Read it in your private information.",
@@ -281,16 +287,17 @@ export function StoryPrologue({ deadline, connected, connectionMessage, privateS
   </main>;
 }
 
-export function SkillPanel({ privateState, state, selectedRoom = null, selectedRooms = [], doubleKillActive = false, selectedFloor = null, selectedColumn = null, selectedPlayerId = null }: { privateState: PrivatePlayerState; state: PublicGameState; selectedRoom?: number | null; selectedRooms?: number[]; doubleKillActive?: boolean; selectedFloor?: number | null; selectedColumn?: number | null; selectedPlayerId?: string | null }) {
+export function SkillPanel({ privateState, state, selectedRoom = null, selectedRooms = [], doubleKillActive = false, selectedFloor = null, selectedColumn = null, selectedPlayerId = null, selectedPlayerIds = [] }: { privateState: PrivatePlayerState; state: PublicGameState; selectedRoom?: number | null; selectedRooms?: number[]; doubleKillActive?: boolean; selectedFloor?: number | null; selectedColumn?: number | null; selectedPlayerId?: string | null; selectedPlayerIds?: string[] }) {
   const en = useLanguage() === "en";
   const role = privateState.role;
   const room = usesRoomTarget(role);
   const floor = usesFloorTarget(role);
   const column = usesColumnTarget(role);
   const selectedPlayer = state.players.find((player) => player.id === selectedPlayerId && player.id !== privateState.playerId);
+  const lawyerPrompt = en ? `Selected guests (${selectedPlayerIds.length}/2): ${selectedPlayerIds.map((id) => state.players.find((player) => player.id === id)?.displayName).filter(Boolean).join(", ") || "none"}` : `เลือกผู้เข้าพักแล้ว (${selectedPlayerIds.length}/2): ${selectedPlayerIds.map((id) => state.players.find((player) => player.id === id)?.displayName).filter(Boolean).join(", ") || "ยังไม่ได้เลือก"}`;
   const prompt = en ? room ? selectedRoom === null ? "Select a room on the hotel map" : `Target: room ${selectedRoom}` : floor ? selectedFloor === null ? "Select a floor on the hotel map" : `Target: floor ${selectedFloor}` : column ? selectedColumn === null ? "Select a column on the hotel map" : `Target: column 0${selectedColumn}` : selectedPlayer ? `Target: ${selectedPlayer.displayName}` : "Select a guest from the list" : room ? selectedRoom === null ? "แตะห้องบนแผนผังโรงแรมเพื่อเลือกเป้าหมาย" : `เป้าหมาย: ห้อง ${selectedRoom}` : floor ? selectedFloor === null ? "แตะเลขชั้นบนแผนผังโรงแรมเพื่อเลือกเป้าหมาย" : `เป้าหมาย: ชั้น ${selectedFloor}` : column ? selectedColumn === null ? "แตะหัวแนวห้องบนแผนผังโรงแรมเพื่อเลือกเป้าหมาย" : `เป้าหมาย: แนวห้อง 0${selectedColumn}` : selectedPlayer ? `เป้าหมาย: ${selectedPlayer.displayName}` : "แตะผู้เข้าพักในรายชื่อเพื่อเลือกเป้าหมาย";
   const doublePrompt = doubleKillActive ? en ? `Select two distinct rooms on the map (${selectedRooms.length}/2): ${selectedRooms.join(", ")}` : `แตะเลือกห้องต่างกันสองห้องบนแผนผัง (${selectedRooms.length}/2): ${selectedRooms.join(", ")}` : null;
-  return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Use skill" : "ใช้สกิล"} · {en ? roleNamesEn[role] : roleNames[role]}</h2><p className="mt-3 text-sm leading-6 text-[#d8d2d8]">{en ? roleSkillDescriptionsEn[role] : roleSkillDescriptions[role]}</p><p className="mt-4 rounded-lg border border-[#c8a46b]/35 bg-[#362939] p-3 text-sm font-semibold text-[#f2d79c]">{doublePrompt ?? prompt}</p></Paper>;
+  return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Use skill" : "ใช้สกิล"} · {en ? roleNamesEn[role] : roleNames[role]}</h2><p className="mt-3 text-sm leading-6 text-[#d8d2d8]">{en ? roleSkillDescriptionsEn[role] : roleSkillDescriptions[role]}</p><p className="mt-4 rounded-lg border border-[#c8a46b]/35 bg-[#362939] p-3 text-sm font-semibold text-[#f2d79c]">{role === "LAWYER" ? lawyerPrompt : doublePrompt ?? prompt}</p></Paper>;
 }
 
 export function SkillConfirmBar({ targetLabel, canSubmit, onConfirm }: { targetLabel: string; canSubmit: boolean; onConfirm: () => void }) {
@@ -360,6 +367,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const [skillBoardSelection, setSkillBoardSelection] = useState<{ turn: number; playerId: string; kind: "room" | "floor" | "column"; target: number } | null>(null);
   const [doubleKillSelection, setDoubleKillSelection] = useState<{ turn: number; playerId: string; rooms: number[] } | null>(null);
   const [skillPlayerSelection, setSkillPlayerSelection] = useState<{ turn: number; playerId: string; targetId: string } | null>(null);
+  const [lawyerSelection, setLawyerSelection] = useState<{ turn: number; playerId: string; targetIds: string[] } | null>(null);
   const [clockNow, setClockNow] = useState<number | null>(null);
   const skillDeadlineAt = privateState?.canUseSkill ? privateState.skillDeadlineAt : undefined;
   const actionDeadlineAt = skillDeadlineAt ?? (state.phase === "VOTING" ? state.phaseDeadlineAt : undefined);
@@ -385,9 +393,10 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const selectedSkillFloor = selectedBoardTarget?.kind === "floor" ? selectedBoardTarget.target : null;
   const selectedSkillColumn = selectedBoardTarget?.kind === "column" ? selectedBoardTarget.target : null;
   const selectedSkillPlayer = skillPlayerSelection?.turn === state.turn && skillPlayerSelection.playerId === privateState?.playerId && state.players.some((player) => player.id === skillPlayerSelection.targetId && player.isAlive !== false) ? skillPlayerSelection.targetId : null;
-  const skillTarget = privateState ? doubleKillActive ? doubleKillRooms.length === 2 ? doubleKillRooms : null : usesRoomTarget(privateState.role) ? selectedSkillRoom : usesFloorTarget(privateState.role) ? selectedSkillFloor : usesColumnTarget(privateState.role) ? selectedSkillColumn : privateState.role === "ACCOMPLICE" ? selectedSkillPlayer : null : null;
+  const selectedLawyerTargets = lawyerSelection?.turn === state.turn && lawyerSelection.playerId === privateState?.playerId ? lawyerSelection.targetIds.filter((id) => id !== privateState?.playerId && state.players.some((player) => player.id === id && player.isAlive !== false)) : [];
+  const skillTarget = privateState ? doubleKillActive ? doubleKillRooms.length === 2 ? doubleKillRooms : null : usesRoomTarget(privateState.role) ? selectedSkillRoom : usesFloorTarget(privateState.role) ? selectedSkillFloor : usesColumnTarget(privateState.role) ? selectedSkillColumn : privateState.role === "ACCOMPLICE" ? selectedSkillPlayer : privateState.role === "LAWYER" && selectedLawyerTargets.length === 2 ? selectedLawyerTargets : null : null;
   const selectedPlayerName = state.players.find((player) => player.id === selectedSkillPlayer)?.displayName;
-  const skillTargetLabel = doubleKillActive ? en ? `Select two rooms: ${doubleKillRooms.join(", ") || "none"} (${doubleKillRooms.length}/2)` : `เลือกสองห้อง: ${doubleKillRooms.join(", ") || "ยังไม่ได้เลือก"} (${doubleKillRooms.length}/2)` : en ? skillTarget === null ? "No target selected" : typeof skillTarget === "string" ? `Guest: ${selectedPlayerName ?? "not found"}` : usesRoomTarget(privateState!.role) ? `Room ${skillTarget}` : usesFloorTarget(privateState!.role) ? `Floor ${skillTarget}` : `Column 0${skillTarget}` : skillTarget === null ? "ยังไม่ได้เลือกเป้าหมาย" : typeof skillTarget === "string" ? `ผู้เข้าพัก: ${selectedPlayerName ?? "ไม่พบผู้เล่น"}` : usesRoomTarget(privateState!.role) ? `ห้อง ${skillTarget}` : usesFloorTarget(privateState!.role) ? `ชั้น ${skillTarget}` : `แนวห้อง 0${skillTarget}`;
+  const skillTargetLabel = privateState?.role === "LAWYER" ? en ? `Guests (${selectedLawyerTargets.length}/2): ${selectedLawyerTargets.map((id) => state.players.find((player) => player.id === id)?.displayName).join(", ")}` : `ผู้เข้าพัก (${selectedLawyerTargets.length}/2): ${selectedLawyerTargets.map((id) => state.players.find((player) => player.id === id)?.displayName).join(", ")}` : doubleKillActive ? en ? `Select two rooms: ${doubleKillRooms.join(", ") || "none"} (${doubleKillRooms.length}/2)` : `เลือกสองห้อง: ${doubleKillRooms.join(", ") || "ยังไม่ได้เลือก"} (${doubleKillRooms.length}/2)` : en ? skillTarget === null ? "No target selected" : typeof skillTarget === "string" ? `Guest: ${selectedPlayerName ?? "not found"}` : usesRoomTarget(privateState!.role) ? `Room ${skillTarget}` : usesFloorTarget(privateState!.role) ? `Floor ${skillTarget}` : `Column 0${skillTarget}` : skillTarget === null ? "ยังไม่ได้เลือกเป้าหมาย" : typeof skillTarget === "string" ? `ผู้เข้าพัก: ${selectedPlayerName ?? "ไม่พบผู้เล่น"}` : usesRoomTarget(privateState!.role) ? `ห้อง ${skillTarget}` : usesFloorTarget(privateState!.role) ? `ชั้น ${skillTarget}` : `แนวห้อง 0${skillTarget}`;
   const skillExpired = skillDeadlineAt !== undefined && (skillSecondsLeft === null || skillSecondsLeft === 0);
   const canConfirmSkill = !!privateState?.canUseSkill && skillTarget !== null && !busy && connected && !skillExpired;
   const selectBoardTarget = (kind: "room" | "floor" | "column", target: number) => {
@@ -445,11 +454,11 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
         <div ref={boardRef} className="scroll-mt-4"><HotelBoard state={state} selfId={privateState?.playerId} ownRoomNumber={privateState?.roomNumber} unavailableSkillRooms={privateState?.role === "LOCKSMITH" ? privateState.locksmithUsedRooms : undefined} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} onSkillRoomSelect={roomSkillActive ? (roomNumber) => selectBoardTarget("room", roomNumber) : undefined} onSkillFloorSelect={floorSkillActive ? (floor) => selectBoardTarget("floor", floor) : undefined} onSkillColumnSelect={columnSkillActive ? (column) => selectBoardTarget("column", column) : undefined} selectedSkillRoom={selectedSkillRoom} selectedSkillRooms={doubleKillRooms} selectedSkillFloor={selectedSkillFloor} selectedSkillColumn={selectedSkillColumn} voteBusy={busy || !connected || voteExpired || ((roomSkillActive || floorSkillActive || columnSkillActive) && skillSecondsLeft === 0)} /></div>
       </div>
       <div className="min-w-0 space-y-5">
-      <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} onlinePlayerIds={onlinePlayerIds} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : undefined} /></div>
+      <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} selectedPlayerIds={selectedLawyerTargets} selectionCount={privateState?.role === "LAWYER" ? 2 : 1} onlinePlayerIds={onlinePlayerIds} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : privateState?.canUseSkill && privateState.role === "LAWYER" ? (targetId) => setLawyerSelection((current) => ({ turn: state.turn, playerId: privateState.playerId, targetIds: selectLawyerTargets(current?.turn === state.turn && current.playerId === privateState.playerId ? current.targetIds : [], targetId) })) : undefined} /></div>
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage ? gameMessage(state.phaseMessage, language) : null}</p></Paper>}
-      {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} selectedRoom={selectedSkillRoom} selectedRooms={doubleKillRooms} doubleKillActive={doubleKillActive} selectedFloor={selectedSkillFloor} selectedColumn={selectedSkillColumn} selectedPlayerId={selectedSkillPlayer} />}
+      {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} selectedRoom={selectedSkillRoom} selectedRooms={doubleKillRooms} doubleKillActive={doubleKillActive} selectedFloor={selectedSkillFloor} selectedColumn={selectedSkillColumn} selectedPlayerId={selectedSkillPlayer} selectedPlayerIds={selectedLawyerTargets} />}
       {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p className="text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p></Paper>}
       {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p></Paper>}
       <Paper className="flex! h-[300px]! flex-col! border! border-[#353440]! bg-[#191a22]! p-5!">

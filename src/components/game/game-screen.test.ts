@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
-import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, StoryPrologue, getFreshSkillResults, getTurnNotice, scrollToSkillTarget, skillActionInstructions } from "./game-screen";
+import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, StoryPrologue, getFreshSkillResults, getTurnNotice, scrollToSkillTarget, selectLawyerTargets, skillActionInstructions } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
 import { roleSkillDescriptions } from "@/lib/role-skills";
 import { roleNames } from "../role-portrait";
@@ -455,6 +455,25 @@ describe("game privacy and turn UI", () => {
     expect(renderToStaticMarkup(createElement(SkillPanel, { privateState: { ...privateState, role: "ACCOMPLICE" }, state: { ...publicState, players }, selectedPlayerId: null }))).toContain("แตะผู้เข้าพักในรายชื่อ");
   });
 
+  it("selects two distinct Lawyer targets from living guest cards", () => {
+    expect(selectLawyerTargets([], "b")).toEqual(["b"]);
+    expect(selectLawyerTargets(["b"], "c")).toEqual(["b", "c"]);
+    expect(selectLawyerTargets(["b", "c"], "b")).toEqual(["c"]);
+    expect(selectLawyerTargets(["b", "c"], "d")).toEqual(["c", "d"]);
+    const players = [
+      { id: "a", displayName: "Self", seatIndex: 0, isAlive: true },
+      { id: "b", displayName: "Guest B", seatIndex: 1, isAlive: true },
+      { id: "c", displayName: "Guest C", seatIndex: 2, isAlive: true },
+      { id: "d", displayName: "Dead", seatIndex: 3, isAlive: false },
+    ];
+    const html = renderToStaticMarkup(createElement(PublicGuests, { players, selfId: "a", selectedPlayerIds: ["b", "c"], onSelectPlayer: () => {} }));
+    expect((html.match(/aria-pressed="true"/g) ?? [])).toHaveLength(2);
+    expect(html).toContain('aria-label="Dead เสียชีวิต"');
+    expect(html).not.toContain('aria-label="เลือกผู้เข้าพัก Self');
+    expect(renderToStaticMarkup(createElement(SkillPanel, { privateState: { ...privateState, role: "LAWYER" }, state: { ...publicState, players }, selectedPlayerIds: ["b", "c"] }))).toContain("Guest B");
+    expect(skillActionInstructions.LAWYER).toContain("สองคน");
+  });
+
   it("provides a clear action instruction for every skill", () => {
     for (const role of ROLE_ORDER) expect(skillActionInstructions[role]).toBeTruthy();
     expect(skillActionInstructions.ACCOMPLICE).toContain("ผู้เข้าพัก");
@@ -509,6 +528,7 @@ describe("game privacy and turn UI", () => {
       RECEPTIONIST: "เทิร์นที่ 3",
       PHOTOGRAPHER: "ภาพถ่าย",
       DETECTIVE: "ตรวจหนึ่งห้อง",
+      LAWYER: "เลือกผู้เข้าพักคนอื่นที่ยังมีชีวิตสองคน",
       FORMER_POLICE: "คำใบ้ส่วนตัว",
       ACCOMPLICE: "เลือกผู้เล่นที่ยังมีชีวิตหนึ่งคน",
       KILLER: "ลอบสังหารผู้พักที่ยังมีชีวิต",
