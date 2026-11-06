@@ -12,6 +12,7 @@ import type { GameResultState, PrivatePlayerState, PublicGameState, VersionedTea
 import { createActionId } from "@/lib/action-id";
 import { requiredInnocentRoleCount } from "@/lib/game-balance";
 import { acceptNewerGameState } from "@/lib/game-state-version";
+import { primeGameAudio } from "@/lib/game-sound";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { roleNames, roleNamesEn } from "@/components/role-portrait";
 import { INNOCENT_ROLES, type Role } from "@/types/game";
@@ -40,6 +41,14 @@ const GameScreen = dynamic(() => import("@/components/game/game-screen").then((m
 });
 
 export function LobbyScreen({ code }: { code: string }) {
+  useEffect(() => {
+    window.addEventListener("pointerdown", primeGameAudio, { once: true });
+    window.addEventListener("keydown", primeGameAudio, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", primeGameAudio);
+      window.removeEventListener("keydown", primeGameAudio);
+    };
+  }, []);
   const language = useLanguage();
   const en = language === "en";
   const languageRef = useRef(language);

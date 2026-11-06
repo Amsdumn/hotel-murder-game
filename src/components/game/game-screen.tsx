@@ -7,6 +7,7 @@ import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Paper
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { avatarEnglish } from "@/lib/avatar-translations";
 import { gameMessage } from "@/lib/game-copy";
+import { getGameSoundEvent, playGameSound, type GameSoundSnapshot } from "@/lib/game-sound";
 import type { Language } from "@/lib/language";
 import { lobbyErrorMessage } from "@/lib/lobby-client";
 import { roleSkillDescriptions, roleSkillDescriptionsEn } from "@/lib/role-skills";
@@ -247,7 +248,7 @@ export function RoleRevealCard({ privateState }: { privateState: PrivatePlayerSt
   return <div className="mt-4 rounded-xl border border-[#c8a46b]/40 bg-[#29202b] p-4 text-left"><p className="text-xs tracking-[.2em] text-[#c8a46b]">{en ? "Your role · private" : "บทบาทของคุณ · เฉพาะคุณ"}</p><p className="mt-2 font-serif text-2xl">{en ? roleNamesEn[privateState.role] : roleNames[privateState.role]} · {en ? "Room" : "ห้อง"} {privateState.roomNumber}</p><p className="mt-2 text-sm text-[#d8d2d8]">{privateState.team === "INNOCENT" ? en ? "Innocent team" : "ฝ่ายผู้บริสุทธิ์" : en ? "Murderer team" : "ฝ่ายฆาตกร"}</p><p className="mt-3 border-t border-[#c8a46b]/20 pt-3 text-sm leading-6 text-[#d8d2d8]">{en ? roleSkillDescriptionsEn[privateState.role] : roleSkillDescriptions[privateState.role]}</p></div>;
 }
 
-export function StoryPrologue({ deadline, connected, connectionMessage, privateState, avatarId }: { deadline?: number; connected: boolean; connectionMessage: string; privateState: PrivatePlayerState | null; avatarId?: AvatarId | null }) {
+export function StoryPrologue({ deadline, connected, connectionMessage, privateState, avatarId, muted, onMuteChange }: { deadline?: number; connected: boolean; connectionMessage: string; privateState: PrivatePlayerState | null; avatarId?: AvatarId | null; muted?: boolean; onMuteChange?: (muted: boolean) => void }) {
   const en = useLanguage() === "en";
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [showRole, setShowRole] = useState(false);
@@ -260,7 +261,7 @@ export function StoryPrologue({ deadline, connected, connectionMessage, privateS
     return () => window.clearInterval(interval);
   }, [deadline]);
   return <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_50%_20%,#452433,#100f17_68%)] px-5 py-10 text-[#f4efe8]">
-    <div className="fixed right-4 top-4 z-30"><LanguageSwitcher /></div>
+    <div className="fixed right-4 top-4 z-30 flex gap-2"><LanguageSwitcher />{onMuteChange && <SoundSettings muted={!!muted} onChange={onMuteChange} />}</div>
     <section className="w-full max-w-2xl rounded-3xl border border-[#c8a46b]/35 bg-[#17141d]/90 px-7 py-10 text-center shadow-2xl sm:px-14 sm:py-14" aria-labelledby="prologue-title">
       <p className="text-xs tracking-[.35em] text-[#c8a46b]">HOTEL MURDER ONLINE</p>
       <p className="mt-8 text-sm tracking-[.22em] text-[#d8bc86]">{en ? "BEFORE THE STORY BEGINS" : "ก่อนเรื่องราวจะเริ่ม"}</p>
@@ -303,7 +304,34 @@ export function SkillConfirmBar({ targetLabel, canSubmit, onConfirm }: { targetL
 export function GameScreen({ state, privateState, teamState, result, murderSequence, connected, connectionMessage, onlinePlayerIds = [], onCommand }: { state: PublicGameState; privateState: PrivatePlayerState | null; teamState: PrivateTeamState | null; result: GameResultState | null; murderSequence: number; connected: boolean; connectionMessage: string; onlinePlayerIds?: string[]; onCommand: (event: "game:skill" | "game:vote" | "game:chat", payload: Record<string, unknown>, version: number) => Promise<LobbyAck<{ version: number }>> }) {
   const language = useLanguage();
   const en = language === "en";
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
+  const [soundReady, setSoundReady] = useState(false);
+  const previousSoundSnapshot = useRef<GameSoundSnapshot | null>(null);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      try { setMuted(localStorage.getItem("hotel-game-muted") === "true"); } catch { setMuted(false); }
+      setSoundReady(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+  const openedRoomCount = state.publicHistory?.filter((event) => event.type === "ROOM_OPENED").length ?? 0;
+  useEffect(() => {
+    if (!soundReady) return;
+    const soundSnapshot: GameSoundSnapshot = {
+      code: state.code, phase: state.phase, turn: state.turn,
+      canUseSkill: !!privateState?.canUseSkill, playerId: privateState?.playerId,
+      phaseDeadlineAt: state.phaseDeadlineAt, resultReady: !!result, openedRoomCount,
+    };
+    const event = getGameSoundEvent(previousSoundSnapshot.current, soundSnapshot);
+    previousSoundSnapshot.current = soundSnapshot;
+    if (!event) return;
+    const storageKey = `hotel-game-sound:${event.key}`;
+    try {
+      if (sessionStorage.getItem(storageKey)) return;
+      sessionStorage.setItem(storageKey, "1");
+    } catch { /* Sound still works when storage is unavailable. */ }
+    if (!muted) playGameSound(event.cue);
+  }, [soundReady, state.code, state.phase, state.turn, state.phaseDeadlineAt, privateState?.canUseSkill, privateState?.playerId, result, openedRoomCount, muted]);
   const [deathDismissed, setDeathDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -372,7 +400,10 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   };
   const turnNotice = getTurnNotice(state, privateState, language);
   const ownVotedRoom = state.phase === "VOTING" ? state.votes?.find((vote) => vote.playerId === privateState?.playerId)?.roomNumber : undefined;
-  const changeMuted = (value: boolean) => setMuted(value);
+  const changeMuted = (value: boolean) => {
+    setMuted(value);
+    try { localStorage.setItem("hotel-game-muted", String(value)); } catch { /* Keep this tab's preference. */ }
+  };
   const act = async (event: "game:skill" | "game:vote", payload: Record<string, unknown>) => {
     setBusy(true); setError("");
     const response = await onCommand(event, payload, state.version);
@@ -384,7 +415,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     const response = await onCommand("game:chat", { channel, text }, state.version);
     return response.ok;
   };
-  if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} privateState={privateState} avatarId={state.players.find((player) => player.id === privateState?.playerId)?.avatarId} />;
+  if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} privateState={privateState} avatarId={state.players.find((player) => player.id === privateState?.playerId)?.avatarId} muted={muted} onMuteChange={changeMuted} />;
   return <main className={`min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8 ${privateState?.canUseSkill ? "pb-32" : ""} ${state.phase === "DISCUSSION" ? "pt-24" : ""}`}><div className="mx-auto max-w-6xl">
     {skillResult && <SkillResultOverlay message={skillResult.message} language={language} players={state.players} />}
     <SkillTurnDialog open={!!skillTurnKey && skillTurnKey !== dismissedSkillTurnKey && !skillResult} language={language} onContinue={() => {
@@ -420,5 +451,5 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p>{state.phaseDeadlineAt && <div className="mt-4"><PhaseTimer deadline={state.phaseDeadlineAt} label={state.turn >= 4 ? en ? "Final result in" : "สรุปผลเกมใน" : en ? "Next turn in" : "เริ่มรอบถัดไปใน"} /></div>}</Paper>}
       <Paper className="border! border-[#353440]! bg-[#191a22]! p-5!"><h2 className="font-serif text-xl">{en ? "Public event history" : "ประวัติเหตุการณ์สาธารณะ"}</h2><ol className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{gameMessage(event.message, language)}</li>)}</ol></Paper>
     </div></div>}
-  </div>{state.phase === "DISCUSSION" && state.phaseDeadlineAt !== undefined && <FloatingGameChat key={`public:${state.turn}:${state.phaseDeadlineAt}`} channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} deadline={state.phaseDeadlineAt} onSend={(text) => sendChat("PUBLIC", text)} />}{state.phase === "SKILL_PHASE" && teamState?.canChat && teamState.chatDeadlineAt !== undefined && <FloatingGameChat key={`team:${state.turn}:${teamState.chatDeadlineAt}`} channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={connected} language={language} deadline={teamState.chatDeadlineAt} onSend={(text) => sendChat("MURDERER", text)} />}{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
+  </div>{state.phase === "DISCUSSION" && state.phaseDeadlineAt !== undefined && <FloatingGameChat key={`public:${state.turn}:${state.phaseDeadlineAt}`} channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} deadline={state.phaseDeadlineAt} onSend={(text) => sendChat("PUBLIC", text)} />}{state.phase === "SKILL_PHASE" && teamState?.canChat && teamState.chatDeadlineAt !== undefined && <FloatingGameChat key={`team:${state.turn}:${teamState.chatDeadlineAt}`} channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={connected} language={language} deadline={teamState.chatDeadlineAt} onSend={(text) => sendChat("MURDERER", text)} />}{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={!soundReady || muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
 }
