@@ -8,4 +8,6 @@ Keep the role present in `ROLE_ORDER`, `roleNames`, the portrait map, `roleSkill
 
 After completing and verifying each requested change, commit the finished work to Git in the same task. Include only files belonging to that change in its commit; do not push unless requested.
 
+Before every merge into `main`, increment the app version in `package.json` and `package-lock.json` (at least the patch number), commit that bump, and verify the version shown at the bottom-right of the app matches it. Use a larger semantic-version increment when the release warrants it. The version must be updated for each merge, even when the merged changes do not otherwise touch the UI.
+
 The player interface supports Thai and English. For new public characters, add English names and stories to `src/lib/avatar-translations.ts`. For new roles, add English names and skill descriptions alongside the Thai ones. New player-facing UI and server-result copy must render in both languages; keep language selection local to each browser so players in one game may use different languages.

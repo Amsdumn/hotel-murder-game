@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { AppThemeProvider } from "@/components/app-theme-provider";
+import { AppVersion } from "@/components/app-version";
 import "./globals.css";
 
 const notoSansThai = Noto_Sans_Thai({
@@ -20,7 +21,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="th" className={notoSansThai.variable} suppressHydrationWarning>
       <body>
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
-          <AppThemeProvider>{children}</AppThemeProvider>
+          <AppThemeProvider>
+            {children}
+            <AppVersion />
+          </AppThemeProvider>
         </AppRouterCacheProvider>
       </body>
     </html>
