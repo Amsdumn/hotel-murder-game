@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -13,6 +13,7 @@ import { createActionId } from "@/lib/action-id";
 import { requiredInnocentRoleCount } from "@/lib/game-balance";
 import { acceptNewerGameState } from "@/lib/game-state-version";
 import { primeGameAudio } from "@/lib/game-sound";
+import { addLocalTestBots, canUseLocalBots, localBotCount } from "@/lib/local-test-bots";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { roleNames, roleNamesEn } from "@/components/role-portrait";
 import { INNOCENT_ROLES, type Role } from "@/types/game";
@@ -21,7 +22,7 @@ export function InnocentRoleSettings({ selected, requiredCount, onToggle }: { se
   const en = useLanguage() === "en";
   return <section aria-label={en ? "Innocent roles" : "บทบาทฝ่ายผู้บริสุทธิ์"}>
     <h3 className="text-sm font-semibold text-[#f2d79c]">{en ? "Choose Innocent roles" : "เลือกบทบาทฝ่ายผู้บริสุทธิ์"}</h3>
-    <p className="mt-1 text-xs leading-5 text-[#c6bdb1]">{en ? `Select ${requiredCount} roles for the maximum player count (${selected.length} selected). The Killer and Accomplice are always included; the remaining roles are drawn randomly from your selection.` : `เลือก ${requiredCount} บทบาทตามจำนวนผู้เล่นสูงสุด (เลือกแล้ว ${selected.length}) ฆาตกรและผู้สมรู้ร่วมคิดจะอยู่ในเกมเสมอ และระบบสุ่มบทบาทที่เหลือจากชุดที่เลือก`}</p>
+    <p className="mt-1 text-xs leading-5 text-[#c6bdb1]">{en ? `Select ${requiredCount} roles for the maximum player count (${selected.length} selected). The Assassin is always included; the Accomplice joins games with six or more players. The remaining roles are drawn randomly from your selection.` : `เลือก ${requiredCount} บทบาทตามจำนวนผู้เล่นสูงสุด (เลือกแล้ว ${selected.length}) นักฆ่าอยู่ในเกมเสมอ ส่วนผู้สมรู้ร่วมคิดจะเข้าร่วมเมื่อมีผู้เล่นตั้งแต่ 6 คนขึ้นไป ระบบสุ่มบทบาทที่เหลือจากชุดที่เลือก`}</p>
     <div className="mt-3 grid grid-cols-2 gap-2">{INNOCENT_ROLES.map((role) => {
       const active = selected.includes(role);
       const className = `rounded-lg border px-3 py-2 text-left text-sm ${active ? "border-[#f2d79c] bg-[#493947] text-[#f2d79c]" : "border-[#d9b66f]/25 bg-[#29202b] text-[#e8dfd5]"}`;
@@ -41,6 +42,9 @@ const GameScreen = dynamic(() => import("@/components/game/game-screen").then((m
 });
 
 export function LobbyScreen({ code }: { code: string }) {
+  const localBotsEnabled = useSyncExternalStore(() => () => {}, () => canUseLocalBots(window.location.hostname, process.env.NODE_ENV), () => false);
+  const [addingBots, setAddingBots] = useState(false);
+  const [botCount, setBotCount] = useState(() => localBotCount(code));
   useEffect(() => {
     window.addEventListener("pointerdown", primeGameAudio, { once: true });
     window.addEventListener("keydown", primeGameAudio, { once: true });
@@ -219,16 +223,16 @@ export function LobbyScreen({ code }: { code: string }) {
                 </div>
                 <div className="space-y-2">
                   {view.players.map((player) => (
-                    <div key={player.id} className="flex items-center justify-between gap-3 rounded-lg border border-[#d9b66f]/15 bg-[#2c2422] px-4 py-3">
+                    <div key={player.id} className="flex flex-col items-start justify-between gap-2 rounded-lg border border-[#d9b66f]/15 bg-[#2c2422] px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
                       <div className="flex min-w-0 items-center gap-3">
                         <div className="min-w-0">
                         <span className="mr-3 text-[#a9977d]">{player.seatIndex + 1}.</span>
-                        <span className="wrap-break-word">{player.displayName}</span>
+                        <span className="inline-block max-w-[150px] truncate align-bottom" title={player.displayName}>{player.displayName}</span>
                         {player.id === view.hostPlayerId && <span className="ml-2 text-xs text-[#d9b66f]">{en ? "Host" : "เจ้าของห้อง"}</span>}
                         {player.id === playerId && <span className="ml-2 text-xs text-[#c6bdb1]">{en ? "You" : "คุณ"}</span>}
                         </div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         {!player.connected && <span className="text-xs text-[#9f9486]">{en ? "Offline" : "ออฟไลน์"}</span>}
                         <Chip size="small" label={player.ready ? en ? "Ready" : "พร้อม" : en ? "Waiting" : "รอ"} color={player.ready ? "success" : "default"} />
                         {player.id === playerId && <Button size="small" variant="text" disabled={busy} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>{en ? "Rename" : "แก้ชื่อ"}</Button>}
@@ -237,10 +241,16 @@ export function LobbyScreen({ code }: { code: string }) {
                     </div>
                   ))}
                 </div>
-                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 24 } }} /><Button type="submit" variant="contained" disabled={busy || !connected || draftName.trim().length < 2}>{en ? "Save name" : "บันทึกชื่อ"}</Button><Button variant="text" onClick={() => setEditingName(false)}>{en ? "Cancel" : "ยกเลิก"}</Button></form>}
+                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 256 } }} /><Button type="submit" variant="contained" disabled={busy || !connected || draftName.trim().length < 2}>{en ? "Save name" : "บันทึกชื่อ"}</Button><Button variant="text" onClick={() => setEditingName(false)}>{en ? "Cancel" : "ยกเลิก"}</Button></form>}
                 <Button className="mt-6!" variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
                   {self?.ready ? en ? "Not ready" : "ยกเลิกความพร้อม" : en ? "Ready" : "พร้อมแล้ว"}
                 </Button>
+                {localBotsEnabled && isHost && view.players.length < view.playerLimit && <Button className="mt-3!" variant="outlined" disabled={addingBots || busy || !connected} onClick={() => void (async () => {
+                  setAddingBots(true);
+                  try { await addLocalTestBots(code, view.playerLimit - view.players.length, setBotCount); }
+                  catch { setError(en ? "Could not add test players. Try again." : "เพิ่มผู้เล่นทดสอบไม่สำเร็จ กรุณาลองใหม่"); }
+                  finally { setAddingBots(false); }
+                })()}>{addingBots ? en ? "Adding test players…" : "กำลังเพิ่มผู้เล่นทดสอบ…" : en ? `Fill with test players (${botCount} connected)` : `เพิ่มผู้เล่นทดสอบให้ครบ (${botCount} คนเชื่อมต่อ)`}</Button>}
                 <p className="mt-2 text-xs text-[#c6bdb1]">{en ? "Everyone's character is assigned when the game begins." : "ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม"}</p>
               </>}
             </Paper>
@@ -255,7 +265,9 @@ export function LobbyScreen({ code }: { code: string }) {
                   <TextField size="small" select fullWidth label={en ? "Maximum players" : "จำนวนผู้เล่นสูงสุด"} value={isHost ? playerLimit : view.playerLimit} onChange={(event) => setPlayerLimit(Number(event.target.value))} disabled={!isHost || busy}>
                     {[5, 6, 7, 8, 9, 10].map((count) => <MenuItem key={count} value={count}>{count} {en ? "players" : "คน"}</MenuItem>)}
                   </TextField>
-                  <TextField size="small" type="number" fullWidth label={en ? "Discussion time (seconds)" : "เวลาพูดคุย (วินาที)"} value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy} slotProps={{ htmlInput: { min: 30, max: 600 } }} />
+                  <TextField size="small" select fullWidth label={en ? "Discussion time" : "เวลาพูดคุย"} value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy}>
+                    {Array.from({ length: 14 }, (_, index) => (index + 1) * 30).map((seconds) => <MenuItem key={seconds} value={seconds}>{seconds < 60 ? en ? `${seconds} seconds` : `${seconds} วินาที` : seconds % 60 === 0 ? en ? `${seconds / 60} minutes` : `${seconds / 60} นาที` : en ? `${Math.floor(seconds / 60)} min 30 sec` : `${Math.floor(seconds / 60)} นาที 30 วินาที`}</MenuItem>)}
+                  </TextField>
                   <InnocentRoleSettings selected={isHost ? selectedInnocentRoles : view.selectedInnocentRoles} requiredCount={requiredInnocentRoleCount(isHost ? playerLimit : view.playerLimit)} onToggle={isHost && !busy ? (role) => setSelectedInnocentRoles((roles) => roles.includes(role) ? roles.filter((item) => item !== role) : roles.length >= requiredInnocentRoleCount(playerLimit) ? roles : [...roles, role]) : undefined} />
                   {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length || selectedInnocentRoles.length > requiredInnocentRoleCount(playerLimit)} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds, selectedInnocentRoles })}>{en ? "Save settings" : "บันทึกการตั้งค่า"}</Button>}
                 </Stack>

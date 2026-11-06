@@ -14,6 +14,6 @@ describe("host role settings", () => {
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(3);
     expect(html.match(/aria-pressed="false"/g)).toHaveLength(5);
     expect(html.match(/disabled=""/g)).toHaveLength(5);
-    expect(html).toContain("ฆาตกรและผู้สมรู้ร่วมคิดจะอยู่ในเกมเสมอ");
+    expect(html).toContain("ผู้สมรู้ร่วมคิดจะเข้าร่วมเมื่อมีผู้เล่นตั้งแต่ 6 คนขึ้นไป");
   });
 });

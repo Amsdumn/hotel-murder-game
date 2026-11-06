@@ -5,9 +5,13 @@ import { ImageConfigContext } from "next/dist/shared/lib/image-config-context.sh
 import { imageConfigDefault } from "next/dist/shared/lib/image-config";
 import nextConfig from "../../next.config";
 import { AVATARS } from "@/lib/avatars";
-import { AvatarDetail, AvatarGallery } from "./main-menu";
+import { AvatarDetail, AvatarGallery, MainMenu } from "./main-menu";
 
 describe("homepage avatars", () => {
+  it("shows a bilingual control for homepage ambience", () => {
+    const html = renderToStaticMarkup(createElement(MainMenu));
+    expect(html).toContain('aria-label="เปิดเสียงบรรยากาศ"');
+  });
   it("shows a clickable 3D anime portrait for all twelve story characters", () => {
     const html = renderToStaticMarkup(createElement(AvatarGallery, { onSelect: () => {} }));
     expect(AVATARS).toHaveLength(12);
