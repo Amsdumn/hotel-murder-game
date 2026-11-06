@@ -6,17 +6,13 @@ import dynamic from "next/dynamic";
 import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { useUiStore } from "@/stores/use-ui-store";
 import { ActiveRooms } from "@/components/lobby/active-rooms";
-import { roleNames } from "@/components/role-portrait";
-import { roleNamesEn } from "@/components/role-portrait";
-import { ROLE_ORDER } from "@/types/game";
 import { readGuestProfile, readLobbyToken } from "@/lib/lobby-client";
-import { roleSkillDescriptions } from "@/lib/role-skills";
-import { roleSkillDescriptionsEn } from "@/lib/role-skills";
 import { AVATARS, avatarById, type AvatarId } from "@/lib/avatars";
 import { avatarEnglish } from "@/lib/avatar-translations";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 
 const LobbyEntryDialog = dynamic(() => import("@/components/lobby/lobby-entry-dialog").then((module) => module.LobbyEntryDialog));
+const RoleBook = dynamic(() => import("@/components/role-book").then((module) => module.RoleBook));
 
 function subscribeToProfile(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -24,13 +20,6 @@ function subscribeToProfile(onChange: () => void) {
 }
 
 function profileNameSnapshot() { return readGuestProfile()?.displayName ?? ""; }
-
-const skillRules = ROLE_ORDER.map((id) => ({
-  id,
-  role: roleNames[id],
-  team: id === "KILLER" || id === "ACCOMPLICE" ? "ฝ่ายฆาตกร" : "ผู้บริสุทธิ์",
-  description: roleSkillDescriptions[id],
-}));
 
 export function AvatarGallery({ onSelect }: { onSelect: (avatarId: AvatarId) => void }) {
   const en = useLanguage() === "en";
@@ -76,7 +65,6 @@ export function MainMenu() {
   const [selectedAvatar, setSelectedAvatar] = useState<AvatarId | null>(null);
   const aboutOpen = useUiStore((state) => state.aboutOpen);
   const setAboutOpen = useUiStore((state) => state.setAboutOpen);
-  const localizedSkillRules = skillRules.map((rule) => ({ ...rule, role: en ? roleNamesEn[rule.id] : rule.role, team: en ? (rule.id === "KILLER" || rule.id === "ACCOMPLICE" ? "Murderer" : "Innocent") : rule.team, description: en ? roleSkillDescriptionsEn[rule.id] : rule.description }));
 
   const openEntry = (mode: "create" | "join", code = "") => {
     setInitialDisplayName(readGuestProfile()?.displayName ?? "");
@@ -138,30 +126,21 @@ export function MainMenu() {
         <DialogContent dividers className="space-y-7! leading-7!">
           <section aria-labelledby="how-to-play-overview">
             <h2 id="how-to-play-overview" className="font-serif text-xl text-[#d9b66f]">{en ? "Getting started" : "เริ่มเกม"}</h2>
-            <p className="mt-2">{en ? "Five to ten players receive random characters, secret roles, and rooms when the game starts. Characters do not reveal roles or teams. The hotel has seven floors and 21 rooms. One player is the Assassin, one is the Accomplice, and the rest are Innocent." : "ผู้เล่น 5–10 คนได้รับตัวละคร บทบาท และห้องพักแบบสุ่มเมื่อเริ่มเกม ตัวละครไม่บอกบทบาทหรือฝ่าย โรงแรมมี 7 ชั้น รวม 21 ห้อง มีนักฆ่า 1 คน ผู้สมรู้ร่วมคิด 1 คน และที่เหลือเป็นฝ่ายผู้บริสุทธิ์"}</p>
-            <p className="mt-2">{en ? "After the prologue, you may privately reveal your role, room, and skill. Three empty rooms then show mysterious clues. Nobody dies from these clues." : "หลังคำเกริ่นเรื่อง ผู้เล่นกดดูบทบาท ห้องพัก และสกิลของตนเองได้ จากนั้นจะพบร่องรอยปริศนาในห้องว่าง 3 ห้อง ไม่มีใครเสียชีวิตจากการพบร่องรอยนี้"}</p>
+            <p className="mt-2">{en ? "Five to ten connected players join a lobby. Everyone must be ready before the host can start. The host may set the player limit and discussion time. At most two game rooms can be active at once." : "ผู้เล่น 5–10 คนเข้าห้องรอ ทุกคนต้องเชื่อมต่อและกดพร้อมก่อนเจ้าของห้องเริ่มเกมได้ เจ้าของห้องปรับจำนวนผู้เล่นและเวลาพูดคุยได้ และเปิดห้องเกมพร้อมกันได้สูงสุด 2 ห้อง"}</p>
+            <p className="mt-2">{en ? "When the game starts, the server randomly assigns each player a public character, a separate secret role, and one unique room among 21 rooms on seven floors. A character's appearance never reveals their role or team." : "เมื่อเริ่มเกม ระบบสุ่มตัวละครสาธารณะ บทบาทลับ และห้องพักที่ไม่ซ้ำกันจาก 21 ห้องบน 7 ชั้นให้แต่ละคน รูปลักษณ์ตัวละครไม่บอกบทบาทหรือฝ่าย"}</p>
+            <p className="mt-2">{en ? "The story prologue lasts 30 seconds. During it, you may choose to reveal only your own role, room, and skill. Afterward, three empty rooms reveal mysterious traces; no one dies from these starting clues." : "คำเกริ่นเรื่องใช้เวลา 30 วินาที ระหว่างนั้นคุณเลือกเปิดดูบทบาท ห้องพัก และสกิลของตนเองได้ จากนั้นระบบเผยร่องรอยปริศนาในห้องว่าง 3 ห้อง โดยไม่มีใครเสียชีวิตจากเบาะแสเริ่มต้น"}</p>
           </section>
           <section aria-labelledby="how-to-play-turns">
             <h2 id="how-to-play-turns" className="font-serif text-xl text-[#d9b66f]">{en ? "Each turn" : "หนึ่งรอบเล่นอย่างไร"}</h2>
             <ol className="mt-3 list-decimal space-y-2 pl-5">
-              <li>{en ? <><strong>Skills:</strong> Living players act in the role order below. Each has 60 seconds. Choose a room, floor, or column on the hotel map and confirm.</> : <><strong>ใช้สกิล:</strong> ผู้เล่นที่ยังมีชีวิตใช้สกิลตามลำดับบทบาทด้านล่าง แต่ละคนมีเวลา 60 วินาที หากสกิลเลือกห้อง ชั้น หรือแนวห้อง ให้แตะเป้าหมายบนแผนผังแล้วกดยืนยัน</>}</li>
-              <li>{en ? <><strong>Discussion:</strong> Share clues outside the website. The default is 180 seconds; the host can change it before the game.</> : <><strong>พูดคุย:</strong> แลกเปลี่ยนเบาะแสนอกเว็บไซต์ เวลาปกติ 180 วินาที เจ้าของห้องปรับได้ก่อนเริ่มเกม</>}</li>
-              <li>{en ? <><strong>Voting:</strong> Each living player votes once for a room within 60 seconds. You may vote for your own room, but cannot choose an opened, murdered, or clue room. A tie leads to another 60-second runoff. If nobody votes, the game picks an eligible room randomly.</> : <><strong>ลงคะแนน:</strong> ผู้เล่นที่ยังมีชีวิตโหวตเลือกห้องได้คนละหนึ่งครั้งใน 60 วินาที เลือกห้องตัวเองได้ แต่เลือกห้องที่เปิดแล้ว ถูกฆาตกรรม หรือมีร่องรอยปริศนาไม่ได้ หากเสมอจะโหวตรอบตัดสินอีก 60 วินาที เมื่อหมดเวลาเกมนับคะแนนที่มีอยู่ หากไม่มีใครโหวตเกมจะสุ่มห้องที่เลือกได้</>}</li>
+              <li>{en ? <><strong>Skills:</strong> Living players act in the Role Book order. An interactive slot lasts 60 seconds and shows a personal prompt. Choose a target on the map or guest list, then confirm. The Receptionist and Photographer resolve automatically on turn 3; dead or blacked-out players are skipped.</> : <><strong>ใช้สกิล:</strong> ผู้เล่นที่ยังมีชีวิตใช้สกิลตามลำดับใน Role Book คิวที่ต้องกดใช้มีเวลา 60 วินาทีและแสดงข้อความแจ้งเฉพาะตัว เลือกเป้าหมายบนแผนผังหรือรายชื่อผู้เข้าพักแล้วกดยืนยัน พนักงานต้อนรับและช่างภาพทำงานอัตโนมัติในเทิร์นที่ 3 ส่วนผู้ตายหรืออยู่บนชั้นไฟดับจะข้ามคิว</>}</li>
+              <li>{en ? <><strong>Discussion:</strong> Share clues outside the website. The default is 180 seconds; the host can set 30–600 seconds before the game.</> : <><strong>พูดคุย:</strong> แลกเปลี่ยนเบาะแสนอกเว็บไซต์ เวลาปกติ 180 วินาที เจ้าของห้องตั้งได้ 30–600 วินาทีก่อนเริ่มเกม</>}</li>
+              <li>{en ? <><strong>Voting:</strong> Each living player casts one final vote for an eligible room within 60 seconds, including their own room. Clue, murdered, and previously opened rooms are excluded; a locked room is still eligible. A tie triggers one 60-second runoff. If the runoff ties, or nobody votes, the game chooses randomly among eligible candidates.</> : <><strong>ลงคะแนน:</strong> ผู้เล่นที่ยังมีชีวิตโหวตห้องที่เลือกได้คนละหนึ่งครั้งภายใน 60 วินาที เปลี่ยนคะแนนในรอบนั้นไม่ได้ และเลือกห้องตัวเองได้ ห้องร่องรอย ห้องฆาตกรรม และห้องที่เปิดแล้วเลือกไม่ได้ แต่ห้องที่ล็อกยังโหวตได้ หากเสมอมีรอบตัดสินอีก 60 วินาที; ถ้ายังเสมอหรือไม่มีใครโหวต ระบบสุ่มจากห้องที่มีสิทธิ์</>}</li>
+              <li>{en ? <><strong>Room result:</strong> The chosen room opens. A living occupant dies; an empty room has no victim. If the game continues, the result stays on screen for six seconds before the next turn.</> : <><strong>ผลการเปิดห้อง:</strong> ระบบเปิดห้องที่ได้รับเลือก หากมีผู้พักที่ยังมีชีวิตคนนั้นจะเสียชีวิต หากห้องว่างจะไม่มีเหยื่อ ถ้าเกมยังไม่จบจะแสดงผล 6 วินาทีก่อนเริ่มเทิร์นถัดไป</>}</li>
             </ol>
-            <p className="mt-3">{en ? "The chosen room opens and its result appears before the next turn." : "เกมเปิดห้องที่ได้รับเลือกและแสดงผลก่อนเริ่มรอบถัดไป"}</p>
-            <p className="mt-3">{en ? "If the Assassin dies, the Innocent team wins immediately. The Murderer team wins immediately when more Murderers than Innocents remain alive, or if the Assassin survives through turn four." : "หากนักฆ่าเสียชีวิต ฝ่ายผู้บริสุทธิ์ชนะทันที ฝ่ายฆาตกรชนะทันทีเมื่อจำนวนฝ่ายฆาตกรที่ยังมีชีวิตมากกว่าฝ่ายผู้บริสุทธิ์ หรือเมื่อนักฆ่ารอดจนจบรอบที่ 4"}</p>
+            <p className="mt-3">{en ? "There are at most four turns. If the Assassin dies, Innocents win immediately. Murderers win immediately when more Murderers than Innocents remain alive, or if the Assassin survives through turn four. The final reveal shows every role, team, room, and survivor." : "เกมมีสูงสุด 4 เทิร์น หากนักฆ่าเสียชีวิต ฝ่ายผู้บริสุทธิ์ชนะทันที ฝ่ายฆาตกรชนะทันทีเมื่อสมาชิกที่ยังมีชีวิตมากกว่าฝ่ายผู้บริสุทธิ์ หรือเมื่อนักฆ่ารอดจนจบเทิร์นที่ 4 ตอนจบเกมจะเฉลยบทบาท ฝ่าย ห้องพัก และสถานะของทุกคน"}</p>
           </section>
-          <section aria-labelledby="how-to-play-skills">
-            <h2 id="how-to-play-skills" className="font-serif text-xl text-[#d9b66f]">{en ? "Roles and skills" : "บทบาทและสกิล"}</h2>
-            <p className="mt-2 text-sm text-[#c6bdb1]">{en ? "The order below is the skill order each turn. Investigation results go only to eligible players." : "ลำดับด้านล่างคือลำดับการใช้สกิลในแต่ละรอบ ผลสืบสวนจะส่งให้เฉพาะผู้มีสิทธิ์"}</p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {localizedSkillRules.map(({ id, role, team, description }, index) => <div key={id} className="rounded-lg border border-[#d9b66f]/20 bg-[#2c2422] p-4">
-                <div className="min-w-0"><p className="text-xs text-[#d9b66f]">{en ? "Order" : "ลำดับ"} {index + 1} · {team}</p>
-                <h3 className="mt-1 font-serif text-lg">{role}</h3>
-                <p className="mt-2 text-sm leading-6 text-[#d6cfc4]">{description}</p></div>
-              </div>)}
-            </div>
-          </section>
+          {aboutOpen && <RoleBook language={en ? "en" : "th"} />}
           <section aria-labelledby="how-to-play-death">
             <h2 id="how-to-play-death" className="font-serif text-xl text-[#d9b66f]">{en ? "After death" : "เมื่อเสียชีวิต"}</h2>
             <p className="mt-2">{en ? "You may keep watching the board, public events, discussion, and voting results, but cannot use skills, vote, or see anyone else's private information." : "ยังรับชมกระดาน เหตุการณ์สาธารณะ การพูดคุย และผลโหวตได้ แต่ใช้สกิลหรือลงคะแนนไม่ได้ และจะไม่เห็นข้อมูลลับของผู้อื่น"}</p>
