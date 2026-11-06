@@ -9,6 +9,7 @@ import { appendPrivateAction, type EngineResult, type GameEngineState } from "./
 const commandSchema = z.object({ actionId: z.uuid(), expectedVersion: z.number().int().nonnegative() });
 const skillSchema = commandSchema.extend({ target: z.union([z.number(), z.string()]) });
 const voteSchema = commandSchema.extend({ roomNumber: z.number().int() });
+const chatSchema = commandSchema.extend({ channel: z.enum(["PUBLIC", "MURDERER"]), text: z.string().trim().min(1).max(300) });
 
 export class GameService {
   constructor(private readonly store: LobbyStore) {}
@@ -49,22 +50,28 @@ export class GameService {
   async skill(code: string, playerId: string, input: unknown, now = Date.now()): Promise<EngineResult> {
     const parsed = skillSchema.safeParse(input);
     if (!parsed.success) throw new LobbyError("INVALID_INPUT");
-    const { record, actionId } = await this.record(code, playerId, input, true);
-    if (!record.gameState) throw new LobbyError("FORBIDDEN");
-    const state = record.gameState;
-    const missedTurn = state.privateActionHistory?.[playerId]?.some((entry) => entry.turn === state.turn && entry.type === "SKILL" && entry.message === "หมดเวลาใช้สกิล");
-    if (missedTurn || (state.phase === "SKILL_PHASE" && state.activePlayerId === playerId && state.phaseDeadlineAt !== undefined && now >= state.phaseDeadlineAt)) throw new LobbyError("SKILL_EXPIRED");
-    let result: EngineResult;
-    try { result = performSkill(record.gameState, playerId, parsed.data.target, now, record.discussionSeconds); }
-    catch { throw new LobbyError("FORBIDDEN"); }
-    const privateResult = result.privateEvents.find((event) => event.recipientPlayerId === playerId && (event.type === "SKILL_RESULT" || event.type === "ASSASSINATION_RESULT"));
-    const message = privateResult?.type === "SKILL_RESULT"
-      ? `ใช้สกิล: ${privateResult.message}`
-      : privateResult?.type === "ASSASSINATION_RESULT"
-        ? `ลอบสังหารห้อง ${parsed.data.target}: ${privateResult.success ? "สำเร็จ" : "ไม่สำเร็จ"}`
-        : "ใช้สกิล";
-    result = { ...result, state: appendPrivateAction(result.state, playerId, { turn: record.gameState.turn, type: "SKILL", message }) };
-    return this.commit(record, actionId, result);
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const { record, actionId } = await this.record(code, playerId, input, true);
+      if (!record.gameState) throw new LobbyError("FORBIDDEN");
+      const state = record.gameState;
+      const missedTurn = state.privateActionHistory?.[playerId]?.some((entry) => entry.turn === state.turn && entry.type === "SKILL" && entry.message === "หมดเวลาใช้สกิล");
+      if (missedTurn || (state.phase === "SKILL_PHASE" && state.activePlayerId === playerId && state.phaseDeadlineAt !== undefined && now >= state.phaseDeadlineAt)) throw new LobbyError("SKILL_EXPIRED");
+      let result: EngineResult;
+      try { result = performSkill(state, playerId, parsed.data.target, now, record.discussionSeconds); }
+      catch { throw new LobbyError("FORBIDDEN"); }
+      const privateResult = result.privateEvents.find((event) => event.recipientPlayerId === playerId && (event.type === "SKILL_RESULT" || event.type === "ASSASSINATION_RESULT"));
+      const message = privateResult?.type === "SKILL_RESULT"
+        ? `ใช้สกิล: ${privateResult.message}`
+        : privateResult?.type === "ASSASSINATION_RESULT"
+          ? `ลอบสังหารห้อง ${parsed.data.target}: ${privateResult.success ? "สำเร็จ" : "ไม่สำเร็จ"}`
+          : "ใช้สกิล";
+      result = { ...result, state: appendPrivateAction(result.state, playerId, { turn: state.turn, type: "SKILL", message }) };
+      try { return await this.commit(record, actionId, result); }
+      catch (error) {
+        if (!(error instanceof LobbyError) || error.code !== "STALE_STATE") throw error;
+      }
+    }
+    throw new LobbyError("STALE_STATE");
   }
 
   async vote(code: string, playerId: string, input: unknown, now = Date.now()): Promise<EngineResult> {
@@ -89,12 +96,39 @@ export class GameService {
     throw new LobbyError("STALE_STATE");
   }
 
+  async chat(code: string, playerId: string, input: unknown, now = Date.now()): Promise<EngineResult> {
+    const parsed = chatSchema.safeParse(input);
+    if (!parsed.success) throw new LobbyError("INVALID_INPUT");
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const { record, actionId } = await this.record(code, playerId, input, true);
+      const state = record.gameState;
+      const sender = state?.players.find((player) => player.id === playerId);
+      if (!state || !sender?.isAlive) throw new LobbyError("FORBIDDEN");
+      const publicChat = parsed.data.channel === "PUBLIC";
+      const activeActor = state.players.find((player) => player.id === state.activePlayerId);
+      const allowed = publicChat
+        ? state.phase === "DISCUSSION"
+        : state.phase === "SKILL_PHASE" && sender.team === "MURDERER" && activeActor?.team === "MURDERER";
+      if (!allowed) throw new LobbyError("FORBIDDEN");
+      if (state.phaseDeadlineAt === undefined || now >= state.phaseDeadlineAt) throw new LobbyError("FORBIDDEN");
+      const message = { id: actionId, playerId, playerName: sender.displayName, turn: state.turn, text: parsed.data.text, sentAt: now };
+      const next = publicChat
+        ? { ...state, publicChatMessages: [...(state.publicChatMessages ?? []), message].slice(-100) }
+        : { ...state, murdererChatMessages: [...(state.murdererChatMessages ?? []), message].slice(-100) };
+      try { return await this.commit(record, actionId, { state: next, publicEvents: [], privateEvents: [] }); }
+      catch (error) {
+        if (!(error instanceof LobbyError) || error.code !== "STALE_STATE") throw error;
+      }
+    }
+    throw new LobbyError("STALE_STATE");
+  }
+
   async advanceDue(now = Date.now()): Promise<EngineResult[]> {
     const due = await this.store.listDueGames(now);
     const outcomes: EngineResult[] = [];
     for (const record of due) {
       if (!record.gameState) continue;
-      const result = record.gameState.phase === "ROLE_REVEAL" ? advancePrologue(record.gameState, now) : record.gameState.phase === "SKILL_PHASE" ? advanceTimedSkill(record.gameState, now, record.discussionSeconds) : advanceTimedPhase(record.gameState, now);
+      const result = record.gameState.phase === "ROLE_REVEAL" ? advancePrologue(record.gameState, now, undefined, record.discussionSeconds) : record.gameState.phase === "SKILL_PHASE" ? advanceTimedSkill(record.gameState, now, record.discussionSeconds) : advanceTimedPhase(record.gameState, now, undefined, record.discussionSeconds);
       if (result.state === record.gameState) continue;
       try { outcomes.push(await this.commit(record, `timer:${record.version}`, result)); }
       catch (error) { if (!(error instanceof LobbyError) || error.code !== "STALE_STATE") throw error; }

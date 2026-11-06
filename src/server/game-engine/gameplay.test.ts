@@ -79,6 +79,7 @@ describe("gameplay setup and skills", () => {
     const state: GameEngineState = { ...base, phase: "SKILL_PHASE", players, crimeRooms: [103], activePlayerId: "killer", usedSkillPlayerIds: ["victim"] };
     const chosen = performSkill(state, "killer", 301, 1000, 180);
     expect(chosen.state.activePlayerId).toBe("witness");
+    expect(chosen.state.phaseDeadlineAt).toBe(181000);
     expect(chosen.state.players.find((player) => player.id === "witness")?.isAlive).toBe(true);
     expect(chosen.publicEvents).toEqual([]);
     const witnessed = performSkill(chosen.state, "witness", 3, 2000, 180);
@@ -210,6 +211,7 @@ describe("gameplay setup and skills", () => {
     expect(revealed.state.phaseDeadlineAt).toBe(91000);
     expect(projectPrivatePlayerState(revealed.state, revealed.state.activePlayerId!).skillDeadlineAt).toBe(revealed.state.phaseDeadlineAt);
     expect(projectPrivatePlayerState(revealed.state, revealed.state.players.find((player) => player.id !== revealed.state.activePlayerId)!.id).skillDeadlineAt).toBeUndefined();
+    expect(advancePrologue(result.state, 31000, choose(), 180).state.phaseDeadlineAt).toBe(211000);
   });
 
   it("finds three unoccupied rooms even with ten players", () => {

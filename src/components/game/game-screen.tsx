@@ -17,6 +17,7 @@ import { MurderEventOverlay } from "./murder-event-overlay";
 import { PrivateRoomScene } from "./private-room-scene";
 import { ReceptionistRegister } from "./receptionist-register";
 import { PhotographerResult } from "./photographer-result";
+import { GameChat } from "./game-chat";
 import { avatarById, type AvatarId } from "@/lib/avatars";
 
 export function PublicGuests({ players, selfId, selectedPlayerId, onSelectPlayer }: { players: PublicGameState["players"]; selfId?: string; selectedPlayerId?: string | null; onSelectPlayer?: (playerId: string) => void }) {
@@ -296,7 +297,7 @@ export function SkillConfirmBar({ targetLabel, canSubmit, onConfirm }: { targetL
   </div>;
 }
 
-export function GameScreen({ state, privateState, teamState, result, murderSequence, connected, connectionMessage, onCommand }: { state: PublicGameState; privateState: PrivatePlayerState | null; teamState: PrivateTeamState | null; result: GameResultState | null; murderSequence: number; connected: boolean; connectionMessage: string; onCommand: (event: "game:skill" | "game:vote", payload: Record<string, unknown>, version: number) => Promise<LobbyAck<{ version: number }>> }) {
+export function GameScreen({ state, privateState, teamState, result, murderSequence, connected, connectionMessage, onCommand }: { state: PublicGameState; privateState: PrivatePlayerState | null; teamState: PrivateTeamState | null; result: GameResultState | null; murderSequence: number; connected: boolean; connectionMessage: string; onCommand: (event: "game:skill" | "game:vote" | "game:chat", payload: Record<string, unknown>, version: number) => Promise<LobbyAck<{ version: number }>> }) {
   const language = useLanguage();
   const en = language === "en";
   const [muted, setMuted] = useState(false);
@@ -366,6 +367,11 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     if (!response.ok) setError(lobbyErrorMessage(response.error, language));
     setBusy(false);
   };
+  const sendChat = async (channel: "PUBLIC" | "MURDERER", text: string): Promise<boolean> => {
+    if (!connected) return false;
+    const response = await onCommand("game:chat", { channel, text }, state.version);
+    return response.ok;
+  };
   if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} privateState={privateState} avatarId={state.players.find((player) => player.id === privateState?.playerId)?.avatarId} />;
   return <main className={`min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8 ${privateState?.canUseSkill ? "pb-32" : ""} ${state.phase === "DISCUSSION" ? "pt-24" : ""}`}><div className="mx-auto max-w-6xl">
     {skillResult && <SkillResultOverlay message={skillResult.message} language={language} players={state.players} />}
@@ -386,6 +392,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {error && <p role="alert" className="mb-5 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200">{error}</p>}
     {showSecret && privateState && (privateState.role === "RECEPTIONIST" || privateState.role === "PHOTOGRAPHER") && state.turn === 3 && <div role="status" className="mb-5 rounded-xl border border-[#e3c88e]/60 bg-[#30202d] p-4 font-semibold text-[#f2d79c]">{en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</div>}
     {privateState?.privateResults.some((message) => message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") || message.startsWith("ภาพถ่ายเทิร์นที่ 3:")) && !showSecret && <Alert severity="info" className="mb-5!">{en ? "A new private investigation result is available. Open your private information to view it." : "มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู"}</Alert>}
+    {teamState?.canChat && !showSecret && state.phase === "SKILL_PHASE" && <Alert severity="info" className="mb-5!">{en ? "Murderer team chat is open. Show your private information to send a message." : "เปิดแชทฝ่ายฆาตกรแล้ว กดแสดงข้อมูลลับเพื่อส่งข้อความ"}</Alert>}
     {state.phase !== "SKILL_PHASE" && privateState?.skillBlockReason && <Alert severity="warning" className="mb-5!">{privateState.skillBlockReason === "BLACKOUT" ? en ? "Your floor is dark. You cannot use your skill this turn." : "ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้" : en ? "Your Electrician skill is cooling down this turn." : "สกิลช่างไฟกำลังพักหนึ่งรอบ รอบนี้ใช้สกิลไม่ได้"}</Alert>}
     {privateState?.canUseSkill && skillDeadlineAt !== undefined && <p className="mb-5 text-sm text-[#e7ce98]" role="timer" aria-live="off">{skillSecondsLeft === null ? en ? "Checking skill time…" : "กำลังตรวจเวลาใช้สกิล…" : skillSecondsLeft > 0 ? en ? `${skillSecondsLeft} seconds left to use your skill` : `เวลาใช้สกิลเหลือ ${skillSecondsLeft} วินาที` : en ? "Skill time expired. Waiting for the next phase." : "หมดเวลาใช้สกิลแล้ว กำลังรอขั้นตอนถัดไป"}</p>}
     {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-2">
@@ -395,10 +402,11 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       <div className="min-w-0 space-y-5">
       <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : undefined} /></div>
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
+      {showSecret && teamState && state.phase === "SKILL_PHASE" && <><GameChat channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={!!teamState.canChat && connected} language={language} onSend={(text) => sendChat("MURDERER", text)} />{teamState.canChat && teamState.chatDeadlineAt !== undefined && <PhaseTimer deadline={teamState.chatDeadlineAt} label={en ? "Team chat closes in" : "เวลาแชทฝ่ายฆาตกร"} />}</>}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage ? gameMessage(state.phaseMessage, language) : null}</p></Paper>}
       {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} selectedRoom={selectedSkillRoom} selectedFloor={selectedSkillFloor} selectedColumn={selectedSkillColumn} selectedPlayerId={selectedSkillPlayer} />}
-      {state.phase === "DISCUSSION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p className="text-sm text-[#c6bdb1]">{en ? "Discuss clues outside this website. The timer stays at the top of the screen." : "พูดคุยนอกเว็บไซต์ได้ตามต้องการ นาฬิกาอยู่ด้านบนของหน้าจอ"}</p></Paper>}
+      {state.phase === "DISCUSSION" && <GameChat channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} onSend={(text) => sendChat("PUBLIC", text)} />}
       {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><PhaseTimer deadline={state.phaseDeadlineAt} label={en ? "Voting" : "เวลาลงคะแนน"} /><p className="mt-2 text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p></Paper>}
       {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p>{state.phaseDeadlineAt && <div className="mt-4"><PhaseTimer deadline={state.phaseDeadlineAt} label={state.turn >= 4 ? en ? "Final result in" : "สรุปผลเกมใน" : en ? "Next turn in" : "เริ่มรอบถัดไปใน"} /></div>}</Paper>}
       <Paper className="border! border-[#353440]! bg-[#191a22]! p-5!"><h2 className="font-serif text-xl">{en ? "Public event history" : "ประวัติเหตุการณ์สาธารณะ"}</h2><ol className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{gameMessage(event.message, language)}</li>)}</ol></Paper>

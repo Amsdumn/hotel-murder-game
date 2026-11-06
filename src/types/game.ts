@@ -26,6 +26,15 @@ export type GamePhase =
 
 export type RoomNumber = `${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9}0${1 | 2 | 3}`;
 
+export interface GameChatMessage {
+  id: string;
+  playerId: string;
+  playerName: string;
+  turn: number;
+  text: string;
+  sentAt: number;
+}
+
 export interface GameConfig {
   minPlayers: 5;
   maxPlayers: 10;
@@ -45,6 +54,7 @@ export interface PublicGameState {
   publicHistory?: Array<{ type: string; message: string }>;
   runoffRooms?: number[];
   votes?: Array<{ playerId: string; roomNumber: number }>;
+  chatMessages?: GameChatMessage[];
 }
 
 export interface PrivatePlayerState {
@@ -68,6 +78,9 @@ export interface PrivatePlayerState {
 export interface PrivateTeamState {
   teammates: Array<{ playerId: string; role: "KILLER" | "ACCOMPLICE"; roomNumber: number }>;
   privateResults: string[];
+  chatMessages?: GameChatMessage[];
+  canChat?: boolean;
+  chatDeadlineAt?: number;
 }
 
 export interface VersionedTeamState {

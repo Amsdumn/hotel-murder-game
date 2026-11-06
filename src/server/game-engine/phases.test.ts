@@ -57,6 +57,7 @@ describe("server-owned phases", () => {
     expect(advanceTimedPhase(opened.state, 6999).state).toBe(opened.state);
     const next = advanceTimedPhase(opened.state, 7000);
     expect(next.state).toMatchObject({ phase: "SKILL_PHASE", turn: 2, phaseDeadlineAt: 67000 });
+    expect(advanceTimedPhase(opened.state, 7000, () => 0, 180).state.phaseDeadlineAt).toBe(187000);
     expect(next.state.assassinationTargetRoom).toBeUndefined();
   });
 

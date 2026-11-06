@@ -1,4 +1,4 @@
-import type { GamePhase, Role, Team } from "../../types/game";
+import type { GameChatMessage, GamePhase, Role, Team } from "../../types/game";
 
 export interface EnginePlayer {
   id: string;
@@ -47,6 +47,8 @@ export interface GameEngineState {
   publicHistory?: PublicGameEvent[];
   privateResultMessages?: Record<string, string[]>;
   privateActionHistory?: Record<string, PrivateActionEntry[]>;
+  publicChatMessages?: GameChatMessage[];
+  murdererChatMessages?: GameChatMessage[];
   phaseStartVersion?: number;
 }
 

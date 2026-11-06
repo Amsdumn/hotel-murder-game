@@ -34,14 +34,14 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   return { state: initial, publicEvents: [], privateEvents: [] };
 }
 
-export function advancePrologue(state: GameEngineState, now: number, choose: RandomIndex = randomInt): EngineResult {
+export function advancePrologue(state: GameEngineState, now: number, choose: RandomIndex = randomInt, skillSeconds = 60): EngineResult {
   if (state.phase !== "ROLE_REVEAL" || state.phaseDeadlineAt === undefined || now < state.phaseDeadlineAt) return { state, publicEvents: [], privateEvents: [] };
   const emptyRooms = gameRooms(state).filter((room) => !state.players.some((player) => player.roomNumber === room));
   const crime = applyInitialCrime({ ...state, phase: "INITIAL_CRIME" }, () => shuffle(emptyRooms, choose).slice(0, 3));
   const phaseEvent: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: 1 };
   const afterCrime: GameEngineState = { ...crime.state, phase: "SKILL_PHASE", publicHistory: [...crime.publicEvents, phaseEvent] };
   const first = advanceSkillTurn(afterCrime, null);
-  return { state: { ...first.state, phaseDeadlineAt: now + 60_000 }, publicEvents: [...crime.publicEvents, phaseEvent], privateEvents: [...crime.privateEvents, ...first.privateEvents] };
+  return { state: { ...first.state, phaseDeadlineAt: now + skillSeconds * 1000 }, publicEvents: [...crime.publicEvents, phaseEvent], privateEvents: [...crime.privateEvents, ...first.privateEvents] };
 }
 
 function requireRoom(state: GameEngineState, value: unknown): number {
@@ -163,7 +163,7 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
     next = discussion.state;
     publicEvents.push(...discussion.publicEvents);
   }
-  else next = { ...next, phaseDeadlineAt: now + 60_000 };
+  else next = { ...next, phaseDeadlineAt: now + discussionSeconds * 1000 };
   return { state: next, publicEvents, privateEvents };
 }
 
@@ -179,5 +179,5 @@ export function advanceTimedSkill(state: GameEngineState, now: number, discussio
     const discussion = beginDiscussion(advanced.state, now, discussionSeconds);
     return { state: discussion.state, publicEvents: [...resolved.publicEvents, ...discussion.publicEvents], privateEvents: [...resolved.privateEvents, ...advanced.privateEvents, ...discussion.privateEvents] };
   }
-  return { state: { ...advanced.state, phaseDeadlineAt: now + 60_000 }, publicEvents: resolved.publicEvents, privateEvents: [...resolved.privateEvents, ...advanced.privateEvents] };
+  return { state: { ...advanced.state, phaseDeadlineAt: now + discussionSeconds * 1000 }, publicEvents: resolved.publicEvents, privateEvents: [...resolved.privateEvents, ...advanced.privateEvents] };
 }

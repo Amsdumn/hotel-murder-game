@@ -31,6 +31,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
   const pendingDisconnects = new Map<string, ReturnType<typeof setTimeout>>();
   const lastPublicState = new Map<string, string>();
   const lastPrivateState = new Map<string, string>();
+  const lastTeamState = new Map<string, string>();
   const lobbyEntryLimits = new LobbyJoinRateLimiter();
 
   function bind(socket: Socket, identity: LobbyIdentity): void {
@@ -62,10 +63,12 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
         if (lastPrivateState.get(player.id) !== privateSignature) {
           lastPrivateState.set(player.id, privateSignature);
           io.to(socketId).emit("game:private", privateState);
-          io.to(socketId).emit("game:team", {
-            version: result.state.version,
-            teamState: player.isAlive && player.team === "MURDERER" ? projectMurdererTeamState(result.state, player.id) : null,
-          });
+        }
+        const teamState = player.isAlive && player.team === "MURDERER" ? projectMurdererTeamState(result.state, player.id) : null;
+        const teamSignature = JSON.stringify(teamState);
+        if (lastTeamState.get(player.id) !== teamSignature) {
+          lastTeamState.set(player.id, teamSignature);
+          io.to(socketId).emit("game:team", { version: result.state.version, teamState });
         }
       }
     }
@@ -218,6 +221,15 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
         const binding = bindings.get(socket.id);
         if (!binding) throw new LobbyError("INVALID_SESSION");
         const result = await games.vote(binding.code, binding.playerId, input);
+        publishGame(result);
+        return { version: result.state.version };
+      });
+    });
+    socket.on("game:chat", (input: unknown, ack: unknown) => {
+      void respond(ack, async () => {
+        const binding = bindings.get(socket.id);
+        if (!binding) throw new LobbyError("INVALID_SESSION");
+        const result = await games.chat(binding.code, binding.playerId, input);
         publishGame(result);
         return { version: result.state.version };
       });

@@ -19,7 +19,7 @@ export function finishSkillPhase(state: GameEngineState, now: number, seconds: n
   return beginDiscussion(next.state, now, seconds);
 }
 
-export function advanceTimedPhase(state: GameEngineState, now: number, chooseTie: (length: number) => number = randomInt): EngineResult {
+export function advanceTimedPhase(state: GameEngineState, now: number, chooseTie: (length: number) => number = randomInt, skillSeconds = 60): EngineResult {
   if (state.phase === "VOTING" && state.phaseDeadlineAt === undefined) return { state: { ...state, phaseDeadlineAt: now + VOTING_DURATION_MS }, publicEvents: [], privateEvents: [] };
   if (state.phaseDeadlineAt === undefined || now < state.phaseDeadlineAt) return { state, publicEvents: [], privateEvents: [] };
   if (state.phase === "DISCUSSION") {
@@ -35,7 +35,7 @@ export function advanceTimedPhase(state: GameEngineState, now: number, chooseTie
     const event: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: state.turn + 1 };
     const next: GameEngineState = { ...state, turn: state.turn + 1, phase: "SKILL_PHASE", activePlayerId: null, usedSkillPlayerIds: [], lockedRooms: [], darkFloors: [], assassinationTargetRoom: undefined, votes: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] };
     const first = advanceSkillTurn(next, null);
-    return { state: { ...first.state, phaseDeadlineAt: now + 60_000 }, publicEvents: [event], privateEvents: first.privateEvents };
+    return { state: { ...first.state, phaseDeadlineAt: now + skillSeconds * 1000 }, publicEvents: [event], privateEvents: first.privateEvents };
   }
   return { state, publicEvents: [], privateEvents: [] };
 }

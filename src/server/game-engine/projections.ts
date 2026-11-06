@@ -11,6 +11,7 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     phaseMessage: state.phase === "SKILL_PHASE" ? "กำลังดำเนินการสืบสวน..." : null,
     ...(["ROLE_REVEAL", "DISCUSSION", "VOTING", "RESOLUTION"].includes(state.phase) && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
     publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),
+    chatMessages: [...(state.publicChatMessages ?? [])],
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
     ...(state.phase === "VOTING" ? { votes: Object.entries(state.votes ?? {}).map(([playerId, roomNumber]) => ({ playerId, roomNumber })) } : {}),
     publicRooms: gameRooms(state).map((roomNumber) => {
@@ -54,9 +55,13 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
 export function projectMurdererTeamState(state: GameEngineState, requesterId: string): PrivateTeamState {
   const player = state.players.find((item) => item.id === requesterId);
   if (!player || !player.isAlive || player.team !== "MURDERER") throw new Error("Team state access denied");
+  const canChat = state.phase === "SKILL_PHASE" && state.players.some((item) => item.id === state.activePlayerId && item.team === "MURDERER") && state.phaseDeadlineAt !== undefined;
   return {
     teammates: state.players.filter((item) => item.role === "KILLER" || item.role === "ACCOMPLICE")
       .map((item) => ({ playerId: item.id, role: item.role as "KILLER" | "ACCOMPLICE", roomNumber: item.roomNumber })),
     privateResults: [],
+    chatMessages: [...(state.murdererChatMessages ?? [])],
+    canChat,
+    ...(canChat ? { chatDeadlineAt: state.phaseDeadlineAt } : {}),
   };
 }

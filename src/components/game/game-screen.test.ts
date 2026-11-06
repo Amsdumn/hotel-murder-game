@@ -22,6 +22,17 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("prompts living Murderers to open their private team chat during a Murderer skill turn", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: publicState,
+      privateState,
+      teamState: { teammates: [], privateResults: [], chatMessages: [], canChat: true, chatDeadlineAt: Date.now() + 180_000 },
+      result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain("เปิดแชทฝ่ายฆาตกรแล้ว กดแสดงข้อมูลลับเพื่อส่งข้อความ");
+    expect(html).not.toContain('aria-label="แชทฝ่ายฆาตกร"');
+  });
   it("scrolls mobile skill turns to the required guest or map target", () => {
     const guests = { scrollIntoView: vi.fn() } as unknown as HTMLElement;
     const board = { scrollIntoView: vi.fn() } as unknown as HTMLElement;

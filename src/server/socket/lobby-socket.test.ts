@@ -8,7 +8,7 @@ import { LobbyService } from "../lobby/lobby-service";
 import { MemoryLobbyStore } from "../lobby/test-memory-store";
 import { createSocketServer } from "./create-socket-server";
 import { GameService } from "../game-engine/game-service";
-import { performSkill } from "../game-engine/gameplay";
+import { createInitialGame, performSkill } from "../game-engine/gameplay";
 import { projectPublicState } from "../game-engine/projections";
 
 const sockets: ClientSocket[] = [];
@@ -38,6 +38,63 @@ async function setup() {
 }
 
 describe("Socket.IO lobby", () => {
+  it("broadcasts public chat and sends murderer chat only through private team state", async () => {
+    const { client, store } = await setup();
+    const service = new LobbyService(store);
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    const identities = [host];
+    for (let index = 1; index < 5; index += 1) {
+      const view = await service.preview(host.code);
+      identities.push(await service.join({ code: host.code, displayName: `Guest ${index}`, actionId: crypto.randomUUID(), expectedVersion: view.version }));
+    }
+    const lobby = (await store.findLobby(host.code))!;
+    const gameState = createInitialGame(host.code, lobby.players, lobby.version + 1).state;
+    gameState.phase = "DISCUSSION";
+    gameState.phaseDeadlineAt = Date.now() + 180_000;
+    gameState.phaseStartVersion = gameState.version;
+    expect(await store.replaceLobby(host.code, lobby.version, { ...lobby, version: gameState.version, phase: "DISCUSSION", gameState })).toBe(true);
+    const connected = new Map<string, ClientSocket>();
+    for (const identity of identities) {
+      const socket = client();
+      expect((await socket.emitWithAck("lobby:resume", { code: host.code, token: identity.token })).ok).toBe(true);
+      connected.set(identity.playerId, socket);
+    }
+    const innocent = gameState.players.find((player) => player.team === "INNOCENT")!;
+    const publicMessage = new Promise<unknown>((resolve) => connected.get(innocent.id)!.once("game:state", resolve));
+    const publicAck = await connected.get(innocent.id)!.emitWithAck("game:chat", { actionId: crypto.randomUUID(), expectedVersion: gameState.version, channel: "PUBLIC", text: "Public clue" });
+    expect(publicAck.ok).toBe(true);
+    expect(JSON.stringify(await publicMessage)).toContain("Public clue");
+
+    const current = (await store.findLobby(host.code))!;
+    const killer = current.gameState!.players.find((player) => player.role === "KILLER")!;
+    const accomplice = current.gameState!.players.find((player) => player.role === "ACCOMPLICE")!;
+    const skillState = { ...current.gameState!, version: current.version + 1, phase: "SKILL_PHASE" as const, activePlayerId: killer.id, phaseDeadlineAt: Date.now() + 180_000, phaseStartVersion: current.version + 1 };
+    expect(await store.replaceLobby(host.code, current.version, { ...current, version: skillState.version, phase: "SKILL_PHASE", gameState: skillState })).toBe(true);
+    const publicUpdate = new Promise<unknown>((resolve) => {
+      const innocentSocket = connected.get(innocent.id)!;
+      const onState = (value: { phase?: string }) => {
+        if (value.phase !== "SKILL_PHASE") return;
+        innocentSocket.off("game:state", onState);
+        resolve(value);
+      };
+      innocentSocket.on("game:state", onState);
+    });
+    const secret = "Only murderers see this";
+    const teamUpdate = new Promise<unknown>((resolve) => {
+      const teammateSocket = connected.get(killer.id)!;
+      const onTeam = (value: unknown) => {
+        if (!JSON.stringify(value).includes(secret)) return;
+        teammateSocket.off("game:team", onTeam);
+        resolve(value);
+      };
+      teammateSocket.on("game:team", onTeam);
+    });
+    const teamAck = await connected.get(accomplice.id)!.emitWithAck("game:chat", { actionId: crypto.randomUUID(), expectedVersion: skillState.version, channel: "MURDERER", text: secret });
+    expect(teamAck.ok).toBe(true);
+    expect(JSON.stringify(await teamUpdate)).toContain(secret);
+    expect(JSON.stringify(await publicUpdate)).not.toContain(secret);
+    expect((await connected.get(innocent.id)!.emitWithAck("game:chat", { actionId: crypto.randomUUID(), expectedVersion: skillState.version, channel: "MURDERER", text: "spy" })).ok).toBe(false);
+  }, 15000);
   it("limits unauthenticated room reads before querying the store", async () => {
     const { client } = await setup();
     const visitor = client();

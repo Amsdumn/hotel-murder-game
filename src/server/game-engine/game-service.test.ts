@@ -5,7 +5,7 @@ import { GameService } from "./game-service";
 import { LobbyService } from "../lobby/lobby-service";
 import { AVATAR_ORDER } from "../../lib/avatars";
 import type { GameEngineState } from "./state";
-import { projectPrivatePlayerState, projectPublicState } from "./projections";
+import { projectMurdererTeamState, projectPrivatePlayerState, projectPublicState } from "./projections";
 
 const players: GameEngineState["players"] = [
   { id: "a", displayName: "A", seatIndex: 0, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 101, isAlive: true },
@@ -21,6 +21,54 @@ function record(phase: "ROLE_REVEAL" | "DISCUSSION" | "SKILL_PHASE" | "VOTING"):
 }
 
 describe("persisted server deadlines", () => {
+  it("accepts public chat only from living players during discussion and restores it", async () => {
+    const store = new MemoryLobbyStore();
+    await store.createLobby(record("DISCUSSION"));
+    const service = new GameService(store);
+    const sent = await service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "PUBLIC", text: "  สวัสดี  " }, 500);
+    expect(projectPublicState(sent.state).chatMessages).toMatchObject([{ playerId: "a", playerName: "A", text: "สวัสดี", turn: 1 }]);
+    expect((await new GameService(store).snapshot("ABC234", "b"))?.publicState.chatMessages?.[0].text).toBe("สวัสดี");
+    await expect(service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "PUBLIC", text: "late" }, 1000)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "MURDERER", text: "secret" }, 500)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "PUBLIC", text: " " }, 500)).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
+
+  it("keeps murderer chat private and limits it to murderer skill turns", async () => {
+    const store = new MemoryLobbyStore();
+    const lobby = record("SKILL_PHASE");
+    lobby.gameState!.activePlayerId = "d";
+    await store.createLobby(lobby);
+    const service = new GameService(store);
+    const sent = await service.chat("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "MURDERER", text: "Room 101" }, 500);
+    expect(projectMurdererTeamState(sent.state, "d").chatMessages).toMatchObject([{ playerId: "e", text: "Room 101" }]);
+    expect(JSON.stringify(projectPublicState(sent.state))).not.toContain("Room 101");
+    expect((await service.snapshot("ABC234", "d"))?.teamState.teamState?.chatMessages?.[0].text).toBe("Room 101");
+    expect((await service.snapshot("ABC234", "a"))?.teamState.teamState).toBeNull();
+    await expect(service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "MURDERER", text: "spy" }, 500)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.chat("ABC234", "d", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "PUBLIC", text: "hello" }, 500)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(service.chat("ABC234", "d", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "MURDERER", text: "late" }, 1000)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const current = (await store.findLobby("ABC234"))!;
+    const innocentTurn = { ...current.gameState!, activePlayerId: "a", version: current.version + 1 };
+    expect(await store.replaceLobby("ABC234", current.version, { ...current, version: innocentTurn.version, gameState: innocentTurn })).toBe(true);
+    expect(projectMurdererTeamState(innocentTurn, "d").chatDeadlineAt).toBeUndefined();
+    await expect(service.chat("ABC234", "d", { actionId: crypto.randomUUID(), expectedVersion: innocentTurn.version, channel: "MURDERER", text: "wrong turn" }, 500)).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+
+  it("keeps a skill and a teammate message when they arrive together", async () => {
+    const store = new MemoryLobbyStore();
+    const lobby = record("SKILL_PHASE");
+    lobby.gameState!.activePlayerId = "d";
+    await store.createLobby(lobby);
+    const service = new GameService(store);
+    const [skill, chat] = await Promise.all([
+      service.skill("ABC234", "d", { actionId: crypto.randomUUID(), expectedVersion: 5, target: "a" }, 500),
+      service.chat("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "MURDERER", text: "Check room 101" }, 500),
+    ]);
+    expect(skill.state.version).not.toBe(chat.state.version);
+    const state = (await store.findLobby("ABC234"))!.gameState!;
+    expect(state.murdererChatMessages?.map((message) => message.text)).toContain("Check room 101");
+    expect(state.privateActionHistory?.d?.some((entry) => entry.type === "SKILL")).toBe(true);
+  });
   it("assigns characters only when the game starts and restores them on reconnect", async () => {
     const store = new MemoryLobbyStore();
     const lobbies = new LobbyService(store);
@@ -66,7 +114,7 @@ describe("persisted server deadlines", () => {
     expect(result).toHaveLength(1);
     expect(result[0].state.phase).toBe("SKILL_PHASE");
     expect(result[0].state.crimeRooms).toHaveLength(3);
-    expect(result[0].state.phaseDeadlineAt).toBe(61000);
+    expect(result[0].state.phaseDeadlineAt).toBe(181000);
     expect((await service.snapshot("ABC234", "a"))?.publicState.publicRooms.filter((room) => room.state === "CRIME_SCENE")).toHaveLength(3);
   });
   it("restores and continues a saved game missing legacy death notices and votes", async () => {
@@ -125,7 +173,7 @@ describe("persisted server deadlines", () => {
     const result = await new GameService(store).advanceDue(1000);
     expect(result[0].publicEvents).toEqual([]);
     expect(result[0].state.activePlayerId).toBe("b");
-    expect(result[0].state.phaseDeadlineAt).toBe(61000);
+    expect(result[0].state.phaseDeadlineAt).toBe(181000);
   });
 
   it("persists the turn-three register for the receptionist after a timer advance", async () => {
