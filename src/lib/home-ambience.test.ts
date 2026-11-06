@@ -11,17 +11,11 @@ describe("homepage ambience", () => {
       play: vi.fn().mockResolvedValue(undefined),
       pause: vi.fn(),
     };
-    const Audio = vi.fn(function (source: string) {
-      expect(source).toBe("/sound-effect/sound-bg-horror-trailer.mp3");
-      return audio;
-    });
     const document = new EventTarget();
     Object.defineProperty(document, "hidden", { value: false });
-    vi.stubGlobal("Audio", Audio);
     vi.stubGlobal("document", document);
 
-    const stop = startHomeAmbience();
-    expect(Audio).toHaveBeenCalledOnce();
+    const stop = startHomeAmbience(audio as unknown as HTMLAudioElement);
     expect(audio.loop).toBe(true);
     expect(audio.volume).toBeLessThan(1);
     expect(audio.play).toHaveBeenCalledOnce();

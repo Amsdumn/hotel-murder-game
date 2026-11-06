@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
@@ -11,7 +11,7 @@ import { AVATARS, avatarById, type AvatarId } from "@/lib/avatars";
 import { avatarEnglish } from "@/lib/avatar-translations";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { primeGameAudio } from "@/lib/game-sound";
-import { startHomeAmbience } from "@/lib/home-ambience";
+import { HOME_AMBIENCE_SRC, startHomeAmbience } from "@/lib/home-ambience";
 
 const LobbyEntryDialog = dynamic(() => import("@/components/lobby/lobby-entry-dialog").then((module) => module.LobbyEntryDialog));
 const RoleBook = dynamic(() => import("@/components/role-book").then((module) => module.RoleBook));
@@ -59,12 +59,11 @@ export function AvatarDetail({ avatarId }: { avatarId: AvatarId }) {
 
 export function MainMenu() {
   const en = useLanguage() === "en";
-  const [muted, setMuted] = useState(true);
-  const [soundReady, setSoundReady] = useState(false);
+  const [muted, setMuted] = useState(false);
+  const homeAudioRef = useRef<HTMLAudioElement>(null);
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      try { setMuted(localStorage.getItem("hotel-game-muted") === "true"); } catch { setMuted(false); }
-      setSoundReady(true);
+      try { setMuted(localStorage.getItem("hotel-game-muted") === "true"); } catch { /* Keep the default sound setting. */ }
     }, 0);
     window.addEventListener("pointerdown", primeGameAudio, { once: true });
     window.addEventListener("keydown", primeGameAudio, { once: true });
@@ -75,9 +74,14 @@ export function MainMenu() {
     };
   }, []);
   useEffect(() => {
-    if (!soundReady || muted) return;
-    return startHomeAmbience();
-  }, [soundReady, muted]);
+    const audio = homeAudioRef.current;
+    if (!audio) return;
+    if (muted) {
+      audio.pause();
+      return;
+    }
+    return startHomeAmbience(audio);
+  }, [muted]);
   const profileName = useSyncExternalStore(subscribeToProfile, profileNameSnapshot, () => "");
   const [entryMode, setEntryMode] = useState<"create" | "join" | null>(null);
   const [selectedCode, setSelectedCode] = useState("");
@@ -96,6 +100,7 @@ export function MainMenu() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#10101b] text-[#f8f1e4]">
+      <audio ref={homeAudioRef} src={HOME_AMBIENCE_SRC} autoPlay loop preload="auto" className="hidden" />
       <div className="pointer-events-none absolute inset-0"><Image src="/art/hotel-night.webp" alt="" fill priority sizes="100vw" className="object-cover object-[62%_center]" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,11,23,.97)_0%,rgba(13,11,23,.86)_35%,rgba(13,11,23,.26)_75%),linear-gradient(0deg,rgba(13,11,23,.9),transparent_48%)]" /></div>
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-6 sm:px-10 lg:px-14">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d9b66f]/20 pb-5">
