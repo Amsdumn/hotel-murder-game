@@ -30,7 +30,7 @@ export function LanguageSwitcher() {
     document.documentElement.lang = next;
     window.dispatchEvent(new Event(eventName));
   };
-  return <div role="group" aria-label={language === "en" ? "Language" : "ภาษา"} className="flex items-center rounded-lg border border-[#d9b66f]/35 bg-[#171321]/80 p-0.5">
+  return <div role="group" aria-label={language === "en" ? "Language" : "ภาษา"} className="flex items-center rounded-[14px] border border-[#d9b66f]/35 bg-[#171321]/80 p-0.5">
     <Button size="small" variant={language === "th" ? "contained" : "text"} aria-pressed={language === "th"} onClick={() => choose("th")}>ไทย</Button>
     <Button size="small" variant={language === "en" ? "contained" : "text"} aria-pressed={language === "en"} onClick={() => choose("en")}>EN</Button>
   </div>;
