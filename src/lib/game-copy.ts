@@ -1,4 +1,6 @@
 import type { Language } from "./language";
+import { AVATARS } from "./avatars";
+import { avatarEnglish } from "./avatar-translations";
 
 const exact: Record<string, string> = {
   "กำลังดำเนินการสืบสวน...": "Investigation in progress...",
@@ -23,6 +25,25 @@ const exact: Record<string, string> = {
 
 function dynamic(message: string): string | null {
   let match: RegExpMatchArray | null;
+  if ((match = message.match(/^เบาะแสอดีตตำรวจเทิร์นที่ (\d+): (.+)$/))) {
+    const [, turn, detail] = match;
+    const prefix = `Former Police clue, turn ${turn}: `;
+    if (detail === "เพศหญิง") return `${prefix}woman`;
+    if (detail === "เพศชาย") return `${prefix}man`;
+    if (detail === "ไม่พบข้อมูลตัวละคร") return `${prefix}character details unavailable`;
+    const age = detail.match(/^อายุ (\d+–\d+) ปี$/);
+    if (age) return `${prefix}age ${age[1]}`;
+    const appearance = detail.match(/^ผมสี(ดำ|น้ำตาล|ทอง|แดง|เทา) ผิวสี(อ่อน|กลาง|เข้ม)$/);
+    if (appearance) {
+      const hair = ({ ดำ: "black", น้ำตาล: "brown", ทอง: "blond", แดง: "red", เทา: "gray" } as Record<string, string>)[appearance[1]];
+      const skin = ({ อ่อน: "light", กลาง: "medium", เข้ม: "deep" } as Record<string, string>)[appearance[2]];
+      return `${prefix}${hair} hair, ${skin} skin tone`;
+    }
+    if (detail.startsWith("เกิดที่")) {
+      const avatar = AVATARS.find((item) => item.origin === detail.slice("เกิดที่".length));
+      if (avatar) return `${prefix}born in ${avatarEnglish[avatar.id].origin}`;
+    }
+  }
   if ((match = message.match(/^พบร่องรอยปริศนาในห้อง (.+)$/))) return `Mysterious clues found in rooms ${match[1]}`;
   if ((match = message.match(/^เปิดห้อง (\d+) · (ห้องว่าง|มีผู้พัก)$/))) return `Room ${match[1]} opened · ${match[2] === "ห้องว่าง" ? "empty" : "occupied"}`;
   if ((match = message.match(/^รอบ (\d+): เริ่มโหวตตัดสิน$/))) return `Turn ${match[1]}: runoff voting begins`;

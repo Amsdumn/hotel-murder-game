@@ -86,7 +86,7 @@ function resolvePendingAssassination(state: GameEngineState): EngineResult {
 export function performSkill(state: GameEngineState, playerId: string, target: unknown, now: number, discussionSeconds: number): EngineResult {
   const actor = state.players.find((player) => player.id === playerId);
   if (state.phase !== "SKILL_PHASE" || state.activePlayerId !== playerId || !actor?.isAlive || state.usedSkillPlayerIds.includes(playerId)) throw new Error("Skill is not permitted");
-  if (actor.role === "RECEPTIONIST" || actor.role === "PHOTOGRAPHER") throw new Error("Automatic skill cannot be submitted");
+  if (actor.role === "FORMER_POLICE" || actor.role === "RECEPTIONIST" || actor.role === "PHOTOGRAPHER") throw new Error("Automatic skill cannot be submitted");
   if (state.darkFloors?.includes(Math.floor(actor.roomNumber / 100)) || (actor.role === "ELECTRICIAN" && state.electricianLastUsedTurn?.[playerId] === state.turn - 1)) throw new Error("Skill is not permitted");
   let next = state;
   const privateEvents: PrivateGameEvent[] = [];

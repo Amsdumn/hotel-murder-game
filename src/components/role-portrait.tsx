@@ -11,6 +11,7 @@ export const roleNames: Record<Role, string> = {
   WINDOW_CLEANER: "คนเช็ดกระจก",
   WITNESS: "พยาน",
   DETECTIVE: "นักสืบ",
+  FORMER_POLICE: "อดีตตำรวจ",
   RECEPTIONIST: "พนักงานต้อนรับ",
   PHOTOGRAPHER: "ช่างภาพ",
   ACCOMPLICE: "ผู้สมรู้ร่วมคิด",
@@ -19,7 +20,7 @@ export const roleNames: Record<Role, string> = {
 
 export const roleNamesEn: Record<Role, string> = {
   ELECTRICIAN: "Electrician", LOCKSMITH: "Locksmith", HOUSEKEEPER: "Housekeeper",
-  WINDOW_CLEANER: "Window Cleaner", WITNESS: "Witness", DETECTIVE: "Detective",
+  WINDOW_CLEANER: "Window Cleaner", WITNESS: "Witness", DETECTIVE: "Detective", FORMER_POLICE: "Former Police Officer",
   RECEPTIONIST: "Receptionist", PHOTOGRAPHER: "Photographer", ACCOMPLICE: "Accomplice", KILLER: "Assassin",
 };
 
@@ -30,6 +31,7 @@ const portraits: Record<Role, string> = {
   WINDOW_CLEANER: "/art/window-cleaner.webp",
   WITNESS: "/art/witness.webp",
   DETECTIVE: "/art/detective.webp",
+  FORMER_POLICE: "/art/former-police.webp",
   RECEPTIONIST: "/art/avatars/irina-volkova-portrait.webp",
   PHOTOGRAPHER: "/art/photographer-portrait.webp",
   ACCOMPLICE: "/art/accomplice.webp",

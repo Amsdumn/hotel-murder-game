@@ -83,6 +83,7 @@ export function getTurnNotice(state: PublicGameState, privateState: PrivatePlaye
     if (privateState?.mode === "SPECTATOR") return "You are a spectator. You may watch, but cannot use skills or vote.";
     if (state.phase === "SKILL_PHASE" && privateState?.skillBlockReason === "BLACKOUT") return "Your floor is dark. You cannot use your skill this turn.";
     if (state.phase === "SKILL_PHASE" && privateState?.skillBlockReason === "COOLDOWN") return "Your Electrician skill is cooling down this turn.";
+    if (state.phase === "SKILL_PHASE" && privateState?.role === "FORMER_POLICE") return "Your clue arrives automatically on your skill slot. Check your private information.";
     if (state.phase === "SKILL_PHASE") return privateState?.canUseSkill ? "Your skill is ready. Choose a target and confirm before time runs out." : "Skill phase: waiting for the active player.";
     if (state.phase === "DISCUSSION") return "Discussion has started. Share clues before voting.";
     if (state.phase === "VOTING" && !privateState) return "Voting: checking your eligibility.";
@@ -94,6 +95,7 @@ export function getTurnNotice(state: PublicGameState, privateState: PrivatePlaye
   if (privateState?.mode === "SPECTATOR") return "คุณเป็นผู้ชม ติดตามเหตุการณ์ได้ แต่ไม่สามารถใช้สกิลหรือลงคะแนน";
   if (state.phase === "SKILL_PHASE" && privateState?.skillBlockReason === "BLACKOUT") return "ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้";
   if (state.phase === "SKILL_PHASE" && privateState?.skillBlockReason === "COOLDOWN") return "สกิลช่างไฟกำลังพักหนึ่งรอบ รอบนี้ใช้สกิลไม่ได้";
+  if (state.phase === "SKILL_PHASE" && privateState?.role === "FORMER_POLICE") return "คำใบ้ของคุณจะมาถึงอัตโนมัติเมื่อถึงคิว ตรวจในข้อมูลลับ";
   if (state.phase === "SKILL_PHASE") return privateState?.canUseSkill
     ? "ถึงตาคุณใช้สกิล เลือกเป้าหมายและยืนยันก่อนหมดเวลา"
     : "ช่วงใช้สกิล กำลังรอผู้เล่นที่ถึงคิวดำเนินการ";
@@ -189,6 +191,7 @@ export const skillActionInstructions: Record<Role, string> = {
   WINDOW_CLEANER: "แตะแนวห้อง 01, 02 หรือ 03 บนแผนผัง แล้วกดยืนยันสกิลด้านล่าง",
   WITNESS: "แตะชั้นหรือห้องบนชั้นที่ต้องการตรวจเป้าหมายของนักฆ่าในรอบนี้ แล้วกดยืนยันสกิลด้านล่าง",
   DETECTIVE: "แตะห้องบนแผนผังที่ต้องการตรวจ แล้วกดยืนยันสกิลด้านล่าง",
+  FORMER_POLICE: "เมื่อถึงคิวในแต่ละเทิร์น ระบบจะให้คำใบ้เกี่ยวกับตัวละครของนักฆ่าอัตโนมัติ ตรวจผลในข้อมูลลับ",
   RECEPTIONIST: "เทิร์นที่ 3 ระบบจะเปิดทะเบียนห้องพักให้คุณอัตโนมัติ ตรวจผลในข้อมูลลับ",
   PHOTOGRAPHER: "เทิร์นที่ 3 ระบบจะให้คุณตรวจภาพถ่ายและบอกว่าใครคือนักฆ่าแบบส่วนตัว ตรวจผลในข้อมูลลับ",
   ACCOMPLICE: "แตะการ์ดผู้เข้าพักที่ยังมีชีวิตหนึ่งคน แล้วกดยืนยันสกิลด้านล่าง",
@@ -202,6 +205,7 @@ const skillActionInstructionsEn: Record<Role, string> = {
   WINDOW_CLEANER: "Select column 01, 02, or 03 on the hotel map, then confirm below.",
   WITNESS: "Select a floor or a room on it to check the Assassin's target this turn, then confirm below.",
   DETECTIVE: "Select a room on the hotel map to inspect, then confirm below.",
+  FORMER_POLICE: "On your slot each turn, receive an automatic clue about the Assassin's public character. Read it in your private information.",
   RECEPTIONIST: "In turn 3, your private room register opens automatically. Read it in your private information.",
   PHOTOGRAPHER: "In turn 3, your photograph privately reveals the Assassin. Read it in your private information.",
   ACCOMPLICE: "Select a living guest card, then confirm below.",
@@ -434,7 +438,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {privateState?.canUseSkill && <div role="alert" aria-live="polite" className="mb-5 rounded-xl border-2 border-[#e3c88e] bg-[linear-gradient(125deg,#493447,#30202d)] p-5 shadow-[0_0_35px_rgba(227,200,142,.18)]"><p className="text-xs font-semibold tracking-[.2em] text-[#f2d79c]">{en ? "YOUR SKILL IS READY" : "ถึงตาคุณใช้สกิล"}</p><h2 className="mt-2 font-serif text-2xl">{en ? roleNamesEn[privateState.role] : roleNames[privateState.role]}</h2><p className="mt-2 text-sm leading-7 text-[#f4e5cc]">{doubleKillActive ? en ? "Select two distinct rooms on the hotel map. Both rooms can kill an occupant. Confirm after selecting both." : "เลือกสองห้องที่ต่างกันบนแผนผัง ทั้งสองห้องสังหารผู้พักได้ เลือกครบแล้วกดยืนยัน" : en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</p></div>}
     {error && <p role="alert" className="mb-5 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200">{error}</p>}
     {showSecret && privateState && (privateState.role === "RECEPTIONIST" || privateState.role === "PHOTOGRAPHER") && state.turn === 3 && <div role="status" className="mb-5 rounded-xl border border-[#e3c88e]/60 bg-[#30202d] p-4 font-semibold text-[#f2d79c]">{en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</div>}
-    {privateState?.privateResults.some((message) => message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") || message.startsWith("ภาพถ่ายเทิร์นที่ 3:")) && !showSecret && <Alert severity="info" className="mb-5!">{en ? "A new private investigation result is available. Open your private information to view it." : "มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู"}</Alert>}
+    {privateState?.privateResults.some((message) => message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") || message.startsWith("ภาพถ่ายเทิร์นที่ 3:") || message.startsWith("เบาะแสอดีตตำรวจเทิร์นที่ ")) && !showSecret && <Alert severity="info" className="mb-5!">{en ? "A new private investigation result is available. Open your private information to view it." : "มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู"}</Alert>}
     {state.phase !== "SKILL_PHASE" && privateState?.skillBlockReason && <Alert severity="warning" className="mb-5!">{privateState.skillBlockReason === "BLACKOUT" ? en ? "Your floor is dark. You cannot use your skill this turn." : "ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้" : en ? "Your Electrician skill is cooling down this turn." : "สกิลช่างไฟกำลังพักหนึ่งรอบ รอบนี้ใช้สกิลไม่ได้"}</Alert>}
     {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-2">
       <div className="min-w-0 space-y-5">

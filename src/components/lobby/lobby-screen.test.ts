@@ -9,11 +9,11 @@ describe("host role settings", () => {
     const html = renderToStaticMarkup(createElement(InnocentRoleSettings, {
       selected: ["DETECTIVE", "WITNESS", "HOUSEKEEPER"], requiredCount: 3, onToggle: () => {},
     }));
-    expect(INNOCENT_ROLES).toHaveLength(8);
+    expect(INNOCENT_ROLES).toHaveLength(9);
     expect(html).toContain("เลือก 3 บทบาทตามจำนวนผู้เล่นสูงสุด");
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(3);
-    expect(html.match(/aria-pressed="false"/g)).toHaveLength(5);
-    expect(html.match(/disabled=""/g)).toHaveLength(5);
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(6);
+    expect(html.match(/disabled=""/g)).toHaveLength(6);
     expect(html).toContain("ผู้สมรู้ร่วมคิดจะเข้าร่วมเมื่อมีผู้เล่นตั้งแต่ 6 คนขึ้นไป");
   });
 });

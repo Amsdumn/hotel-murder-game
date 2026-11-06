@@ -509,6 +509,7 @@ describe("game privacy and turn UI", () => {
       RECEPTIONIST: "เทิร์นที่ 3",
       PHOTOGRAPHER: "ภาพถ่าย",
       DETECTIVE: "ตรวจหนึ่งห้อง",
+      FORMER_POLICE: "คำใบ้ส่วนตัว",
       ACCOMPLICE: "เลือกผู้เล่นที่ยังมีชีวิตหนึ่งคน",
       KILLER: "ลอบสังหารผู้พักที่ยังมีชีวิต",
     };
