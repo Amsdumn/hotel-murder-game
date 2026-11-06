@@ -24,7 +24,7 @@ export function advanceTimedPhase(state: GameEngineState, now: number, chooseTie
   if (state.phaseDeadlineAt === undefined || now < state.phaseDeadlineAt) return { state, publicEvents: [], privateEvents: [] };
   if (state.phase === "DISCUSSION") {
     const event: PublicGameEvent = { type: "PHASE_CHANGED", phase: "VOTING", turn: state.turn };
-    return { state: { ...state, phase: "VOTING", phaseDeadlineAt: now + VOTING_DURATION_MS, votes: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
+    return { state: { ...state, phase: "VOTING", phaseDeadlineAt: now + VOTING_DURATION_MS, votes: {}, lastVoteAt: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
   }
   if (state.phase === "VOTING") return resolveBallot(state, now, chooseTie);
   if (state.phase === "RESOLUTION") {
@@ -33,7 +33,7 @@ export function advanceTimedPhase(state: GameEngineState, now: number, chooseTie
       return { state: { ...state, phase: "FINISHED", winner: "MURDERER", phaseDeadlineAt: undefined, publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
     }
     const event: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: state.turn + 1 };
-    const next: GameEngineState = { ...state, turn: state.turn + 1, phase: "SKILL_PHASE", activePlayerId: null, usedSkillPlayerIds: [], lockedRooms: [], darkFloors: [], assassinationTargetRoom: undefined, votes: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] };
+    const next: GameEngineState = { ...state, turn: state.turn + 1, phase: "SKILL_PHASE", activePlayerId: null, usedSkillPlayerIds: [], lockedRooms: [], darkFloors: [], assassinationTargetRoom: undefined, assassinationTargetRooms: undefined, pendingAssassinationRoom: undefined, pendingAssassinationRooms: undefined, votes: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] };
     const first = advanceSkillTurn(next, null);
     return { state: { ...first.state, phaseDeadlineAt: now + skillSeconds * 1000 }, publicEvents: [event], privateEvents: first.privateEvents };
   }
@@ -53,7 +53,7 @@ function resolveBallot(state: GameEngineState, now: number, chooseTie: (length: 
   if (!candidates.length) throw new Error("No eligible rooms remain");
   if (tied.length > 1 && !state.runoffRooms?.length) {
     const event: PublicGameEvent = { type: "RUNOFF_STARTED", turn: state.turn };
-    return { state: { ...state, votes: {}, runoffRooms: tied, phaseDeadlineAt: now + VOTING_DURATION_MS, publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
+    return { state: { ...state, votes: {}, lastVoteAt: {}, runoffRooms: tied, phaseDeadlineAt: now + VOTING_DURATION_MS, publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
   }
   const index = candidates.length > 1 ? chooseTie(candidates.length) : 0;
   if (!Number.isInteger(index) || index < 0 || index >= candidates.length) throw new Error("Invalid tie selection");
@@ -73,8 +73,10 @@ export function castRoomVote(state: GameEngineState, playerId: string, roomNumbe
   if (state.phaseDeadlineAt !== undefined && now >= state.phaseDeadlineAt) throw new Error("Voting deadline has passed");
   if (state.runoffRooms?.length && !state.runoffRooms.includes(roomNumber)) throw new Error("Room is not in the runoff");
   const submitted = submitVote(state, playerId, roomNumber);
-  const voteEvent: PublicGameEvent = { type: "VOTE_CAST", turn: state.turn, playerName: state.players.find((player) => player.id === playerId)!.displayName, roomNumber };
-  const voted = { ...submitted.state, publicHistory: [...(submitted.state.publicHistory ?? []), voteEvent] };
+  const runoff = !!state.runoffRooms?.length;
+  const voteEvent: PublicGameEvent = { type: "VOTE_CAST", turn: state.turn, playerId, playerName: state.players.find((player) => player.id === playerId)!.displayName, roomNumber, runoff };
+  const history = (submitted.state.publicHistory ?? []).filter((event) => event.type !== "VOTE_CAST" || event.turn !== state.turn || event.playerId !== playerId || event.runoff !== runoff);
+  const voted = { ...submitted.state, lastVoteAt: { ...state.lastVoteAt, [playerId]: now }, publicHistory: [...history, voteEvent] };
   return { state: voted, publicEvents: [voteEvent], privateEvents: [] };
 }
 

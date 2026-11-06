@@ -38,8 +38,12 @@ export interface GameEngineState {
   activePlayerId: string | null;
   usedSkillPlayerIds: string[];
   pendingAssassinationRoom?: number;
+  pendingAssassinationRooms?: number[];
   assassinationTargetRoom?: number;
+  assassinationTargetRooms?: number[];
   votes: Record<string, number>;
+  lastVoteAt?: Record<string, number>;
+  lastChatAt?: Record<string, number>;
   winner: Team | null;
   deathNotices: Record<string, DeathNotice>;
   phaseDeadlineAt?: number;
@@ -57,13 +61,13 @@ export type PublicGameEvent =
   | { type: "MURDER_OCCURRED"; message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม"; turn: number }
   | { type: "PHASE_CHANGED"; phase: "SKILL_PHASE" | "DISCUSSION" | "VOTING" | "RESOLUTION"; turn: number }
   | { type: "RUNOFF_STARTED"; turn: number }
-  | { type: "VOTE_CAST"; turn: number; playerName: string; roomNumber: number }
+  | { type: "VOTE_CAST"; turn: number; playerId: string; playerName: string; roomNumber: number; runoff: boolean }
   | { type: "ROOM_OPENED"; roomNumber: number; occupancy: "EMPTY" | "OCCUPIED"; gameEnded: boolean }
   | { type: "GAME_FINISHED"; winner: Team };
 
 export type PrivateGameEvent =
   | { type: "DEATH_NOTICE"; recipientPlayerId: string; cause: DeathNotice["cause"]; turn: number }
-  | { type: "ASSASSINATION_RESULT"; recipientPlayerId: string; success: boolean; reason: "SUCCESS" | "EMPTY" | "LOCKED" | "ALREADY_DEAD" }
+  | { type: "ASSASSINATION_RESULT"; recipientPlayerId: string; roomNumber?: number; success: boolean; reason: "SUCCESS" | "EMPTY" | "LOCKED" | "ALREADY_DEAD" }
   | { type: "ACTION_REQUEST"; recipientPlayerId: string }
   | { type: "SKILL_RESULT"; recipientPlayerId: string; message: string };
 
@@ -78,7 +82,7 @@ export function appendPrivateAction(state: GameEngineState, playerId: string, en
     ...state,
     privateActionHistory: {
       ...state.privateActionHistory,
-      [playerId]: [...(state.privateActionHistory?.[playerId] ?? []), entry],
+      [playerId]: [...(state.privateActionHistory?.[playerId] ?? []), entry].slice(-100),
     },
   };
 }

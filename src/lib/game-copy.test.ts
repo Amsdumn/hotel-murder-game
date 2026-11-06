@@ -7,6 +7,8 @@ describe("game message translation", () => {
     expect(gameMessage("ชั้น 3 มีผู้เล่นที่ยังมีชีวิต 2 คน", "en")).toBe("Floor 3 has 2 living players");
     expect(gameMessage("ทิศทางชั้นนักฆ่า: ABOVE", "en")).toBe("Assassin's floor: above");
     expect(gameMessage("ล็อกห้อง 103 แล้ว", "th")).toBe("ล็อกห้อง 103 แล้ว");
+    expect(gameMessage("ห้อง 101: ลอบสังหารสำเร็จ", "en")).toBe("Room 101: assassination succeeded");
+    expect(gameMessage("ลอบสังหาร: 101 สำเร็จ, 102 ไม่สำเร็จ", "en")).toBe("Assassinations: 101 succeeded, 102 failed");
   });
   it("translates public events and preserves private player names", () => {
     expect(gameMessage("เปิดห้อง 202 · มีผู้พัก", "en")).toBe("Room 202 opened · occupied");

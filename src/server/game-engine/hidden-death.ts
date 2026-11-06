@@ -23,33 +23,35 @@ export function applyInitialCrime(state: GameEngineState, choose?: () => number[
   return { state: { ...state, crimeRooms: rooms }, publicEvents: [{ type: "CRIME_SCENES_REVEALED", roomNumbers: rooms }], privateEvents: [] };
 }
 
-export function resolveAssassination(state: GameEngineState, targetRoom: number): EngineResult {
+export function resolveAssassination(state: GameEngineState, targetRooms: number | number[]): EngineResult {
+  const rooms = Array.isArray(targetRooms) ? targetRooms : [targetRooms];
   const killer = state.players.find((player) => player.id === state.activePlayerId);
   if (state.phase !== "SKILL_PHASE" || !killer || killer.role !== "KILLER" || !killer.isAlive || state.usedSkillPlayerIds.includes(killer.id)) {
     throw new Error("Skill action is not permitted");
   }
-  if (!isHotelRoom(targetRoom, gameFloorCount(state))) throw new Error("Invalid target room");
-  if (!isSelectableRoom(state, targetRoom)) throw new Error("Room is not eligible");
+  if (rooms.length < 1 || rooms.length > 2 || new Set(rooms).size !== rooms.length || rooms.some((room) => !isHotelRoom(room, gameFloorCount(state)))) throw new Error("Invalid target rooms");
+  if (rooms.some((room) => !isSelectableRoom(state, room))) throw new Error("Room is not eligible");
 
   let next: GameEngineState = { ...state, usedSkillPlayerIds: [...state.usedSkillPlayerIds, killer.id] };
-  let reason: "SUCCESS" | "EMPTY" | "LOCKED" | "ALREADY_DEAD" = "EMPTY";
   const privateEvents: PrivateGameEvent[] = [];
-  if (state.lockedRooms.includes(targetRoom)) reason = "LOCKED";
-  else {
-    const occupant = state.players.find((player) => player.roomNumber === targetRoom);
-    if (!occupant) reason = "EMPTY";
-    else if (!occupant.isAlive) reason = "ALREADY_DEAD";
+  const publicEvents: EngineResult["publicEvents"] = [];
+  for (const targetRoom of rooms) {
+    let reason: "SUCCESS" | "EMPTY" | "LOCKED" | "ALREADY_DEAD" = "EMPTY";
+    if (state.lockedRooms.includes(targetRoom)) reason = "LOCKED";
     else {
-      reason = "SUCCESS";
-      const death = killPlayer(next, occupant.id, "ASSASSINATION");
-      next = death.state;
-      if (death.privateEvent) privateEvents.push(death.privateEvent);
+      const occupant = next.players.find((player) => player.roomNumber === targetRoom);
+      if (!occupant) reason = "EMPTY";
+      else if (!occupant.isAlive) reason = "ALREADY_DEAD";
+      else {
+        reason = "SUCCESS";
+        const death = killPlayer(next, occupant.id, "ASSASSINATION");
+        next = death.state;
+        if (death.privateEvent) privateEvents.push(death.privateEvent);
+      }
     }
+    privateEvents.push({ type: "ASSASSINATION_RESULT", recipientPlayerId: killer.id, roomNumber: targetRoom, success: reason === "SUCCESS", reason });
+    if (reason === "SUCCESS") publicEvents.push({ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: state.turn });
   }
-  privateEvents.unshift({ type: "ASSASSINATION_RESULT", recipientPlayerId: killer.id, success: reason === "SUCCESS", reason });
-  const publicEvents: EngineResult["publicEvents"] = reason === "SUCCESS"
-    ? [{ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: state.turn }]
-    : [];
   if (next.phase === "FINISHED" && next.winner) publicEvents.push({ type: "GAME_FINISHED", winner: next.winner });
   return {
     state: next,
@@ -86,7 +88,7 @@ export function advanceSkillTurn(state: GameEngineState, afterPlayerId: string |
           ...next,
           privateResultMessages: {
             ...next.privateResultMessages,
-            [player.id]: [...(next.privateResultMessages?.[player.id] ?? []), message],
+            [player.id]: [...(next.privateResultMessages?.[player.id] ?? []), message].slice(-100),
           },
         }, player.id, { turn: next.turn, type: "SKILL", message: "เปิดทะเบียนห้องพักแล้ว" });
         privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: player.id, message });
@@ -103,7 +105,7 @@ export function advanceSkillTurn(state: GameEngineState, afterPlayerId: string |
           ...next,
           privateResultMessages: {
             ...next.privateResultMessages,
-            [player.id]: [...(next.privateResultMessages?.[player.id] ?? []), message],
+            [player.id]: [...(next.privateResultMessages?.[player.id] ?? []), message].slice(-100),
           },
         }, player.id, { turn: next.turn, type: "SKILL", message: "ตรวจภาพถ่ายแล้ว" });
         privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: player.id, message });

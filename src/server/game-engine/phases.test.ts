@@ -17,13 +17,14 @@ function game(overrides: Partial<GameEngineState> = {}): GameEngineState {
 
 describe("server-owned phases", () => {
   it("lets a living player replace a vote until the deadline but never vote for their own room", () => {
-    const initial = game({ phase: "VOTING", phaseDeadlineAt: 1000 });
+    const initial = game({ phase: "VOTING", phaseDeadlineAt: 3000 });
     expect(() => castRoomVote(initial, "a", 101, 100)).toThrow();
     const first = castRoomVote(initial, "a", 102, 100).state;
-    const changed = castRoomVote(first, "a", 103, 200).state;
+    const changed = castRoomVote(first, "a", 103, 1200).state;
     expect(changed.votes.a).toBe(103);
+    expect(changed.publicHistory?.filter((event) => event.type === "VOTE_CAST")).toHaveLength(1);
     expect(changed.phase).toBe("VOTING");
-    expect(() => castRoomVote(changed, "a", 102, 1000)).toThrow();
+    expect(() => castRoomVote(changed, "a", 102, 3000)).toThrow();
   });
 
   it("waits for the deadline even when all living players have voted", () => {

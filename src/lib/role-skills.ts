@@ -10,7 +10,7 @@ export const roleSkillDescriptions: Record<Role, string> = {
   RECEPTIONIST: "เมื่อถึงคิวในเทิร์นที่ 3 จะได้รับรายชื่อผู้เล่นทุกคนพร้อมหมายเลขห้องพักแบบส่วนตัวโดยอัตโนมัติ หากเสียชีวิตหรือไฟดับก่อนถึงคิวจะไม่ได้ข้อมูล",
   PHOTOGRAPHER: "เผลอถ่ายภาพติดนักฆ่าไว้ เมื่อถึงคิวในเทิร์นที่ 3 จึงตรวจภาพถ่ายและรู้ชื่อกับหมายเลขผู้เล่นของนักฆ่าแบบส่วนตัวโดยอัตโนมัติ หากเสียชีวิตหรือไฟดับก่อนถึงคิวจะไม่ได้ข้อมูล",
   ACCOMPLICE: "เลือกผู้เล่นหนึ่งคนเพื่อทราบชั้นที่เขาพัก หากเลือกผู้เล่นที่ตายแล้วจะไม่ได้ข้อมูลและถือว่าใช้สกิล ผลเป็นข้อมูลเฉพาะฝ่ายฆาตกร",
-  KILLER: "เลือกหนึ่งห้องเพื่อลอบสังหารผู้พักที่ยังมีชีวิต หากห้องไม่ถูกล็อก ทำได้ครั้งเดียวต่อรอบ เมื่อฆ่าสำเร็จห้องนั้นจะแสดงว่าถูกฆาตกรรม แต่ไม่ประกาศชื่อเหยื่อ",
+  KILLER: "เลือกหนึ่งห้องเพื่อลอบสังหารผู้พักที่ยังมีชีวิต หากห้องไม่ถูกล็อก ทำได้ครั้งเดียวต่อรอบ เกม 5 คนไม่มีผู้สมรู้ร่วมคิด และในเทิร์นที่ 2 นักฆ่าต้องเลือกสองห้องที่ต่างกัน ซึ่งสังหารได้ทั้งสองห้อง เมื่อฆ่าสำเร็จห้องนั้นจะแสดงว่าถูกฆาตกรรม แต่ไม่ประกาศชื่อเหยื่อ",
 };
 
 export const roleSkillDescriptionsEn: Record<Role, string> = {
@@ -23,5 +23,5 @@ export const roleSkillDescriptionsEn: Record<Role, string> = {
   RECEPTIONIST: "On your slot in turn 3, automatically receive a private register of every player and room. You receive nothing if you have died or your floor is dark.",
   PHOTOGRAPHER: "You accidentally photographed the Assassin. On your slot in turn 3, privately learn their name and player number. You receive nothing if you have died or your floor is dark.",
   ACCOMPLICE: "Choose a player and learn their floor. A dead player yields no information but still uses your skill. The result is shared only with the Murderer team.",
-  KILLER: "Choose a room to kill a living occupant if it is unlocked. You may act once per turn. A successful murder marks the room but does not reveal the victim's name.",
+  KILLER: "Choose a room to kill a living occupant if it is unlocked. You may act once per turn. In a five-player game there is no Accomplice, and on turn two you must choose two distinct rooms; both can kill their occupants. A successful murder marks the room but does not reveal the victim's name.",
 };

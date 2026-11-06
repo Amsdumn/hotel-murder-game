@@ -21,6 +21,8 @@ describe("role book", () => {
     for (const role of ROLE_ORDER) expect(html).toContain(roleNamesEn[role]);
     expect(html).toContain("cannot lock the same room again");
     expect(html).toContain("turn 3");
-    expect(html).toContain("floor targeted by the Assassin");
+    expect(html).toContain("at least one targeted room is on your chosen floor");
+    expect(html).toContain("Five-player games have one Assassin and four different Innocent roles");
+    expect(html).toContain("both can kill their occupants");
   });
 });

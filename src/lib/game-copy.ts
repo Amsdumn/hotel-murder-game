@@ -38,6 +38,8 @@ function dynamic(message: string): string | null {
   if ((match = message.match(/^(.+) โหวตห้อง (\d+)$/))) return `${match[1]} voted for room ${match[2]}`;
   if ((match = message.match(/^โหวต(ตัดสิน)?ห้อง (\d+)$/))) return `${match[1] ? "Runoff vote" : "Vote"} for room ${match[2]}`;
   if ((match = message.match(/^ลอบสังหารห้อง (\d+): (สำเร็จ|ไม่สำเร็จ)$/))) return `Assassinate room ${match[1]}: ${match[2] === "สำเร็จ" ? "succeeded" : "failed"}`;
+  if ((match = message.match(/^ห้อง (\d+): ลอบสังหาร(สำเร็จ|ไม่สำเร็จ)$/))) return `Room ${match[1]}: assassination ${match[2] === "สำเร็จ" ? "succeeded" : "failed"}`;
+  if ((match = message.match(/^ลอบสังหาร: ((?:\d+ (?:สำเร็จ|ไม่สำเร็จ))(?:, \d+ (?:สำเร็จ|ไม่สำเร็จ))+)$/))) return `Assassinations: ${match[1].split(", ").map((item) => item.replace("ไม่สำเร็จ", "failed").replace("สำเร็จ", "succeeded")).join(", ")}`;
   return null;
 }
 

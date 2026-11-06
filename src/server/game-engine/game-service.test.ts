@@ -69,6 +69,41 @@ describe("persisted server deadlines", () => {
     expect(state.murdererChatMessages?.map((message) => message.text)).toContain("Check room 101");
     expect(state.privateActionHistory?.d?.some((entry) => entry.type === "SKILL")).toBe(true);
   });
+
+  it("limits repeat votes and chat messages without blocking a later change", async () => {
+    const store = new MemoryLobbyStore();
+    const lobby = record("VOTING");
+    lobby.gameState!.phaseDeadlineAt = 5000;
+    await store.createLobby(lobby);
+    const service = new GameService(store);
+    const first = await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 102 }, 1000);
+    await expect(service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 103 }, 1500)).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    const changed = await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 103 }, 2000);
+    expect(first.state.votes.a).toBe(102);
+    expect(changed.state.votes.a).toBe(103);
+    expect(changed.state.publicHistory?.filter((event) => event.type === "VOTE_CAST")).toHaveLength(1);
+    const current = (await store.findLobby("ABC234"))!;
+    const discussion = { ...current.gameState!, phase: "DISCUSSION" as const, phaseDeadlineAt: 5000, phaseStartVersion: current.version + 1, version: current.version + 1 };
+    expect(await store.replaceLobby("ABC234", current.version, { ...current, phase: "DISCUSSION", version: discussion.version, gameState: discussion })).toBe(true);
+    await service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: discussion.version, channel: "PUBLIC", text: "one" }, 2500);
+    await expect(service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: discussion.version, channel: "PUBLIC", text: "two" }, 2800)).rejects.toMatchObject({ code: "RATE_LIMITED" });
+    expect((await service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: discussion.version, channel: "PUBLIC", text: "three" }, 3500)).state.publicChatMessages?.map((message) => message.text)).toEqual(["one", "three"]);
+  });
+
+  it("retains only the latest one hundred chat messages", async () => {
+    const store = new MemoryLobbyStore();
+    const lobby = record("DISCUSSION");
+    lobby.gameState!.phaseDeadlineAt = 200000;
+    await store.createLobby(lobby);
+    const service = new GameService(store);
+    for (let index = 0; index < 101; index += 1) {
+      await service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "PUBLIC", text: `message-${index}` }, 1000 + index * 1000);
+    }
+    const saved = (await store.findLobby("ABC234"))!;
+    expect(saved.gameState!.publicChatMessages).toHaveLength(100);
+    expect(saved.gameState!.publicChatMessages?.[0].text).toBe("message-1");
+    expect(saved.gameState!.publicChatMessages?.at(-1)?.text).toBe("message-100");
+  });
   it("assigns characters only when the game starts and restores them on reconnect", async () => {
     const store = new MemoryLobbyStore();
     const lobbies = new LobbyService(store);
@@ -93,8 +128,8 @@ describe("persisted server deadlines", () => {
     expect(ready.canStart).toBe(true);
     const started = await games.start(host.code, host.playerId, { actionId: crypto.randomUUID(), expectedVersion: ready.version });
     const assignedRoles = started.state.players.filter((player) => player.team === "INNOCENT").map((player) => player.role);
-    expect(assignedRoles).toHaveLength(3);
-    expect(new Set(assignedRoles).size).toBe(3);
+    expect(assignedRoles).toHaveLength(4);
+    expect(new Set(assignedRoles).size).toBe(4);
     expect(assignedRoles.every((role) => selectedRoles.includes(role as typeof selectedRoles[number]))).toBe(true);
     const avatars = started.state.players.map((player) => player.avatarId);
     expect(new Set(avatars).size).toBe(5);
@@ -244,9 +279,9 @@ describe("voting from independent players", () => {
     await store.createLobby(record("VOTING"));
     const service = new GameService(store);
     const originalVersion = 5;
-    const first = await service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101 });
+    const first = await service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101 }, 1000);
     expect(first.state.votes.e).toBe(101);
-    const changed = await service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 102 });
+    const changed = await service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 102 }, 2000);
     expect(changed.state.votes.e).toBe(102);
     expect(projectPrivatePlayerState(changed.state, "e").canVote).toBe(true);
     await expect(service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101 })).rejects.toMatchObject({ code: "FORBIDDEN" });

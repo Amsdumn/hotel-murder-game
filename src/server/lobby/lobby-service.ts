@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { LobbyIdentity, LobbyView, LobbyErrorCode, PublicLobbySummary } from "../../types/lobby";
 import { INNOCENT_ROLES, ROLE_ORDER } from "../../types/game";
+import { requiredInnocentRoleCount } from "../../lib/game-balance";
 import type { LobbyEventRecord, LobbyRecord, LobbyStore, SessionRecord } from "./lobby-store";
 
 const nameSchema = z.string().trim().min(2).max(24).refine((name) => !/[\x00-\x1f\x7f]/.test(name));
@@ -39,7 +40,7 @@ function project(record: LobbyRecord): LobbyView {
     playerLimit: record.playerLimit,
     discussionSeconds: record.discussionSeconds,
     selectedInnocentRoles: [...(record.selectedInnocentRoles ?? [])],
-    canStart: record.phase === "LOBBY" && record.players.length >= 5 && record.players.every((player) => player.ready && player.connected) && (record.selectedInnocentRoles === undefined || record.selectedInnocentRoles.length === record.playerLimit - 2),
+    canStart: record.phase === "LOBBY" && record.players.length >= 5 && record.players.every((player) => player.ready && player.connected) && (record.selectedInnocentRoles === undefined || record.selectedInnocentRoles.length === requiredInnocentRoleCount(record.playerLimit)),
     players: record.players.map(({ id, displayName, seatIndex, ready, connected }) => ({ id, displayName, seatIndex, ready: record.phase === "LOBBY" && ready, connected: record.phase === "LOBBY" ? connected : true })),
   };
 }
@@ -123,7 +124,7 @@ export class LobbyService {
       ...current, version: current.version + 1,
       emptySince: undefined,
       players: [...current.players, { id: playerId, displayName, seatIndex: current.players.length, ready: false, connected: true }],
-      appliedActionIds: [...current.appliedActionIds, actionId],
+      appliedActionIds: [...current.appliedActionIds, actionId].slice(-10000),
     };
     let saved = false;
     try { saved = await this.store.replaceLobby(code, expectedVersion, next); }
@@ -150,7 +151,7 @@ export class LobbyService {
     const next: LobbyRecord = {
       ...lobby, version: lobby.version + 1,
       players: lobby.players.map((player) => player.id === playerId ? { ...player, ready } : player),
-      appliedActionIds: [...lobby.appliedActionIds, actionId],
+      appliedActionIds: [...lobby.appliedActionIds, actionId].slice(-10000),
     };
     if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
     await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "READY_CHANGED", payload: { ready } });
@@ -165,8 +166,8 @@ export class LobbyService {
     if (lobby.appliedActionIds.includes(actionId)) throw new LobbyError("DUPLICATE_ACTION");
     if (lobby.version !== expectedVersion) throw new LobbyError("STALE_STATE");
     const roles = selectedInnocentRoles ?? lobby.selectedInnocentRoles;
-    if (playerLimit < lobby.players.length || (roles !== undefined && roles.length > playerLimit - 2)) throw new LobbyError("INVALID_INPUT");
-    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, playerLimit, discussionSeconds, selectedInnocentRoles: roles, appliedActionIds: [...lobby.appliedActionIds, actionId] };
+    if (playerLimit < lobby.players.length || (roles !== undefined && roles.length > requiredInnocentRoleCount(playerLimit))) throw new LobbyError("INVALID_INPUT");
+    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, playerLimit, discussionSeconds, selectedInnocentRoles: roles, appliedActionIds: [...lobby.appliedActionIds, actionId].slice(-10000) };
     if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
     await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "CONFIG_CHANGED", payload: { playerLimit, discussionSeconds, innocentRoleCount: next.selectedInnocentRoles?.length ?? 0 } });
     return project(next);
@@ -178,7 +179,7 @@ export class LobbyService {
     if (lobby.phase !== "LOBBY") throw new LobbyError("FORBIDDEN");
     if (lobby.appliedActionIds.includes(actionId)) throw new LobbyError("DUPLICATE_ACTION");
     if (lobby.version !== expectedVersion) throw new LobbyError("STALE_STATE");
-    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, players: lobby.players.map((player) => player.id === playerId ? { ...player, displayName } : player), appliedActionIds: [...lobby.appliedActionIds, actionId] };
+    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, players: lobby.players.map((player) => player.id === playerId ? { ...player, displayName } : player), appliedActionIds: [...lobby.appliedActionIds, actionId].slice(-10000) };
     if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
     await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "PLAYER_RENAMED", payload: { displayName } });
     return project(next);
@@ -192,7 +193,7 @@ export class LobbyService {
     if (lobby.appliedActionIds.includes(actionId)) throw new LobbyError("DUPLICATE_ACTION");
     if (lobby.version !== expectedVersion) throw new LobbyError("STALE_STATE");
     const targetSession = await this.store.findSessionByPlayerId(targetId);
-    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, players: lobby.players.filter((player) => player.id !== targetId).map((player, seatIndex) => ({ ...player, seatIndex })), appliedActionIds: [...lobby.appliedActionIds, actionId] };
+    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, players: lobby.players.filter((player) => player.id !== targetId).map((player, seatIndex) => ({ ...player, seatIndex })), appliedActionIds: [...lobby.appliedActionIds, actionId].slice(-10000) };
     if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
     if (targetSession) await this.store.deleteSession(targetSession.id);
     await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "PLAYER_KICKED", payload: { playerId: targetId } });

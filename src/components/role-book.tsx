@@ -39,12 +39,12 @@ const roleNotes: Record<Role, Record<Language, RoleNote>> = {
     en: { action: "Select another card in the guest list, then confirm.", note: "Learn that player's floor and share the result with the Murderer team. Choosing a dead player yields no floor, but still consumes this turn's skill." },
   },
   KILLER: {
-    th: { action: "แตะห้องบนแผนผัง แล้วกดยืนยัน", note: "สังหารได้เมื่อมีผู้พักที่ยังมีชีวิตและห้องไม่ถูกล็อก; ห้องว่างหรือถูกล็อกจะล้มเหลว การสังหารสำเร็จเผยห้องที่เกิดเหตุ แต่ไม่บอกชื่อเหยื่อ" },
-    en: { action: "Select a room on the map, then confirm.", note: "Kill a living occupant only if the room is unlocked. Empty or locked rooms fail. A successful murder reveals the room, not the victim's name." },
+    th: { action: "แตะห้องบนแผนผัง แล้วกดยืนยัน; เกม 5 คนในเทิร์นที่ 2 ต้องเลือกสองห้องต่างกัน", note: "สังหารได้ทั้งสองห้องเมื่อมีผู้พักที่ยังมีชีวิตและห้องไม่ถูกล็อก; ห้องว่างหรือถูกล็อกจะล้มเหลว การสังหารสำเร็จเผยห้องที่เกิดเหตุ แต่ไม่บอกชื่อเหยื่อ" },
+    en: { action: "Select a room on the map, then confirm. In a five-player game, select two distinct rooms on turn two.", note: "Both rooms can kill living occupants if unlocked. Empty or locked rooms fail. A successful murder reveals the room, not the victim's name." },
   },
   WITNESS: {
-    th: { action: "หลังนักฆ่าเลือกเป้าหมาย ให้แตะชั้นหรือห้องบนชั้นนั้น แล้วกดยืนยัน", note: "หากชั้นที่นักฆ่าเลือกตรงกับชั้นที่ตรวจ จะรู้ว่าชั้นที่นักฆ่าพักสูงกว่า ต่ำกว่า หรือชั้นเดียวกัน; หากไม่ตรงจะไม่ได้เบาะแส" },
-    en: { action: "After the Assassin chooses a target, select a floor or room on that floor, then confirm.", note: "If the floor targeted by the Assassin matches your chosen floor, learn whether the Assassin lives above, below, or on that floor. Otherwise, receive no direction." },
+    th: { action: "หลังนักฆ่าเลือกเป้าหมาย ให้แตะชั้นหรือห้องบนชั้นนั้น แล้วกดยืนยัน", note: "หากชั้นที่นักฆ่าเลือกตรงกับชั้นที่ตรวจอย่างน้อยหนึ่งห้อง จะรู้ว่าชั้นที่นักฆ่าพักสูงกว่า ต่ำกว่า หรือชั้นเดียวกัน; หากไม่ตรงจะไม่ได้เบาะแส" },
+    en: { action: "After the Assassin chooses a target, select a floor or room on that floor, then confirm.", note: "If at least one targeted room is on your chosen floor, learn whether the Assassin lives above, below, or on that floor. Otherwise, receive no direction." },
   },
 };
 
@@ -52,8 +52,8 @@ export function RoleBook({ language }: { language: Language }) {
   const en = language === "en";
   return <section aria-labelledby="role-book-title">
     <h2 id="role-book-title" className="font-serif text-2xl text-[#d9b66f]">{en ? "Role Book" : "คู่มือบทบาท · Role Book"}</h2>
-    <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Each role is unique. Every game has one Assassin and one Accomplice; the remaining players receive different Innocent roles. The order below is the skill order." : "แต่ละบทบาทมีได้เพียงคนเดียว ทุกเกมมีนักฆ่า 1 คนและผู้สมรู้ร่วมคิด 1 คน ที่เหลือสุ่มบทบาทฝ่ายผู้บริสุทธิ์ไม่ซ้ำกัน ลำดับด้านล่างคือลำดับใช้สกิล"}</p>
-    <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "The Assassin and Accomplice privately know each other's identity and room. Other players know only their own secret information until their skills reveal more. Public characters give no clue about secret roles." : "นักฆ่าและผู้สมรู้ร่วมคิดรู้ชื่อและห้องของกันและกันเป็นข้อมูลลับ ผู้เล่นคนอื่นรู้ข้อมูลลับของตัวเองเท่านั้นจนกว่าสกิลจะเผยเพิ่ม ตัวละครสาธารณะไม่บอกบทบาทลับ"}</p>
+    <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Each role is unique. Five-player games have one Assassin and four different Innocent roles, with no Accomplice. Games with six or more players add one Accomplice. The order below is the skill order." : "แต่ละบทบาทมีได้เพียงคนเดียว เกม 5 คนมีนักฆ่า 1 คนกับผู้บริสุทธิ์ 4 บทบาท ไม่มีผู้สมรู้ร่วมคิด เกมตั้งแต่ 6 คนขึ้นไปจึงมีผู้สมรู้ร่วมคิด 1 คน ลำดับด้านล่างคือลำดับใช้สกิล"}</p>
+    <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "When present, the Assassin and Accomplice privately know each other's identity and room. Other players know only their own secret information until their skills reveal more. Public characters give no clue about secret roles." : "เมื่อมีผู้สมรู้ร่วมคิด เขาและนักฆ่าจะรู้ชื่อและห้องของกันและกันเป็นข้อมูลลับ ผู้เล่นคนอื่นรู้ข้อมูลลับของตัวเองเท่านั้นจนกว่าสกิลจะเผยเพิ่ม ตัวละครสาธารณะไม่บอกบทบาทลับ"}</p>
     <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Each interactive skill turn uses the host's discussion time setting. Choose a target and confirm. Clue, murdered, and opened rooms cannot be targeted; a floor or column needs at least one eligible room. Dead or blacked-out players skip their skill." : "สกิลที่ต้องกดใช้มีเวลาเท่ากับเวลาพูดคุยที่เจ้าของห้องตั้งไว้ เลือกเป้าหมายแล้วกดยืนยัน ห้องร่องรอย ห้องฆาตกรรม และห้องที่เปิดแล้วเลือกไม่ได้; ชั้นหรือแนวต้องมีห้องที่เลือกได้อย่างน้อยหนึ่งห้อง ผู้ที่ตายหรืออยู่บนชั้นไฟดับจะข้ามคิว"}</p>
     <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Living players can use the public chat during discussion. Living Murderers can use their private team chat while a Murderer skill turn is active; open private information to see it. Chat closes when that phase or turn ends." : "ผู้เล่นที่ยังมีชีวิตแชทสาธารณะได้ในช่วงพูดคุย ฝ่ายฆาตกรที่ยังมีชีวิตแชทลับกันได้ระหว่างเทิร์นใช้สกิลของฝ่ายฆาตกร โดยเปิดข้อมูลลับเพื่อดูแชท เมื่อหมดช่วงหรือหมดเทิร์นจะส่งข้อความไม่ได้"}</p>
     <div className="mt-5 grid gap-4 sm:grid-cols-2">

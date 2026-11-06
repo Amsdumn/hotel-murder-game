@@ -10,6 +10,7 @@ import { acceptNewerLobbyState, connectLobbySocket, forgetLobbyIdentity, lobbyEr
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
 import type { GameResultState, PrivatePlayerState, PublicGameState, VersionedTeamState } from "@/types/game";
 import { createActionId } from "@/lib/action-id";
+import { requiredInnocentRoleCount } from "@/lib/game-balance";
 import { acceptNewerGameState } from "@/lib/game-state-version";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { roleNames, roleNamesEn } from "@/components/role-portrait";
@@ -240,15 +241,15 @@ export function LobbyScreen({ code }: { code: string }) {
                     {[5, 6, 7, 8, 9, 10].map((count) => <MenuItem key={count} value={count}>{count} {en ? "players" : "คน"}</MenuItem>)}
                   </TextField>
                   <TextField size="small" type="number" fullWidth label={en ? "Discussion time (seconds)" : "เวลาพูดคุย (วินาที)"} value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy} slotProps={{ htmlInput: { min: 30, max: 600 } }} />
-                  <InnocentRoleSettings selected={isHost ? selectedInnocentRoles : view.selectedInnocentRoles} requiredCount={Math.max(0, (isHost ? playerLimit : view.playerLimit) - 2)} onToggle={isHost && !busy ? (role) => setSelectedInnocentRoles((roles) => roles.includes(role) ? roles.filter((item) => item !== role) : roles.length >= playerLimit - 2 ? roles : [...roles, role]) : undefined} />
-                  {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length || selectedInnocentRoles.length > playerLimit - 2} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds, selectedInnocentRoles })}>{en ? "Save settings" : "บันทึกการตั้งค่า"}</Button>}
+                  <InnocentRoleSettings selected={isHost ? selectedInnocentRoles : view.selectedInnocentRoles} requiredCount={requiredInnocentRoleCount(isHost ? playerLimit : view.playerLimit)} onToggle={isHost && !busy ? (role) => setSelectedInnocentRoles((roles) => roles.includes(role) ? roles.filter((item) => item !== role) : roles.length >= requiredInnocentRoleCount(playerLimit) ? roles : [...roles, role]) : undefined} />
+                  {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length || selectedInnocentRoles.length > requiredInnocentRoleCount(playerLimit)} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds, selectedInnocentRoles })}>{en ? "Save settings" : "บันทึกการตั้งค่า"}</Button>}
                 </Stack>
               </div>}
             </Paper>
             <Paper className="border! border-[#d9b66f]/20! bg-[#211c1c]/95! p-5! sm:p-7!">
               <h2 className="font-serif text-xl">{en ? "Game status" : "สถานะเกม"}</h2>
               <p className="mt-3 text-sm leading-7 text-[#c6bdb1]">{en ? "At least five players must join, and everyone must be ready." : "ต้องมีผู้เล่นอย่างน้อย 5 คน และทุกคนกดพร้อม"}</p>
-              <p className="mt-4 text-sm text-[#d9b66f]">{settingsDirty ? en ? "Save your room settings before starting" : "บันทึกการตั้งค่าห้องก่อนเริ่มเกม" : view?.canStart ? en ? "Everyone is ready and the roles are set" : "ทุกคนพร้อมและเลือกบทบาทครบแล้ว" : view && view.players.length >= 5 && view.selectedInnocentRoles.length !== view.playerLimit - 2 ? en ? `Save ${view.playerLimit - 2} Innocent roles to start` : `เลือกและบันทึกบทบาทผู้บริสุทธิ์ ${view.playerLimit - 2} บทบาทก่อนเริ่มเกม` : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
+              <p className="mt-4 text-sm text-[#d9b66f]">{settingsDirty ? en ? "Save your room settings before starting" : "บันทึกการตั้งค่าห้องก่อนเริ่มเกม" : view?.canStart ? en ? "Everyone is ready and the roles are set" : "ทุกคนพร้อมและเลือกบทบาทครบแล้ว" : view && view.players.length >= 5 && view.selectedInnocentRoles.length !== requiredInnocentRoleCount(view.playerLimit) ? en ? `Save ${requiredInnocentRoleCount(view.playerLimit)} Innocent roles to start` : `เลือกและบันทึกบทบาทผู้บริสุทธิ์ ${requiredInnocentRoleCount(view.playerLimit)} บทบาทก่อนเริ่มเกม` : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
               {isHost && view?.canStart && <Button className="mt-4!" fullWidth variant="contained" disabled={busy || !connected || settingsDirty} onClick={() => void (async () => { setBusy(true); const response = await requestLobby<{ version: number }>(socketRef.current!, "game:start", { actionId: createActionId(), expectedVersion: view.version }); if (!response.ok) setError(lobbyErrorMessage(response.error, language)); setBusy(false); })()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
             </Paper>
           </aside>

@@ -34,10 +34,10 @@ describe("gameplay setup and skills", () => {
   });
 
   it("randomly assigns only the innocent roles selected by the host", () => {
-    const selected = ["WITNESS", "DETECTIVE", "HOUSEKEEPER"] as const;
+    const selected = ["WITNESS", "DETECTIVE", "HOUSEKEEPER", "LOCKSMITH"] as const;
     const game = createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, [...selected]).state;
     expect(game.players.filter((player) => player.team === "INNOCENT").map((player) => player.role).sort()).toEqual([...selected].sort());
-    expect(game.players.filter((player) => player.team === "MURDERER").map((player) => player.role).sort()).toEqual(["ACCOMPLICE", "KILLER"]);
+    expect(game.players.filter((player) => player.team === "MURDERER").map((player) => player.role).sort()).toEqual(["KILLER"]);
     expect(() => createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, ["WITNESS"])).toThrow();
   });
 
@@ -45,9 +45,47 @@ describe("gameplay setup and skills", () => {
     const pool = ["WITNESS", "DETECTIVE", "HOUSEKEEPER", "LOCKSMITH", "ELECTRICIAN"] as const;
     const game = createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, [...pool]).state;
     const assigned = game.players.filter((player) => player.team === "INNOCENT").map((player) => player.role);
-    expect(assigned).toHaveLength(3);
+    expect(assigned).toHaveLength(4);
     expect(assigned.every((role) => pool.includes(role as typeof pool[number]))).toBe(true);
-    expect(new Set(assigned).size).toBe(3);
+    expect(new Set(assigned).size).toBe(4);
+  });
+
+  it("kills occupants in both selected rooms on turn two of a five-player game", () => {
+    const initial = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;
+    const players: GameEngineState["players"] = [
+      { id: "killer", displayName: "Killer", seatIndex: 0, role: "KILLER", team: "MURDERER", roomNumber: 201, isAlive: true },
+      { id: "first", displayName: "First", seatIndex: 1, role: "DETECTIVE", team: "INNOCENT", roomNumber: 101, isAlive: true },
+      { id: "second", displayName: "Second", seatIndex: 2, role: "HOUSEKEEPER", team: "INNOCENT", roomNumber: 102, isAlive: true },
+      { id: "third", displayName: "Third", seatIndex: 3, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 301, isAlive: true },
+      { id: "fourth", displayName: "Fourth", seatIndex: 4, role: "ELECTRICIAN", team: "INNOCENT", roomNumber: 401, isAlive: true },
+    ];
+    const state: GameEngineState = { ...initial, players, phase: "SKILL_PHASE", turn: 2, activePlayerId: "killer", usedSkillPlayerIds: players.slice(1).map((player) => player.id), crimeRooms: [103] };
+    expect(() => performSkill(state, "killer", 101, 1000, 180)).toThrow("Two distinct rooms required");
+    expect(() => performSkill(state, "killer", [101, 101], 1000, 180)).toThrow("Two distinct rooms required");
+    const result = performSkill(state, "killer", [101, 102], 1000, 180);
+    expect(result.state.players.filter((player) => !player.isAlive).map((player) => player.id)).toEqual(["first", "second"]);
+    expect(result.publicEvents.filter((event) => event.type === "MURDER_OCCURRED")).toHaveLength(2);
+    expect(projectPrivatePlayerState(result.state, "killer").privateResults).toContain("ห้อง 101: ลอบสังหารสำเร็จ");
+    expect(projectPrivatePlayerState(result.state, "killer").privateResults).toContain("ห้อง 102: ลอบสังหารสำเร็จ");
+  });
+
+  it("defers both turn-two murders until the Witness has checked a targeted floor", () => {
+    const initial = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;
+    const players: GameEngineState["players"] = [
+      { id: "killer", displayName: "Killer", seatIndex: 0, role: "KILLER", team: "MURDERER", roomNumber: 201, isAlive: true },
+      { id: "first", displayName: "First", seatIndex: 1, role: "DETECTIVE", team: "INNOCENT", roomNumber: 101, isAlive: true },
+      { id: "second", displayName: "Second", seatIndex: 2, role: "HOUSEKEEPER", team: "INNOCENT", roomNumber: 102, isAlive: true },
+      { id: "witness", displayName: "Witness", seatIndex: 3, role: "WITNESS", team: "INNOCENT", roomNumber: 301, isAlive: true },
+      { id: "fourth", displayName: "Fourth", seatIndex: 4, role: "ELECTRICIAN", team: "INNOCENT", roomNumber: 401, isAlive: true },
+    ];
+    const state: GameEngineState = { ...initial, players, phase: "SKILL_PHASE", turn: 2, activePlayerId: "killer", usedSkillPlayerIds: ["first", "second", "fourth"], crimeRooms: [103] };
+    const chosen = performSkill(state, "killer", [101, 102], 1000, 180);
+    expect(chosen.state.players.every((player) => player.isAlive)).toBe(true);
+    expect(chosen.state.pendingAssassinationRooms).toEqual([101, 102]);
+    const result = performSkill(chosen.state, "witness", 1, 2000, 180);
+    expect(projectPrivatePlayerState(result.state, "witness").privateResults).toContain("ทิศทางชั้นนักฆ่า: ABOVE");
+    expect(result.state.players.filter((player) => !player.isAlive).map((player) => player.id)).toEqual(["first", "second"]);
+    expect(result.publicEvents.filter((event) => event.type === "MURDER_OCCURRED")).toHaveLength(2);
   });
 
   it("keeps seven floors for an existing game without a stored floor count", () => {
@@ -349,7 +387,7 @@ describe("gameplay setup and skills", () => {
   });
 
   it("consumes the Accomplice's turn when selecting a dead player", () => {
-    const initial = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 31000, choose()).state;
+    const initial = advancePrologue(createInitialGame("ABC234", [...lobbyPlayers, { id: "p5", displayName: "Player 5", seatIndex: 5 }], 3, choose(), 1000).state, 31000, choose()).state;
     const accomplice = initial.players.find((player) => player.role === "ACCOMPLICE")!;
     const killer = initial.players.find((player) => player.role === "KILLER")!;
     const target = initial.players.find((player) => player.team === "INNOCENT")!;
@@ -369,7 +407,7 @@ describe("gameplay setup and skills", () => {
   });
 
   it("sends a living target's floor to the Assassin as an Accomplice report", () => {
-    const initial = advancePrologue(createInitialGame("ABC234", lobbyPlayers, 3, choose(), 1000).state, 31000, choose()).state;
+    const initial = advancePrologue(createInitialGame("ABC234", [...lobbyPlayers, { id: "p5", displayName: "Player 5", seatIndex: 5 }], 3, choose(), 1000).state, 31000, choose()).state;
     const accomplice = initial.players.find((player) => player.role === "ACCOMPLICE")!;
     const killer = initial.players.find((player) => player.role === "KILLER")!;
     const target = initial.players.find((player) => player.team === "INNOCENT")!;

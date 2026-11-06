@@ -43,7 +43,7 @@ describe("Socket.IO lobby", () => {
     const service = new LobbyService(store);
     const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
     const identities = [host];
-    for (let index = 1; index < 5; index += 1) {
+    for (let index = 1; index < 6; index += 1) {
       const view = await service.preview(host.code);
       identities.push(await service.join({ code: host.code, displayName: `Guest ${index}`, actionId: crypto.randomUUID(), expectedVersion: view.version }));
     }
@@ -221,7 +221,7 @@ describe("Socket.IO lobby", () => {
       if (!ready.ok) return;
       version = ready.data.version;
     }
-    const configured = await host.emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    const configured = await host.emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS", "DETECTIVE"] });
     expect(configured.ok).toBe(true);
     if (!configured.ok) return;
     version = configured.data.version;
@@ -256,7 +256,7 @@ describe("Socket.IO lobby", () => {
       if (!ready.ok) return;
       version = ready.data.version;
     }
-    const configured = await members[0].emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    const configured = await members[0].emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS", "DETECTIVE"] });
     expect(configured.ok).toBe(true);
     if (!configured.ok) return;
     version = configured.data.version;

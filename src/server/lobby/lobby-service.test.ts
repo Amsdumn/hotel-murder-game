@@ -232,7 +232,7 @@ describe("LobbyService", () => {
       await service.setReady(playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, ready: true });
     }
     const beforeRoles = await service.preview(host.view.code);
-    await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS", "DETECTIVE"] });
     expect((await service.preview(host.view.code)).canStart).toBe(true);
     await service.setConnected(host.playerId, false);
     expect((await service.preview(host.view.code)).canStart).toBe(false);
@@ -255,11 +255,13 @@ describe("LobbyService", () => {
     expect(view.canStart).toBe(false);
     await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["DETECTIVE", "DETECTIVE"] })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["KILLER", "DETECTIVE", "WITNESS"] })).rejects.toMatchObject({ code: "INVALID_INPUT" });
-    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["DETECTIVE", "WITNESS", "HOUSEKEEPER", "LOCKSMITH"] })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["DETECTIVE", "WITNESS", "HOUSEKEEPER", "LOCKSMITH", "ELECTRICIAN"] })).rejects.toMatchObject({ code: "INVALID_INPUT" });
     view = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 6, discussionSeconds: 180, selectedInnocentRoles: ["DETECTIVE", "WITNESS", "HOUSEKEEPER", "LOCKSMITH"] });
     expect(view.selectedInnocentRoles).toEqual(["DETECTIVE", "WITNESS", "HOUSEKEEPER", "LOCKSMITH"]);
     expect(view.canStart).toBe(true);
-    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180 })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    view = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180 });
+    expect(view.canStart).toBe(true);
+    view = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 6, discussionSeconds: 180 });
     const sixth = await service.join({ code: host.code, displayName: "Sixth", actionId: crypto.randomUUID(), expectedVersion: view.version });
     expect(sixth.view.canStart).toBe(false);
     const ready = await service.setReady(sixth.playerId, { actionId: crypto.randomUUID(), expectedVersion: sixth.view.version, ready: true });

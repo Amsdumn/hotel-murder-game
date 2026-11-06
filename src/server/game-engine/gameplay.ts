@@ -4,6 +4,7 @@ import { advanceSkillTurn, applyInitialCrime, resolveAssassination } from "./hid
 import { beginDiscussion } from "./phases";
 import { appendPrivateAction, gameFloorCount, gameRooms, hotelRooms, isHotelRoom, isSelectableRoom, type EnginePlayer, type EngineResult, type GameEngineState, type PrivateGameEvent, type PublicGameEvent } from "./state";
 import { AVATAR_ORDER } from "../../lib/avatars";
+import { hasAccomplice, requiredInnocentRoleCount } from "../../lib/game-balance";
 
 type RandomIndex = (maximum: number) => number;
 export const PROLOGUE_DURATION_MS = 30_000;
@@ -22,10 +23,10 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   if (seats.length < 5 || seats.length > 10 || new Set(seats.map((seat) => seat.id)).size !== seats.length) throw new Error("Invalid player seats");
   if (seats.length > AVATAR_ORDER.length) throw new Error("Not enough public characters");
   const innocentRoles = selectedInnocentRoles ?? ROLE_ORDER.filter((role) => role !== "KILLER" && role !== "ACCOMPLICE");
-  if (selectedInnocentRoles && (innocentRoles.length < seats.length - 2 || new Set(innocentRoles).size !== innocentRoles.length || innocentRoles.some((role) => role === "KILLER" || role === "ACCOMPLICE" || !ROLE_ORDER.includes(role)))) throw new Error("Invalid innocent role selection");
-  const needed = seats.length - 2;
+  if (selectedInnocentRoles && (innocentRoles.length < requiredInnocentRoleCount(seats.length) || new Set(innocentRoles).size !== innocentRoles.length || innocentRoles.some((role) => role === "KILLER" || role === "ACCOMPLICE" || !ROLE_ORDER.includes(role)))) throw new Error("Invalid innocent role selection");
+  const needed = requiredInnocentRoleCount(seats.length);
   if (needed > innocentRoles.length) throw new Error("Not enough innocent roles");
-  const roles: Role[] = shuffle(["KILLER", "ACCOMPLICE", ...shuffle(innocentRoles, choose).slice(0, needed)], choose);
+  const roles: Role[] = shuffle(["KILLER", ...(hasAccomplice(seats.length) ? ["ACCOMPLICE" as Role] : []), ...shuffle(innocentRoles, choose).slice(0, needed)], choose);
   const floorCount = seats.length === 5 ? 5 : seats.length === 10 ? 9 : 7;
   const rooms = shuffle(hotelRooms(floorCount), choose);
   const avatars = shuffle(AVATAR_ORDER, choose);
@@ -68,17 +69,16 @@ function requireFloor(state: GameEngineState, value: unknown): number {
 }
 
 function addPrivateResult(state: GameEngineState, recipientId: string, message: string): GameEngineState {
-  return { ...state, privateResultMessages: { ...state.privateResultMessages, [recipientId]: [...(state.privateResultMessages?.[recipientId] ?? []), message] } };
+  return { ...state, privateResultMessages: { ...state.privateResultMessages, [recipientId]: [...(state.privateResultMessages?.[recipientId] ?? []), message].slice(-100) } };
 }
 
 function resolvePendingAssassination(state: GameEngineState): EngineResult {
-  const target = state.pendingAssassinationRoom;
+  const targets = state.pendingAssassinationRooms ?? (state.pendingAssassinationRoom === undefined ? [] : [state.pendingAssassinationRoom]);
   const killer = state.players.find((player) => player.role === "KILLER");
-  if (target === undefined || !killer) return { state, publicEvents: [], privateEvents: [] };
-  const resolved = resolveAssassination({ ...state, activePlayerId: killer.id, usedSkillPlayerIds: state.usedSkillPlayerIds.filter((id) => id !== killer.id), pendingAssassinationRoom: undefined }, target);
-  const result = resolved.privateEvents.find((event) => event.type === "ASSASSINATION_RESULT");
-  let next: GameEngineState = { ...resolved.state, activePlayerId: state.activePlayerId, usedSkillPlayerIds: state.usedSkillPlayerIds, pendingAssassinationRoom: undefined };
-  if (result?.type === "ASSASSINATION_RESULT") next = addPrivateResult(next, killer.id, result.success ? "ลอบสังหารสำเร็จ" : "ลอบสังหารไม่สำเร็จ");
+  if (!targets.length || !killer) return { state, publicEvents: [], privateEvents: [] };
+  const resolved = resolveAssassination({ ...state, activePlayerId: killer.id, usedSkillPlayerIds: state.usedSkillPlayerIds.filter((id) => id !== killer.id), pendingAssassinationRoom: undefined, pendingAssassinationRooms: undefined }, targets);
+  let next: GameEngineState = { ...resolved.state, activePlayerId: state.activePlayerId, usedSkillPlayerIds: state.usedSkillPlayerIds, pendingAssassinationRoom: undefined, pendingAssassinationRooms: undefined };
+  for (const result of resolved.privateEvents.filter((event) => event.type === "ASSASSINATION_RESULT")) next = addPrivateResult(next, killer.id, `${targets.length > 1 ? `ห้อง ${result.roomNumber}: ` : ""}${result.success ? "ลอบสังหารสำเร็จ" : "ลอบสังหารไม่สำเร็จ"}`);
   if (resolved.publicEvents.length) next = { ...next, publicHistory: [...(state.publicHistory ?? []), ...resolved.publicEvents] };
   return { state: next, publicEvents: resolved.publicEvents, privateEvents: resolved.privateEvents };
 }
@@ -92,19 +92,21 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
   const privateEvents: PrivateGameEvent[] = [];
   let publicEvents: EngineResult["publicEvents"] = [];
   if (actor.role === "KILLER") {
-    const room = requireSelectableRoom(state, target);
-    const selectedState = { ...state, assassinationTargetRoom: room };
-    const occupant = state.players.find((player) => player.roomNumber === room && player.isAlive);
+    const doubleStrike = state.players.length === 5 && !state.players.some((player) => player.role === "ACCOMPLICE") && state.turn === 2;
+    if (doubleStrike && (!Array.isArray(target) || target.length !== 2 || target[0] === target[1])) throw new Error("Two distinct rooms required");
+    if (!doubleStrike && Array.isArray(target)) throw new Error("One room required");
+    const rooms = (Array.isArray(target) ? target : [target]).map((room) => requireSelectableRoom(state, room));
+    const selectedState = { ...state, assassinationTargetRoom: rooms[0], assassinationTargetRooms: rooms };
+    const occupant = state.players.find((player) => rooms.includes(player.roomNumber) && player.isAlive && !state.lockedRooms.includes(player.roomNumber));
     const witness = state.players.find((player) => player.role === "WITNESS" && player.isAlive && !state.usedSkillPlayerIds.includes(player.id) && !state.darkFloors?.includes(Math.floor(player.roomNumber / 100)));
-    if (occupant && witness && !state.lockedRooms.includes(room)) {
-      next = addPrivateResult({ ...selectedState, usedSkillPlayerIds: [...state.usedSkillPlayerIds, playerId], pendingAssassinationRoom: room }, playerId, "เลือกเป้าหมายแล้ว กำลังประมวลผล");
+    if (occupant && witness) {
+      next = addPrivateResult({ ...selectedState, usedSkillPlayerIds: [...state.usedSkillPlayerIds, playerId], pendingAssassinationRoom: rooms[0], pendingAssassinationRooms: rooms }, playerId, "เลือกเป้าหมายแล้ว กำลังประมวลผล");
     } else {
-      const assassination = resolveAssassination(selectedState, room);
+      const assassination = resolveAssassination(selectedState, rooms);
       next = assassination.state;
       privateEvents.push(...assassination.privateEvents);
       publicEvents = assassination.publicEvents;
-      const result = assassination.privateEvents.find((event) => event.type === "ASSASSINATION_RESULT");
-      if (result?.type === "ASSASSINATION_RESULT") next = addPrivateResult(next, playerId, result.success ? "ลอบสังหารสำเร็จ" : "ลอบสังหารไม่สำเร็จ");
+      for (const result of assassination.privateEvents.filter((event) => event.type === "ASSASSINATION_RESULT")) next = addPrivateResult(next, playerId, `${rooms.length > 1 ? `ห้อง ${result.roomNumber}: ` : ""}${result.success ? "ลอบสังหารสำเร็จ" : "ลอบสังหารไม่สำเร็จ"}`);
       if (publicEvents.length) next = { ...next, publicHistory: [...(state.publicHistory ?? []), ...publicEvents] };
     }
   } else {
@@ -129,7 +131,7 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
       const killer = state.players.find((player) => player.role === "KILLER");
       if (!killer) throw new Error("Killer is missing");
       const direction = Math.floor(killer.roomNumber / 100) > floor ? "ABOVE" : Math.floor(killer.roomNumber / 100) < floor ? "BELOW" : "SAME_FLOOR";
-      message = state.assassinationTargetRoom !== undefined && Math.floor(state.assassinationTargetRoom / 100) === floor ? `ทิศทางชั้นนักฆ่า: ${direction}` : "ไม่พบเบาะแสทิศทาง";
+      message = (state.assassinationTargetRooms ?? (state.assassinationTargetRoom === undefined ? [] : [state.assassinationTargetRoom])).some((room) => Math.floor(room / 100) === floor) ? `ทิศทางชั้นนักฆ่า: ${direction}` : "ไม่พบเบาะแสทิศทาง";
     } else if (actor.role === "DETECTIVE") {
       const room = requireSelectableRoom(state, target);
       const occupant = state.players.find((player) => player.roomNumber === room && player.isAlive);
@@ -148,7 +150,7 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
     next = addPrivateResult({ ...next, usedSkillPlayerIds: [...next.usedSkillPlayerIds, playerId] }, playerId, message);
     privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: playerId, message });
   }
-  if (actor.role === "WITNESS" && next.pendingAssassinationRoom !== undefined) {
+  if (actor.role === "WITNESS" && (next.pendingAssassinationRooms?.length || next.pendingAssassinationRoom !== undefined)) {
     const resolved = resolvePendingAssassination(next);
     next = resolved.state;
     publicEvents.push(...resolved.publicEvents);
