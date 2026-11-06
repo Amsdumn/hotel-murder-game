@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { Alert, AlertTitle, Button, Chip, CircularProgress, MenuItem, Paper, Stack, TextField } from "@mui/material";
+import { Alert, AlertTitle, Button, Chip, CircularProgress, IconButton, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import type { Socket } from "socket.io-client";
 import { acceptNewerLobbyState, connectLobbySocket, forgetLobbyIdentity, lobbyErrorMessage, readLobbyToken, requestLobby, saveGuestProfile, saveLobbyIdentity } from "@/lib/lobby-client";
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
@@ -252,7 +252,7 @@ export function LobbyScreen({ code }: { code: string }) {
                     </div>
                   ))}
                 </div>
-                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 256 } }} /><Button type="submit" variant="contained" disabled={busy || !connected || draftName.trim().length < 2}>{en ? "Save name" : "บันทึกชื่อ"}</Button><Button variant="text" onClick={() => setEditingName(false)}>{en ? "Cancel" : "ยกเลิก"}</Button></form>}
+                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 256 } }} /><IconButton type="submit" color="primary" size="small" disabled={busy || !connected || draftName.trim().length < 2} aria-label={en ? "Save name" : "บันทึกชื่อ"} title={en ? "Save name" : "บันทึกชื่อ"}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4L19 6" /></svg></IconButton><IconButton type="button" color="error" size="small" onClick={() => setEditingName(false)} aria-label={en ? "Cancel" : "ยกเลิก"} title={en ? "Cancel" : "ยกเลิก"}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5 19 19M19 5 5 19" /></svg></IconButton></form>}
                 <Button className="mt-6!" variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
                   {self?.ready ? en ? "Not ready" : "ยกเลิกความพร้อม" : en ? "Ready" : "พร้อมแล้ว"}
                 </Button>
