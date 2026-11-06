@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: hotel-murder-game
+    name: who-is-murdered
     runtime: node
     plan: free
     region: virginia
