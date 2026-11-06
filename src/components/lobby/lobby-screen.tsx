@@ -7,7 +7,7 @@ import dynamic from "next/dynamic";
 import { Alert, AlertTitle, Button, Chip, CircularProgress, IconButton, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import type { Socket } from "socket.io-client";
 import { acceptNewerLobbyState, connectLobbySocket, forgetLobbyIdentity, lobbyErrorMessage, readLobbyToken, requestLobby, saveGuestProfile, saveLobbyIdentity } from "@/lib/lobby-client";
-import type { LobbyIdentity, LobbyView } from "@/types/lobby";
+import type { InnocentRoleMode, LobbyIdentity, LobbyView } from "@/types/lobby";
 import type { GameResultState, PrivatePlayerState, PublicGameState, VersionedTeamState } from "@/types/game";
 import { createActionId } from "@/lib/action-id";
 import { requiredInnocentRoleCount } from "@/lib/game-balance";
@@ -17,18 +17,27 @@ import { addLocalTestBots, canUseLocalBots, localBotCount } from "@/lib/local-te
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { roleNames, roleNamesEn } from "@/components/role-portrait";
 import { INNOCENT_ROLES, type Role } from "@/types/game";
+import type { Language } from "@/lib/language";
 
-export function InnocentRoleSettings({ selected, requiredCount, onToggle }: { selected: Role[]; requiredCount: number; onToggle?: (role: Role) => void }) {
-  const en = useLanguage() === "en";
+export function InnocentRoleSettings({ mode, language, selected, requiredCount, onModeChange, onToggle }: { mode: InnocentRoleMode; language: Language; selected: Role[]; requiredCount: number; onModeChange?: (mode: InnocentRoleMode) => void; onToggle?: (role: Role) => void }) {
+  const en = language === "en";
   return <section aria-label={en ? "Innocent roles" : "บทบาทฝ่ายผู้บริสุทธิ์"}>
     <h3 className="text-sm font-semibold text-[#f2d79c]">{en ? "Choose Innocent roles" : "เลือกบทบาทฝ่ายผู้บริสุทธิ์"}</h3>
-    <p className="mt-1 text-xs leading-5 text-[#c6bdb1]">{en ? `Select ${requiredCount} roles for the maximum player count (${selected.length} selected). The Assassin is always included; the Accomplice joins games with six or more players. The remaining roles are drawn randomly from your selection.` : `เลือก ${requiredCount} บทบาทตามจำนวนผู้เล่นสูงสุด (เลือกแล้ว ${selected.length}) นักฆ่าอยู่ในเกมเสมอ ส่วนผู้สมรู้ร่วมคิดจะเข้าร่วมเมื่อมีผู้เล่นตั้งแต่ 6 คนขึ้นไป ระบบสุ่มบทบาทที่เหลือจากชุดที่เลือก`}</p>
-    <div className="mt-3 grid grid-cols-2 gap-2">{INNOCENT_ROLES.map((role) => {
+    <div role="radiogroup" aria-label={en ? "Innocent role selection mode" : "วิธีเลือกบทบาทผู้บริสุทธิ์"} className="mt-3 grid gap-2 sm:grid-cols-2">
+      {(["CUSTOM", "RANDOM"] as const).map((option) => <label key={option} className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-3 text-sm ${mode === option ? "border-[#f2d79c] bg-[#493947] text-[#f2d79c]" : "border-[#d9b66f]/25 bg-[#29202b] text-[#e8dfd5]"} ${!onModeChange ? "cursor-default opacity-75" : ""}`}>
+        <input type="radio" name="innocent-role-mode" value={option} checked={mode === option} disabled={!onModeChange} onChange={() => onModeChange?.(option)} className="accent-[#f2d79c]" />
+        {option === "CUSTOM" ? en ? "Choose roles yourself" : "กำหนดเอง" : en ? "Let the system choose" : "สุ่มตามระบบ"}
+      </label>)}
+    </div>
+    {mode === "CUSTOM" ? <>
+      <p className="mt-3 text-xs leading-5 text-[#c6bdb1]">{en ? `Select ${requiredCount} roles for the maximum player count (${selected.length} selected). The Assassin is always included; the Accomplice joins games with six or more players. The remaining roles are drawn randomly from your selection.` : `เลือก ${requiredCount} บทบาทตามจำนวนผู้เล่นสูงสุด (เลือกแล้ว ${selected.length}) นักฆ่าอยู่ในเกมเสมอ ส่วนผู้สมรู้ร่วมคิดจะเข้าร่วมเมื่อมีผู้เล่นตั้งแต่ 6 คนขึ้นไป ระบบสุ่มบทบาทที่เหลือจากชุดที่เลือก`}</p>
+      <div className="mt-3 grid grid-cols-2 gap-2">{INNOCENT_ROLES.map((role) => {
       const active = selected.includes(role);
       const className = `rounded-lg border px-3 py-2 text-left text-sm ${active ? "border-[#f2d79c] bg-[#493947] text-[#f2d79c]" : "border-[#d9b66f]/25 bg-[#29202b] text-[#e8dfd5]"}`;
       return onToggle ? <button key={role} type="button" aria-pressed={active} disabled={!active && selected.length >= requiredCount} className={`${className} enabled:hover:border-[#f2d79c] focus-visible:outline-2 focus-visible:outline-[#f2d79c] disabled:cursor-not-allowed disabled:opacity-45`} onClick={() => onToggle(role)}>{en ? roleNamesEn[role] : roleNames[role]}</button>
         : <span key={role} className={className}>{en ? roleNamesEn[role] : roleNames[role]}</span>;
-    })}</div>
+      })}</div>
+    </> : <p className="mt-3 text-xs leading-5 text-[#c6bdb1]">{en ? "The system draws distinct Innocent roles when the game starts. The Assassin is always included; the Accomplice joins games with six or more players." : "ระบบจะสุ่มบทบาทผู้บริสุทธิ์ที่ไม่ซ้ำกันตอนเริ่มเกม นักฆ่าอยู่ในเกมเสมอ และผู้สมรู้ร่วมคิดจะเข้าร่วมเมื่อมีผู้เล่นตั้งแต่ 6 คนขึ้นไป"}</p>}
   </section>;
 }
 
@@ -66,6 +75,7 @@ export function LobbyScreen({ code }: { code: string }) {
   const [playerLimit, setPlayerLimit] = useState(10);
   const [discussionSeconds, setDiscussionSeconds] = useState(180);
   const [selectedInnocentRoles, setSelectedInnocentRoles] = useState<Role[]>([]);
+  const [innocentRoleMode, setInnocentRoleMode] = useState<InnocentRoleMode>("CUSTOM");
   const [gameState, setGameState] = useState<PublicGameState | null>(null);
   const [onlinePlayerIds, setOnlinePlayerIds] = useState<string[] | null>(null);
   const [privateState, setPrivateState] = useState<PrivatePlayerState | null>(null);
@@ -113,6 +123,7 @@ export function LobbyScreen({ code }: { code: string }) {
         setPlayerLimit(result.data.view.playerLimit);
         setDiscussionSeconds(result.data.view.discussionSeconds);
         setSelectedInnocentRoles(result.data.view.selectedInnocentRoles);
+        setInnocentRoleMode(result.data.view.innocentRoleMode);
         setError("");
       } finally {
         resuming = false;
@@ -169,7 +180,10 @@ export function LobbyScreen({ code }: { code: string }) {
     const result = await requestLobby<LobbyView>(socket, event, { ...payload, actionId: createActionId(), expectedVersion: view.version });
     if (result.ok) {
       setView((current) => acceptNewerLobbyState(current, result.data));
-      if (event === "lobby:configure") setSelectedInnocentRoles(result.data.selectedInnocentRoles);
+      if (event === "lobby:configure") {
+        setSelectedInnocentRoles(result.data.selectedInnocentRoles);
+        setInnocentRoleMode(result.data.innocentRoleMode);
+      }
       if (event === "lobby:rename") { saveGuestProfile(String(payload.displayName).trim()); setEditingName(false); }
     }
     else setError(lobbyErrorMessage(result.error, language));
@@ -178,7 +192,7 @@ export function LobbyScreen({ code }: { code: string }) {
 
   const self = view?.players.find((player) => player.id === playerId);
   const isHost = view?.hostPlayerId === playerId;
-  const settingsDirty = !!isHost && !!view && (playerLimit !== view.playerLimit || discussionSeconds !== view.discussionSeconds || selectedInnocentRoles.join(",") !== view.selectedInnocentRoles.join(","));
+  const settingsDirty = !!isHost && !!view && (playerLimit !== view.playerLimit || discussionSeconds !== view.discussionSeconds || innocentRoleMode !== view.innocentRoleMode || selectedInnocentRoles.join(",") !== view.selectedInnocentRoles.join(","));
   const visibleOnlinePlayerIds = (onlinePlayerIds ?? view?.players.filter((player) => player.connected).map((player) => player.id) ?? []).filter((id) => connected || id !== playerId);
 
   if (kicked) return <main className="flex min-h-screen items-center justify-center bg-[#12111c] px-5 text-[#f8f1e4]"><Paper className="max-w-md border! border-[#d9b66f]/30! bg-[#211c1c]! p-8! text-center"><h1 className="font-serif text-2xl">{en ? "You were removed from this room" : "คุณถูกนำออกจากห้องนี้"}</h1><p className="mt-3 text-sm text-[#c6bdb1]">{en ? "The host removed you before the game started." : "เจ้าของห้องนำคุณออกจากห้องพักก่อนเริ่มเกม"}</p><Button className="mt-6!" component={Link} href="/" variant="contained">{en ? "Back to home" : "กลับหน้าแรก"}</Button></Paper></main>;
@@ -207,7 +221,7 @@ export function LobbyScreen({ code }: { code: string }) {
             <div className="min-w-0 flex-1">
               <AlertTitle className="font-serif! text-xl! text-[#f2d79c]!">{en ? "Game status" : "สถานะเกม"}</AlertTitle>
               <p className="text-sm leading-6 text-[#e8ddcb]">{en ? "At least five players must join, and everyone must be ready." : "ต้องมีผู้เล่นอย่างน้อย 5 คน และทุกคนกดพร้อม"}</p>
-              <p className="mt-1 text-sm font-medium text-[#f2d79c]">{settingsDirty ? en ? "Save your room settings before starting" : "บันทึกการตั้งค่าห้องก่อนเริ่มเกม" : view?.canStart ? en ? "Everyone is ready and the roles are set" : "ทุกคนพร้อมและเลือกบทบาทครบแล้ว" : view && view.players.length >= 5 && view.selectedInnocentRoles.length !== requiredInnocentRoleCount(view.playerLimit) ? en ? `Save ${requiredInnocentRoleCount(view.playerLimit)} Innocent roles to start` : `เลือกและบันทึกบทบาทผู้บริสุทธิ์ ${requiredInnocentRoleCount(view.playerLimit)} บทบาทก่อนเริ่มเกม` : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
+              <p className="mt-1 text-sm font-medium text-[#f2d79c]">{settingsDirty ? en ? "Save your room settings before starting" : "บันทึกการตั้งค่าห้องก่อนเริ่มเกม" : view?.canStart ? en ? "Everyone is ready and the roles are set" : "ทุกคนพร้อมและกำหนดบทบาทแล้ว" : view && view.players.length >= 5 && view.innocentRoleMode === "CUSTOM" && view.selectedInnocentRoles.length !== requiredInnocentRoleCount(view.playerLimit) ? en ? `Save ${requiredInnocentRoleCount(view.playerLimit)} Innocent roles to start` : `เลือกและบันทึกบทบาทผู้บริสุทธิ์ ${requiredInnocentRoleCount(view.playerLimit)} บทบาทก่อนเริ่มเกม` : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
               <p className="mt-2 text-xs text-[#c6bdb1]">{en ? "Everyone's character is assigned when the game begins." : "ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม"}</p>
             </div>
             <Button variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
@@ -290,7 +304,7 @@ export function LobbyScreen({ code }: { code: string }) {
           <aside className="space-y-6">
             <Paper className="border! border-[#d9b66f]/20! bg-[#211c1c]/95! p-5! sm:p-7!">
               <h2 className="font-serif text-xl">{en ? "Room settings" : "ตั้งค่าห้อง"}</h2>
-              <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "The host sets the player limit, discussion time, and Innocent role pool before the game starts." : "เจ้าของห้องตั้งค่าจำนวนผู้เล่น เวลาพูดคุย และบทบาทฝ่ายผู้บริสุทธิ์ก่อนเริ่มเกม"}</p>
+              <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "The host sets the player limit, discussion time, and how Innocent roles are chosen before the game starts." : "เจ้าของห้องตั้งค่าจำนวนผู้เล่น เวลาพูดคุย และวิธีเลือกบทบาทฝ่ายผู้บริสุทธิ์ก่อนเริ่มเกม"}</p>
               {view && <div className="mt-5 space-y-4">
                 <Stack spacing={2}>
                   <TextField size="small" select fullWidth label={en ? "Maximum players" : "จำนวนผู้เล่นสูงสุด"} value={isHost ? playerLimit : view.playerLimit} onChange={(event) => setPlayerLimit(Number(event.target.value))} disabled={!isHost || busy}>
@@ -299,8 +313,8 @@ export function LobbyScreen({ code }: { code: string }) {
                   <TextField size="small" select fullWidth label={en ? "Discussion time" : "เวลาพูดคุย"} value={isHost ? discussionSeconds : view.discussionSeconds} onChange={(event) => setDiscussionSeconds(Number(event.target.value))} disabled={!isHost || busy}>
                     {Array.from({ length: 14 }, (_, index) => (index + 1) * 30).map((seconds) => <MenuItem key={seconds} value={seconds}>{seconds < 60 ? en ? `${seconds} seconds` : `${seconds} วินาที` : seconds % 60 === 0 ? en ? `${seconds / 60} minutes` : `${seconds / 60} นาที` : en ? `${Math.floor(seconds / 60)} min 30 sec` : `${Math.floor(seconds / 60)} นาที 30 วินาที`}</MenuItem>)}
                   </TextField>
-                  <InnocentRoleSettings selected={isHost ? selectedInnocentRoles : view.selectedInnocentRoles} requiredCount={requiredInnocentRoleCount(isHost ? playerLimit : view.playerLimit)} onToggle={isHost && !busy ? (role) => setSelectedInnocentRoles((roles) => roles.includes(role) ? roles.filter((item) => item !== role) : roles.length >= requiredInnocentRoleCount(playerLimit) ? roles : [...roles, role]) : undefined} />
-                  {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length || selectedInnocentRoles.length > requiredInnocentRoleCount(playerLimit)} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds, selectedInnocentRoles })}>{en ? "Save settings" : "บันทึกการตั้งค่า"}</Button>}
+                  <InnocentRoleSettings mode={isHost ? innocentRoleMode : view.innocentRoleMode} language={language} selected={isHost ? selectedInnocentRoles : view.selectedInnocentRoles} requiredCount={requiredInnocentRoleCount(isHost ? playerLimit : view.playerLimit)} onModeChange={isHost && !busy ? setInnocentRoleMode : undefined} onToggle={isHost && !busy ? (role) => setSelectedInnocentRoles((roles) => roles.includes(role) ? roles.filter((item) => item !== role) : roles.length >= requiredInnocentRoleCount(playerLimit) ? roles : [...roles, role]) : undefined} />
+                  {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length || (innocentRoleMode === "CUSTOM" && selectedInnocentRoles.length > requiredInnocentRoleCount(playerLimit))} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds, innocentRoleMode, selectedInnocentRoles })}>{en ? "Save settings" : "บันทึกการตั้งค่า"}</Button>}
                 </Stack>
               </div>}
             </Paper>

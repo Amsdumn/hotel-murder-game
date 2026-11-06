@@ -12,10 +12,13 @@ export interface LobbyView {
   hostPlayerId: string;
   playerLimit: number;
   discussionSeconds: number;
+  innocentRoleMode: InnocentRoleMode;
   selectedInnocentRoles: import("./game").Role[];
   canStart: boolean;
   players: LobbyPlayerView[];
 }
+
+export type InnocentRoleMode = "CUSTOM" | "RANDOM";
 
 export interface LobbyIdentity {
   code: string;

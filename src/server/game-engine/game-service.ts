@@ -43,8 +43,8 @@ export class GameService {
 
   async start(code: string, playerId: string, input: unknown): Promise<EngineResult> {
     const { record, actionId } = await this.record(code, playerId, input);
-    if (record.phase !== "LOBBY" || record.hostPlayerId !== playerId || record.players.length < 5 || !record.players.every((player) => player.ready && player.connected) || (record.selectedInnocentRoles !== undefined && record.selectedInnocentRoles.length !== requiredInnocentRoleCount(record.playerLimit))) throw new LobbyError("FORBIDDEN");
-    const result = createInitialGame(code, record.players, record.version + 1, undefined, undefined, record.selectedInnocentRoles);
+    if (record.phase !== "LOBBY" || record.hostPlayerId !== playerId || record.players.length < 5 || !record.players.every((player) => player.ready && player.connected) || (record.innocentRoleMode !== "RANDOM" && record.selectedInnocentRoles !== undefined && record.selectedInnocentRoles.length !== requiredInnocentRoleCount(record.playerLimit))) throw new LobbyError("FORBIDDEN");
+    const result = createInitialGame(code, record.players, record.version + 1, undefined, undefined, record.innocentRoleMode === "RANDOM" ? undefined : record.selectedInnocentRoles);
     return this.commit(record, actionId, result);
   }
 

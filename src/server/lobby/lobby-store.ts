@@ -17,6 +17,7 @@ export interface LobbyRecord {
   hostPlayerId: string;
   playerLimit: number;
   discussionSeconds: number;
+  innocentRoleMode?: import("../../types/lobby").InnocentRoleMode;
   selectedInnocentRoles?: import("../../types/game").Role[];
   players: LobbyPlayerRecord[];
   appliedActionIds: string[];

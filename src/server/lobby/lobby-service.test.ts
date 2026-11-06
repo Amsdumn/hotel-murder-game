@@ -283,4 +283,21 @@ describe("LobbyService", () => {
     const ready = await service.setReady(sixth.playerId, { actionId: crypto.randomUUID(), expectedVersion: sixth.view.version, ready: true });
     expect(ready.canStart).toBe(true);
   });
+
+  it("persists random mode and restores the custom pool when switching back", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    expect(host.view.innocentRoleMode).toBe("CUSTOM");
+    let view = await service.preview(host.code);
+    const roles = ["DETECTIVE", "WITNESS", "HOUSEKEEPER", "LOCKSMITH"];
+    view = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180, innocentRoleMode: "CUSTOM", selectedInnocentRoles: roles });
+    expect(view.selectedInnocentRoles).toEqual(roles);
+    view = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180, innocentRoleMode: "RANDOM" });
+    expect(view.innocentRoleMode).toBe("RANDOM");
+    expect((await service.preview(host.code)).selectedInnocentRoles).toEqual(roles);
+    view = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180, innocentRoleMode: "CUSTOM" });
+    expect(view.innocentRoleMode).toBe("CUSTOM");
+    expect(view.selectedInnocentRoles).toEqual(roles);
+    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180, innocentRoleMode: "OTHER" })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
 });
