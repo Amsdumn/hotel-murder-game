@@ -2,7 +2,7 @@
 
 ## Hotel and players
 
-The hotel has seven floors and three rooms per floor: `101–103`, `201–203`, `301–303`, `401–403`, `501–503`, `601–603`, `701–703`. Each player receives a unique room. Games support 5–10 players; ten gives every role one seat.
+The hotel has three rooms per floor, numbered `01–03`. A new game with 5–9 players has one floor per player; a 10-player game has nine floors. Thus a 5-player game uses rooms `101–503` (15 rooms), while a 9- or 10-player game uses rooms `101–903` (27 rooms). Each player receives a unique room. Games support 5–10 players; ten gives every role one seat. Existing games saved without a floor count keep their original seven-floor layout on reconnect.
 
 At most two game rooms may be active at once, counting both waiting lobbies and games in progress. Reject creation of a third active room with a localized room-limit error. A finished room no longer uses one of the two active slots, so another room can be created while its result remains available for reconnect.
 
@@ -43,7 +43,7 @@ Each living player may use their own ability once per turn, only during their ac
 | 1 | Electrician | Innocent | Black out one floor for the current turn. Every player housed on that floor loses their skill slot this turn. The Electrician may use this skill once, then must wait one full turn before using it again. |
 | 2 | Locksmith | Innocent | Lock one room for the current turn against Killer assassination only. The lock expires at turn end and does not stop voting. |
 | 3 | Housekeeper | Innocent | Privately learn the number of living players on one selected floor. |
-| 4 | Window Cleaner | Innocent | Privately learn the number of living players in room column 1, 2, or 3 across all seven floors. |
+| 4 | Window Cleaner | Innocent | Privately learn the number of living players in room column 1, 2, or 3 across every floor in this game. |
 | 5 | Detective | Innocent | Inspect one room. If occupied by a living player, privately learn `INNOCENT` or `MURDERER`; otherwise learn `EMPTY`. Never learn identity or exact role. |
 | 6 | Receptionist | Innocent | On turn three only, automatically and privately learn every player's display name, seat number, and assigned room, including dead players. Reveal no roles or teams. If dead or blacked out before this slot, receive nothing. At other turns, skip this slot silently. This role is unique. |
 | 7 | Photographer (ช่างภาพ) | Innocent | Accidentally photographed the Killer. On turn three only, automatically and privately learn the Killer's seat number and display name after reviewing the film. If dead or blacked out before this slot, receive nothing. At other turns, skip silently. Never reveal the Killer's room or role to other players. |
@@ -77,11 +77,12 @@ function canVoteForRoom(
   crimeRooms: number[],
   openedRooms: number[],
   murderedRooms: number[],
+  floorCount: number,
 ): boolean {
   const floor = Math.floor(roomNumber / 100);
   const room = roomNumber % 100;
   const isValidRoom = Number.isInteger(roomNumber) &&
-    floor >= 1 && floor <= 7 && room >= 1 && room <= 3;
+    floor >= 1 && floor <= floorCount && room >= 1 && room <= 3;
 
   return isValidRoom &&
     !crimeRooms.includes(roomNumber) &&

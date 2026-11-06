@@ -20,6 +20,11 @@ function game(overrides: Partial<GameEngineState> = {}): GameEngineState {
 }
 
 describe("hidden deaths", () => {
+  it("validates vote room geometry against the game's floor count", () => {
+    expect(canVoteForRoom(901, [], [], [], 9)).toBe(true);
+    expect(canVoteForRoom(601, [], [], [], 5)).toBe(false);
+  });
+
   it("rerolls occupied rooms and marks only three empty crime scenes", () => {
     const selections = [[202, 101, 301], [102, 301, 401], [301, 401, 501]];
     const result = applyInitialCrime(game({ phase: "INITIAL_CRIME" }), () => selections.shift() ?? []);

@@ -11,6 +11,16 @@ const players = [
 ];
 
 describe("receptionist register", () => {
+  it("renders ninth-floor rooms as structured entries", () => {
+    const html = renderToStaticMarkup(createElement(ReceptionistRegister, {
+      message: "ทะเบียนห้องพักเทิร์นที่ 3: ผู้เล่น 1 Anna · ห้อง 901, ผู้เล่น 2 Ben, Jr. · ห้อง 903",
+      players,
+    }));
+    expect((html.match(/data-register-entry=/g) ?? [])).toHaveLength(2);
+    expect(html).toContain("ห้อง 901");
+    expect(html).toContain("ห้อง 903");
+  });
+
   it("shows each guest and room as a separate private register entry", () => {
     const html = renderToStaticMarkup(createElement(ReceptionistRegister, {
       message: "ทะเบียนห้องพักเทิร์นที่ 3: ผู้เล่น 1 Anna · ห้อง 101, ผู้เล่น 2 Ben, Jr. · ห้อง 703",

@@ -1,7 +1,7 @@
 import { isHotelRoom, isSelectableRoom, killPlayer, type EngineResult, type GameEngineState } from "./state";
 
-export function canVoteForRoom(roomNumber: number, crimeRooms: number[], openedRooms: number[], murderedRooms: number[] = []): boolean {
-  return isHotelRoom(roomNumber) && !crimeRooms.includes(roomNumber) && !openedRooms.includes(roomNumber) && !murderedRooms.includes(roomNumber);
+export function canVoteForRoom(roomNumber: number, crimeRooms: number[], openedRooms: number[], murderedRooms: number[] = [], floorCount = 7): boolean {
+  return isHotelRoom(roomNumber, floorCount) && !crimeRooms.includes(roomNumber) && !openedRooms.includes(roomNumber) && !murderedRooms.includes(roomNumber);
 }
 
 export function submitVote(state: GameEngineState, playerId: string, roomNumber: number): { state: GameEngineState; complete: boolean } {

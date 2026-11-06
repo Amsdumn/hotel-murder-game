@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { advancePrologue, advanceTimedSkill, createInitialGame, performSkill } from "./gameplay";
-import { HOTEL_ROOMS, type GameEngineState } from "./state";
+import { HOTEL_ROOMS, isSelectableRoom, type GameEngineState } from "./state";
 import { projectPrivatePlayerState, projectPublicState } from "./projections";
 import { advanceSkillTurn } from "./hidden-death";
+import { castRoomVote } from "./phases";
 import { AVATAR_ORDER } from "../../lib/avatars";
 
 const lobbyPlayers = Array.from({ length: 5 }, (_, seatIndex) => ({ id: `p${seatIndex}`, displayName: `Player ${seatIndex}`, seatIndex }));
@@ -15,6 +16,42 @@ function choose() {
 }
 
 describe("gameplay setup and skills", () => {
+  it("scales new games from five through nine floors for five through ten players", () => {
+    for (const playerCount of [5, 6, 7, 8, 9, 10]) {
+      const floorCount = Math.min(playerCount, 9);
+      const seats = Array.from({ length: playerCount }, (_, seatIndex) => ({ id: `seat-${seatIndex}`, displayName: `Guest ${seatIndex}`, seatIndex }));
+      const initial = createInitialGame("ABC234", seats, 1, choose(), 1000).state;
+      expect(initial.floorCount).toBe(floorCount);
+      expect(initial.players.every((player) => Math.floor(player.roomNumber / 100) <= floorCount)).toBe(true);
+      expect(projectPublicState(initial).publicRooms).toHaveLength(floorCount * 3);
+      expect(projectPublicState(initial).publicRooms.at(-1)?.roomNumber).toBe(floorCount * 100 + 3);
+      const started = advancePrologue(initial, 31000, choose()).state;
+      expect(started.crimeRooms).toHaveLength(3);
+      expect(started.crimeRooms.every((room) => Math.floor(room / 100) <= floorCount)).toBe(true);
+      expect(isSelectableRoom(initial, floorCount * 100 + 1)).toBe(true);
+      expect(isSelectableRoom(initial, (floorCount + 1) * 100 + 1)).toBe(false);
+    }
+  });
+
+  it("keeps seven floors for an existing game without a stored floor count", () => {
+    const legacy = { ...createInitialGame("ABC234", lobbyPlayers, 1, choose()).state };
+    delete legacy.floorCount;
+    expect(projectPublicState(legacy).publicRooms).toHaveLength(21);
+    expect(isSelectableRoom(legacy, 703)).toBe(true);
+    expect(isSelectableRoom(legacy, 801)).toBe(false);
+  });
+
+  it("accepts ninth-floor targets in a ten-player game", () => {
+    const seats = Array.from({ length: 10 }, (_, seatIndex) => ({ id: `seat-${seatIndex}`, displayName: `Guest ${seatIndex}`, seatIndex }));
+    const initial = createInitialGame("ABC234", seats, 1, choose()).state;
+    const detective = initial.players.find((player) => player.role === "DETECTIVE")!;
+    const state: GameEngineState = { ...initial, phase: "SKILL_PHASE", activePlayerId: detective.id };
+    expect(() => performSkill(state, detective.id, 901, 1000, 180)).not.toThrow();
+    const housekeeper = initial.players.find((player) => player.role === "HOUSEKEEPER")!;
+    expect(() => performSkill({ ...state, activePlayerId: housekeeper.id }, housekeeper.id, 9, 1000, 180)).not.toThrow();
+    expect(castRoomVote({ ...initial, phase: "VOTING", phaseDeadlineAt: 2000 }, detective.id, 901, () => 0, 1000).state.votes[detective.id]).toBe(901);
+  });
+
   it("lets a living witness act before a successful assassination resolves", () => {
     const base = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;
     const players: GameEngineState["players"] = [
@@ -260,7 +297,8 @@ describe("gameplay setup and skills", () => {
     for (const role of ["KILLER", "LOCKSMITH", "DETECTIVE"] as const) {
       const state: GameEngineState = { ...initial, activePlayerId: actor.id, players: initial.players.map((player) => player.id === actor.id ? { ...player, role } : player) };
       expect(() => performSkill(state, actor.id, state.crimeRooms[0], 1000, 180)).toThrow("Room is not eligible");
-      expect(() => performSkill({ ...state, openedRooms: [701] }, actor.id, 701, 1000, 180)).toThrow("Room is not eligible");
+      const openedRoom = projectPublicState(state).publicRooms.find((room) => room.state === "UNKNOWN")!.roomNumber;
+      expect(() => performSkill({ ...state, openedRooms: [openedRoom] }, actor.id, openedRoom, 1000, 180)).toThrow("Room is not eligible");
       const victim = state.players.find((player) => player.id !== actor.id)!;
       const murdered = { ...state, deathNotices: { ...state.deathNotices, [victim.id]: { cause: "ASSASSINATION" as const, turn: 1 } } };
       expect(() => performSkill(murdered, actor.id, victim.roomNumber, 1000, 180)).toThrow("Room is not eligible");

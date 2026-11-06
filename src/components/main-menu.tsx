@@ -110,7 +110,7 @@ export function MainMenu() {
           <section aria-label={en ? "Hotel characters" : "ตัวละครในโรงแรม"} className="relative mx-auto w-full max-w-xl lg:mt-20">
             <div className="absolute -inset-8 rounded-full bg-[#8c3b47]/20 blur-3xl" />
             <AvatarGallery onSelect={setSelectedAvatar} />
-            <p className="relative mt-4 text-center text-xs tracking-[.25em] text-[#e5bd82]">{en ? "12 CHARACTERS · 21 ROOMS · UNTOLD SECRETS" : "12 ตัวละคร · 21 ห้อง · ความลับที่ไม่มีใครบอก"}</p>
+            <p className="relative mt-4 text-center text-xs tracking-[.25em] text-[#e5bd82]">{en ? "12 CHARACTERS · UP TO 27 ROOMS · UNTOLD SECRETS" : "12 ตัวละคร · สูงสุด 27 ห้อง · ความลับที่ไม่มีใครบอก"}</p>
             <p className="relative mt-2 text-center text-xs text-[#c6bdb1]">{en ? "Select a portrait to read their story. Characters are assigned when the game begins." : "แตะภาพเพื่ออ่านเรื่องราว ระบบจะสุ่มตัวละครเมื่อเริ่มเกม"}</p>
           </section>
         </div>
@@ -127,7 +127,7 @@ export function MainMenu() {
           <section aria-labelledby="how-to-play-overview">
             <h2 id="how-to-play-overview" className="font-serif text-xl text-[#d9b66f]">{en ? "Getting started" : "เริ่มเกม"}</h2>
             <p className="mt-2">{en ? "Five to ten connected players join a lobby. Everyone must be ready before the host can start. The host may set the player limit and discussion time. At most two game rooms can be active at once." : "ผู้เล่น 5–10 คนเข้าห้องรอ ทุกคนต้องเชื่อมต่อและกดพร้อมก่อนเจ้าของห้องเริ่มเกมได้ เจ้าของห้องปรับจำนวนผู้เล่นและเวลาพูดคุยได้ และเปิดห้องเกมพร้อมกันได้สูงสุด 2 ห้อง"}</p>
-            <p className="mt-2">{en ? "When the game starts, the server randomly assigns each player a public character, a separate secret role, and one unique room among 21 rooms on seven floors. A character's appearance never reveals their role or team." : "เมื่อเริ่มเกม ระบบสุ่มตัวละครสาธารณะ บทบาทลับ และห้องพักที่ไม่ซ้ำกันจาก 21 ห้องบน 7 ชั้นให้แต่ละคน รูปลักษณ์ตัวละครไม่บอกบทบาทหรือฝ่าย"}</p>
+            <p className="mt-2">{en ? "When the game starts, the server randomly assigns each player a public character, a separate secret role, and one unique room. The hotel has one floor per player from five to nine players, capped at nine floors for ten players, with three rooms per floor. A character's appearance never reveals their role or team." : "เมื่อเริ่มเกม ระบบสุ่มตัวละครสาธารณะ บทบาทลับ และห้องพักที่ไม่ซ้ำกันให้แต่ละคน โรงแรมมีชั้นเท่าจำนวนผู้เล่นตั้งแต่ 5–9 คน และมี 9 ชั้นเมื่อเล่น 10 คน โดยแต่ละชั้นมี 3 ห้อง รูปลักษณ์ตัวละครไม่บอกบทบาทหรือฝ่าย"}</p>
             <p className="mt-2">{en ? "The story prologue lasts 30 seconds. During it, you may choose to reveal only your own role, room, and skill. Afterward, three empty rooms reveal mysterious traces; no one dies from these starting clues." : "คำเกริ่นเรื่องใช้เวลา 30 วินาที ระหว่างนั้นคุณเลือกเปิดดูบทบาท ห้องพัก และสกิลของตนเองได้ จากนั้นระบบเผยร่องรอยปริศนาในห้องว่าง 3 ห้อง โดยไม่มีใครเสียชีวิตจากเบาะแสเริ่มต้น"}</p>
           </section>
           <section aria-labelledby="how-to-play-turns">

@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 import { ROLE_ORDER, type Role } from "../../types/game";
 import { advanceSkillTurn, applyInitialCrime, resolveAssassination } from "./hidden-death";
 import { beginDiscussion } from "./phases";
-import { appendPrivateAction, HOTEL_ROOMS, isHotelRoom, isSelectableRoom, type EnginePlayer, type EngineResult, type GameEngineState, type PrivateGameEvent, type PublicGameEvent } from "./state";
+import { appendPrivateAction, gameFloorCount, gameRooms, hotelRooms, isHotelRoom, isSelectableRoom, type EnginePlayer, type EngineResult, type GameEngineState, type PrivateGameEvent, type PublicGameEvent } from "./state";
 import { AVATAR_ORDER } from "../../lib/avatars";
 
 type RandomIndex = (maximum: number) => number;
@@ -25,16 +25,17 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   const needed = seats.length - 2;
   if (needed > innocentRoles.length) throw new Error("Not enough innocent roles");
   const roles: Role[] = shuffle(["KILLER", "ACCOMPLICE", ...shuffle(innocentRoles, choose).slice(0, needed)], choose);
-  const rooms = shuffle(HOTEL_ROOMS, choose);
+  const floorCount = Math.min(seats.length, 9);
+  const rooms = shuffle(hotelRooms(floorCount), choose);
   const avatars = shuffle(AVATAR_ORDER, choose);
   const players: EnginePlayer[] = seats.map((seat, index) => ({ id: seat.id, displayName: seat.displayName, seatIndex: seat.seatIndex, avatarId: avatars[index], role: roles[index], team: roles[index] === "KILLER" || roles[index] === "ACCOMPLICE" ? "MURDERER" : "INNOCENT", roomNumber: rooms[index], isAlive: true }));
-  const initial: GameEngineState = { code, version, phase: "ROLE_REVEAL", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], locksmithUsedRooms: [], darkFloors: [], electricianLastUsedTurn: {}, activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, privateActionHistory: {}, publicHistory: [], phaseDeadlineAt: now + PROLOGUE_DURATION_MS };
+  const initial: GameEngineState = { code, version, floorCount, phase: "ROLE_REVEAL", turn: 1, players, crimeRooms: [], openedRooms: [], lockedRooms: [], locksmithUsedRooms: [], darkFloors: [], electricianLastUsedTurn: {}, activePlayerId: null, usedSkillPlayerIds: [], votes: {}, winner: null, deathNotices: {}, privateResultMessages: {}, privateActionHistory: {}, publicHistory: [], phaseDeadlineAt: now + PROLOGUE_DURATION_MS };
   return { state: initial, publicEvents: [], privateEvents: [] };
 }
 
 export function advancePrologue(state: GameEngineState, now: number, choose: RandomIndex = randomInt): EngineResult {
   if (state.phase !== "ROLE_REVEAL" || state.phaseDeadlineAt === undefined || now < state.phaseDeadlineAt) return { state, publicEvents: [], privateEvents: [] };
-  const emptyRooms = HOTEL_ROOMS.filter((room) => !state.players.some((player) => player.roomNumber === room));
+  const emptyRooms = gameRooms(state).filter((room) => !state.players.some((player) => player.roomNumber === room));
   const crime = applyInitialCrime({ ...state, phase: "INITIAL_CRIME" }, () => shuffle(emptyRooms, choose).slice(0, 3));
   const phaseEvent: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: 1 };
   const afterCrime: GameEngineState = { ...crime.state, phase: "SKILL_PHASE", publicHistory: [...crime.publicEvents, phaseEvent] };
@@ -42,26 +43,26 @@ export function advancePrologue(state: GameEngineState, now: number, choose: Ran
   return { state: { ...first.state, phaseDeadlineAt: now + 60_000 }, publicEvents: [...crime.publicEvents, phaseEvent], privateEvents: [...crime.privateEvents, ...first.privateEvents] };
 }
 
-function requireRoom(value: unknown): number {
-  if (typeof value !== "number" || !isHotelRoom(value)) throw new Error("Invalid skill target");
+function requireRoom(state: GameEngineState, value: unknown): number {
+  if (typeof value !== "number" || !isHotelRoom(value, gameFloorCount(state))) throw new Error("Invalid skill target");
   return value;
 }
 
 function requireSelectableRoom(state: GameEngineState, value: unknown): number {
-  const room = requireRoom(value);
+  const room = requireRoom(state, value);
   if (!isSelectableRoom(state, room)) throw new Error("Room is not eligible");
   return room;
 }
 
 function requireSelectableArea(state: GameEngineState, value: unknown, kind: "floor" | "column"): number {
-  const area = kind === "floor" ? requireFloor(value) : value;
+  const area = kind === "floor" ? requireFloor(state, value) : value;
   if (typeof area !== "number" || !Number.isInteger(area) || (kind === "column" && (area < 1 || area > 3))) throw new Error("Invalid skill target");
-  if (!HOTEL_ROOMS.some((room) => (kind === "floor" ? Math.floor(room / 100) : room % 100) === area && isSelectableRoom(state, room))) throw new Error("No eligible rooms in target area");
+  if (!gameRooms(state).some((room) => (kind === "floor" ? Math.floor(room / 100) : room % 100) === area && isSelectableRoom(state, room))) throw new Error("No eligible rooms in target area");
   return area;
 }
 
-function requireFloor(value: unknown): number {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 7) throw new Error("Invalid skill target");
+function requireFloor(state: GameEngineState, value: unknown): number {
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > gameFloorCount(state)) throw new Error("Invalid skill target");
   return value;
 }
 

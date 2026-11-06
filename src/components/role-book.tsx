@@ -19,8 +19,8 @@ const roleNotes: Record<Role, Record<Language, RoleNote>> = {
     en: { action: "Select a floor or a room on that floor, then confirm.", note: "Privately learn the number of living players on that floor, without names or rooms." },
   },
   WINDOW_CLEANER: {
-    th: { action: "แตะแนวห้อง 01, 02 หรือ 03 หรือห้องในแนวนั้น แล้วกดยืนยัน", note: "นับผู้เล่นที่ยังมีชีวิตในแนวเดียวกันครบทั้ง 7 ชั้น โดยไม่ทราบชื่อ" },
-    en: { action: "Select column 01, 02, or 03, or a room in that column, then confirm.", note: "Count living players in that column across all seven floors, without learning names." },
+    th: { action: "แตะแนวห้อง 01, 02 หรือ 03 หรือห้องในแนวนั้น แล้วกดยืนยัน", note: "นับผู้เล่นที่ยังมีชีวิตในแนวเดียวกันครบทุกชั้นของเกม โดยไม่ทราบชื่อ" },
+    en: { action: "Select column 01, 02, or 03, or a room in that column, then confirm.", note: "Count living players in that column across every floor in this game, without learning names." },
   },
   DETECTIVE: {
     th: { action: "แตะห้องบนแผนผัง แล้วกดยืนยัน", note: "ถ้ามีผู้พักที่ยังมีชีวิต จะรู้เพียงฝ่ายผู้บริสุทธิ์หรือฆาตกร ไม่รู้ชื่อหรือบทบาท; หากไม่มีจะได้ผลว่าห้องว่าง" },

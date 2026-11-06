@@ -1,5 +1,5 @@
 import type { PrivatePlayerState, PrivateTeamState, PublicGameState } from "../../types/game";
-import { HOTEL_ROOMS, publicEventMessage, type GameEngineState } from "./state";
+import { gameRooms, publicEventMessage, type GameEngineState } from "./state";
 
 export function projectPublicState(state: GameEngineState): PublicGameState {
   return {
@@ -13,7 +13,7 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),
     ...(state.runoffRooms?.length ? { runoffRooms: [...state.runoffRooms] } : {}),
     ...(state.phase === "VOTING" ? { votes: Object.entries(state.votes ?? {}).map(([playerId, roomNumber]) => ({ playerId, roomNumber })) } : {}),
-    publicRooms: HOTEL_ROOMS.map((roomNumber) => {
+    publicRooms: gameRooms(state).map((roomNumber) => {
       if (state.crimeRooms.includes(roomNumber)) return { roomNumber, state: "CRIME_SCENE" as const };
       const murdered = state.players.some((player) => player.roomNumber === roomNumber && state.deathNotices?.[player.id]?.cause === "ASSASSINATION");
       if (murdered) return { roomNumber, state: state.openedRooms.includes(roomNumber) ? "OPENED_MURDERED" as const : "MURDERED" as const };

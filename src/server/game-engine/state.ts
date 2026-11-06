@@ -25,6 +25,7 @@ export interface PrivateActionEntry {
 export interface GameEngineState {
   code: string;
   version: number;
+  floorCount?: number;
   phase: GamePhase;
   turn: number;
   players: EnginePlayer[];
@@ -91,18 +92,31 @@ export function publicEventMessage(event: PublicGameEvent): string {
   return `รอบ ${event.turn}: เริ่มช่วง${phase}`;
 }
 
-export const HOTEL_ROOMS = Array.from({ length: 7 }, (_, floor) =>
-  Array.from({ length: 3 }, (_, room) => (floor + 1) * 100 + room + 1),
-).flat();
+export function hotelRooms(floorCount: number): number[] {
+  return Array.from({ length: floorCount }, (_, floor) =>
+    Array.from({ length: 3 }, (_, room) => (floor + 1) * 100 + room + 1),
+  ).flat();
+}
 
-export function isHotelRoom(roomNumber: number): boolean {
+// The original room set is retained for legacy fixtures; game logic uses gameRooms(state).
+export const HOTEL_ROOMS = hotelRooms(7);
+
+export function gameFloorCount(state: GameEngineState): number {
+  return state.floorCount ?? 7;
+}
+
+export function gameRooms(state: GameEngineState): number[] {
+  return hotelRooms(gameFloorCount(state));
+}
+
+export function isHotelRoom(roomNumber: number, floorCount = 7): boolean {
   const floor = Math.floor(roomNumber / 100);
   const room = roomNumber % 100;
-  return Number.isInteger(roomNumber) && floor >= 1 && floor <= 7 && room >= 1 && room <= 3;
+  return Number.isInteger(roomNumber) && floor >= 1 && floor <= floorCount && room >= 1 && room <= 3;
 }
 
 export function isSelectableRoom(state: GameEngineState, roomNumber: number): boolean {
-  return isHotelRoom(roomNumber)
+  return isHotelRoom(roomNumber, gameFloorCount(state))
     && !state.crimeRooms.includes(roomNumber)
     && !state.openedRooms.includes(roomNumber)
     && !state.players.some((player) => player.roomNumber === roomNumber && state.deathNotices?.[player.id]?.cause === "ASSASSINATION");

@@ -1,7 +1,7 @@
 import { randomInt } from "node:crypto";
 import type { GameResultState } from "../../types/game";
 import { advanceSkillTurn } from "./hidden-death";
-import { HOTEL_ROOMS, isSelectableRoom, publicEventMessage, type EngineResult, type GameEngineState, type PublicGameEvent } from "./state";
+import { gameRooms, isSelectableRoom, publicEventMessage, type EngineResult, type GameEngineState, type PublicGameEvent } from "./state";
 import { resolveVoteRoom, submitVote } from "./voting";
 
 export const VOTING_DURATION_MS = 60_000;
@@ -49,7 +49,7 @@ function leaders(votes: Record<string, number>): number[] {
 
 function resolveBallot(state: GameEngineState, now: number, chooseTie: (length: number) => number): EngineResult {
   const tied = leaders(state.votes).filter((room) => isSelectableRoom(state, room));
-  const candidates = tied.length ? tied : state.runoffRooms?.length ? state.runoffRooms.filter((room) => isSelectableRoom(state, room)) : HOTEL_ROOMS.filter((room) => isSelectableRoom(state, room));
+  const candidates = tied.length ? tied : state.runoffRooms?.length ? state.runoffRooms.filter((room) => isSelectableRoom(state, room)) : gameRooms(state).filter((room) => isSelectableRoom(state, room));
   if (!candidates.length) throw new Error("No eligible rooms remain");
   if (tied.length > 1 && !state.runoffRooms?.length) {
     const event: PublicGameEvent = { type: "RUNOFF_STARTED", turn: state.turn };

@@ -22,6 +22,22 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("renders the room map for the active game's floor count", () => {
+    const renderMap = (floors: number) => renderToStaticMarkup(createElement(HotelBoard, {
+      state: {
+        ...publicState,
+        publicRooms: Array.from({ length: floors }, (_, index) => [1, 2, 3].map((column) => ({ roomNumber: (index + 1) * 100 + column, state: "UNKNOWN" as const }))).flat(),
+      },
+    }));
+    const five = renderMap(5);
+    expect(five).toContain("5 ชั้น · 15 ห้อง");
+    expect(five).toContain("ห้อง 503");
+    expect(five).not.toContain("ห้อง 601");
+    const nine = renderMap(9);
+    expect(nine).toContain("9 ชั้น · 27 ห้อง");
+    expect(nine).toContain("ห้อง 903");
+  });
+
   it("places guests above the hotel map in an equal-width game column", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, {
       state: publicState, privateState, teamState: null, result: null,

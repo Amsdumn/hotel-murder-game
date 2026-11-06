@@ -14,7 +14,7 @@ export function ReceptionistRegister({ message, players }: { message: string; pl
     const start = message.indexOf(marker);
     if (start < 0) return [];
     const room = message.slice(start + marker.length, start + marker.length + 3);
-    return /^([1-7]0[1-3])$/.test(room) ? [{ player, room }] : [];
+    return /^([1-9]0[1-3])$/.test(room) ? [{ player, room }] : [];
   });
 
   return <section aria-label={en ? "Private room register" : "ทะเบียนห้องพักส่วนตัว"} className="rounded-xl border border-[#d8bc86]/40 bg-[#29232c] p-4">
