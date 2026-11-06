@@ -55,6 +55,19 @@ describe("server-owned phases", () => {
     expect(result.state.openedRooms).toEqual([102]);
   });
 
+  it("ends immediately when opening an Innocent room leaves more living Murderers", () => {
+    const voting = game({
+      phase: "VOTING", phaseDeadlineAt: 1000, votes: { d: 102 },
+      players: players.map((player) => player.id === "a" ? { ...player, isAlive: false } : player),
+      deathNotices: { a: { cause: "ASSASSINATION", turn: 1 } },
+    });
+    const result = advanceTimedPhase(voting, 1000);
+    expect(result.state).toMatchObject({ phase: "FINISHED", winner: "MURDERER" });
+    expect(result.publicEvents).toContainEqual({ type: "ROOM_OPENED", roomNumber: 102, occupancy: "OCCUPIED", gameEnded: true });
+    expect(result.publicEvents).toContainEqual({ type: "GAME_FINISHED", winner: "MURDERER" });
+    expect(projectGameResult(result.state)).toMatchObject({ winner: "MURDERER", turnsPlayed: 1 });
+  });
+
   it("shows the fourth room result before announcing the murderer victory", () => {
     const voting = game({ phase: "VOTING", turn: 4, phaseDeadlineAt: 1000, votes: { a: 101 } });
     const opened = advanceTimedPhase(voting, 1000, () => 0);

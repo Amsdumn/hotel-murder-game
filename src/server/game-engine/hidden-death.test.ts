@@ -54,6 +54,24 @@ describe("hidden deaths", () => {
     expect(result.publicEvents).toContainEqual({ type: "GAME_FINISHED", winner: "INNOCENT" });
   });
 
+  it("keeps playing at equal living team counts and ends when an assassination gives Murderers a majority", () => {
+    const tied = resolveAssassination(game(), 102);
+    expect(tied.state.phase).toBe("SKILL_PHASE");
+    expect(tied.state.winner).toBeNull();
+    expect(tied.publicEvents).not.toContainEqual(expect.objectContaining({ type: "GAME_FINISHED" }));
+
+    const majority = resolveAssassination(game({
+      players: game().players.map((player) => player.id === "innocent" ? { ...player, isAlive: false } : player),
+      deathNotices: { innocent: { cause: "VOTE", turn: 1 } },
+    }), 102);
+    expect(majority.state.phase).toBe("FINISHED");
+    expect(majority.state.winner).toBe("MURDERER");
+    expect(majority.publicEvents).toEqual([
+      { type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: 1 },
+      { type: "GAME_FINISHED", winner: "MURDERER" },
+    ]);
+  });
+
   it("keeps failed assassination private for empty, locked, and dead rooms", () => {
     for (const state of [game(), game({ lockedRooms: [102] }), game({ players: game().players.map((player) => player.id === "victim" ? { ...player, isAlive: false } : player) })]) {
       const room = state.lockedRooms.length ? 102 : state.players[1]?.isAlive ? 301 : 102;

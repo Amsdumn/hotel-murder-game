@@ -147,7 +147,7 @@ export function MainMenu() {
               <li>{en ? <><strong>Voting:</strong> Each living player votes once for a room within 60 seconds. You may vote for your own room, but cannot choose an opened, murdered, or clue room. A tie leads to another 60-second runoff. If nobody votes, the game picks an eligible room randomly.</> : <><strong>ลงคะแนน:</strong> ผู้เล่นที่ยังมีชีวิตโหวตเลือกห้องได้คนละหนึ่งครั้งใน 60 วินาที เลือกห้องตัวเองได้ แต่เลือกห้องที่เปิดแล้ว ถูกฆาตกรรม หรือมีร่องรอยปริศนาไม่ได้ หากเสมอจะโหวตรอบตัดสินอีก 60 วินาที เมื่อหมดเวลาเกมนับคะแนนที่มีอยู่ หากไม่มีใครโหวตเกมจะสุ่มห้องที่เลือกได้</>}</li>
             </ol>
             <p className="mt-3">{en ? "The chosen room opens and its result appears before the next turn." : "เกมเปิดห้องที่ได้รับเลือกและแสดงผลก่อนเริ่มรอบถัดไป"}</p>
-            <p className="mt-3">{en ? "If the Assassin dies, the Innocent team wins immediately. If the Assassin survives through turn four, the Murderer team wins." : "หากนักฆ่าเสียชีวิต ฝ่ายผู้บริสุทธิ์ชนะทันที หากนักฆ่ารอดจนจบรอบที่ 4 ฝ่ายฆาตกรชนะ"}</p>
+            <p className="mt-3">{en ? "If the Assassin dies, the Innocent team wins immediately. The Murderer team wins immediately when more Murderers than Innocents remain alive, or if the Assassin survives through turn four." : "หากนักฆ่าเสียชีวิต ฝ่ายผู้บริสุทธิ์ชนะทันที ฝ่ายฆาตกรชนะทันทีเมื่อจำนวนฝ่ายฆาตกรที่ยังมีชีวิตมากกว่าฝ่ายผู้บริสุทธิ์ หรือเมื่อนักฆ่ารอดจนจบรอบที่ 4"}</p>
           </section>
           <section aria-labelledby="how-to-play-skills">
             <h2 id="how-to-play-skills" className="font-serif text-xl text-[#d9b66f]">{en ? "Roles and skills" : "บทบาทและสกิล"}</h2>

@@ -28,7 +28,7 @@ Initial clue rooms remain unavailable for voting throughout the game.
 
 There are at most four turns. Each turn proceeds through Skill Phase, Discussion, Voting, and Resolution, following Role Reveal and Initial Crime. The explicit phases are `LOBBY`, `ROLE_REVEAL`, `INITIAL_CRIME`, `SKILL_PHASE`, `DISCUSSION`, `VOTING`, `RESOLUTION`, and `FINISHED`.
 
-The Innocent team wins immediately if the Killer dies, even when the Accomplice survives. The Murderer team wins if the Killer remains alive through the end of turn four. Check victory after every death and after turn-four resolution.
+The Innocent team wins immediately if the Killer dies, even when the Accomplice survives. The Murderer team wins immediately after a death if more Murderer-team players than Innocent-team players remain alive; equal counts do not end the game. The Murderer team also wins if the Killer remains alive through the end of turn four. Check victory after every death and after turn-four resolution.
 
 After the game reaches `FINISHED`, reveal the winning team, every player's role, team, room assignment and final living/dead status, the important public events, and the number of turns played. Show `ผู้บริสุทธิ์ชนะ! นักฆ่าถูกเปิดโปงแล้ว` for an Innocent victory or `ฆาตกรชนะ! ความลับถูกฝังไว้ในโรงแรมแห่งนี้` for a Murderer victory. Never send this result projection before the game finishes.
 

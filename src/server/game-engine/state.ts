@@ -111,7 +111,10 @@ export function isSelectableRoom(state: GameEngineState, roomNumber: number): bo
 export function killPlayer(state: GameEngineState, playerId: string, cause: DeathNotice["cause"]): { state: GameEngineState; privateEvent: PrivateGameEvent | null } {
   const player = state.players.find((item) => item.id === playerId);
   if (!player || !player.isAlive) return { state, privateEvent: null };
-  const winner = player.role === "KILLER" ? "INNOCENT" : state.winner;
+  const survivors = state.players.filter((item) => item.isAlive && item.id !== playerId);
+  const murderers = survivors.filter((item) => item.team === "MURDERER").length;
+  const innocents = survivors.length - murderers;
+  const winner = player.role === "KILLER" ? "INNOCENT" : state.winner ?? (murderers > innocents ? "MURDERER" : null);
   return {
     state: appendPrivateAction({
       ...state,
