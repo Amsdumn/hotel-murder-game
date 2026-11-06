@@ -9,6 +9,7 @@ export interface LobbyPlayerRecord {
 
 export interface LobbyRecord {
   code: string;
+  activeSlot?: number;
   emptySince?: number;
   phase: import("../../types/game").GamePhase;
   version: number;

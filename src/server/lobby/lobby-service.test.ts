@@ -128,6 +128,21 @@ describe("LobbyService", () => {
     expect((await service.preview(second.code)).players[0]?.displayName).toBe("Other Host");
   });
 
+  it("rejects a third active room and allows another after one game finishes", async () => {
+    const store = new MemoryLobbyStore();
+    const service = new LobbyService(store);
+    const first = await service.create({ displayName: "First Host", actionId: crypto.randomUUID() });
+    await service.create({ displayName: "Second Host", actionId: crypto.randomUUID() });
+    await expect(service.create({ displayName: "Third Host", actionId: crypto.randomUUID() }))
+      .rejects.toMatchObject({ code: "ROOM_LIMIT_REACHED" });
+
+    const record = (await store.findLobby(first.code))!;
+    await store.replaceLobby(first.code, record.version, { ...record, phase: "FINISHED", version: record.version + 1 });
+    const replacement = await service.create({ displayName: "Replacement Host", actionId: crypto.randomUUID() });
+    expect((await service.listRooms()).map((room) => room.code)).toContain(replacement.code);
+    expect(await service.listRooms()).toHaveLength(2);
+  });
+
   it("allows concurrent creation of distinct rooms", async () => {
     const service = new LobbyService(new MemoryLobbyStore());
     const results = await Promise.allSettled([
@@ -137,6 +152,15 @@ describe("LobbyService", () => {
     expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(2);
     const codes = results.filter((result) => result.status === "fulfilled").map((result) => result.value.code);
     expect(new Set(codes).size).toBe(2);
+  });
+
+  it("keeps the active-room count at two under concurrent creation", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const results = await Promise.allSettled(["A", "B", "C"].map((host) =>
+      service.create({ displayName: `Host ${host}`, actionId: crypto.randomUUID() })));
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(2);
+    expect(results.filter((result) => result.status === "rejected")[0]?.reason).toMatchObject({ code: "ROOM_LIMIT_REACHED" });
+    expect(await service.listRooms()).toHaveLength(2);
   });
 
   it("creates a lobby with a private reconnect token", async () => {

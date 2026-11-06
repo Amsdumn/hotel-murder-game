@@ -54,7 +54,8 @@ describe("Socket.IO lobby", () => {
     const created = [];
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const reply = await client().emitWithAck("lobby:create", { displayName: `Host ${attempt}`, actionId: crypto.randomUUID() });
-      expect(reply.ok).toBe(true);
+      if (attempt < 2) expect(reply.ok).toBe(true);
+      else expect(reply).toEqual({ ok: false, error: "ROOM_LIMIT_REACHED" });
       created.push(reply);
     }
     expect(await client().emitWithAck("lobby:create", { displayName: "Extra Host", actionId: crypto.randomUUID() })).toEqual({ ok: false, error: "RATE_LIMITED" });

@@ -11,18 +11,22 @@ function isIndexNotFound(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === 27;
 }
 
-let removeLegacyRoomLimit: Promise<void> | null = null;
+let ensureRoomSlotsPromise: Promise<void> | null = null;
 
-function ensureRoomLimitRemoved(): Promise<void> {
-  if (!removeLegacyRoomLimit) {
-    removeLegacyRoomLimit = (async () => {
+function ensureRoomSlots(): Promise<void> {
+  if (!ensureRoomSlotsPromise) {
+    ensureRoomSlotsPromise = (async () => {
       await GameModel.init();
-      try { await GameModel.collection.dropIndex("activeSlot_1"); }
-      catch (error) { if (!isIndexNotFound(error)) throw error; }
-      await GameModel.collection.updateMany({ activeSlot: { $exists: true } }, { $unset: { activeSlot: "" } });
-    })().catch((error: unknown) => { removeLegacyRoomLimit = null; throw error; });
+      const oldIndex = (await GameModel.collection.listIndexes().toArray()).find((index) => index.name === "activeSlot_1");
+      if (oldIndex && !oldIndex.partialFilterExpression) {
+        try { await GameModel.collection.dropIndex("activeSlot_1"); }
+        catch (error) { if (!isIndexNotFound(error)) throw error; }
+      }
+      await GameModel.collection.updateMany({ phase: "FINISHED", activeSlot: { $exists: true } }, { $unset: { activeSlot: "" } });
+      await GameModel.collection.createIndex({ activeSlot: 1 }, { name: "activeSlot_1", unique: true, partialFilterExpression: { activeSlot: { $exists: true } } });
+    })().catch((error: unknown) => { ensureRoomSlotsPromise = null; throw error; });
   }
-  return removeLegacyRoomLimit;
+  return ensureRoomSlotsPromise;
 }
 
 export class MongoLobbyStore implements LobbyStore {
@@ -62,16 +66,26 @@ export class MongoLobbyStore implements LobbyStore {
 
   async createLobby(record: LobbyRecord): Promise<void> {
     await connectDatabase();
-    await ensureRoomLimitRemoved();
-    try { await GameModel.create(record); }
-    catch (error) {
-      if (isDuplicateKey(error)) {
-        const previous = await GameModel.findOne({ creationActionId: record.creationActionId }).lean().exec();
-        if (previous) throw new LobbyError("DUPLICATE_ACTION");
-        throw new LobbyError("CODE_COLLISION");
+    await ensureRoomSlots();
+    const active = await GameModel.find({ phase: { $ne: "FINISHED" } }).select("code activeSlot").lean().exec();
+    if (active.length >= 2) throw new LobbyError("ROOM_LIMIT_REACHED");
+    if (active.length === 1 && active[0].activeSlot === undefined) {
+      try {
+        await GameModel.updateOne({ code: active[0].code, phase: { $ne: "FINISHED" }, activeSlot: { $exists: false } }, { $set: { activeSlot: 0 } }).exec();
+      } catch (error) {
+        if (isDuplicateKey(error)) throw new LobbyError("ROOM_LIMIT_REACHED");
+        throw error;
       }
-      throw error;
     }
+    for (const activeSlot of [0, 1]) {
+      try { await GameModel.create({ ...record, activeSlot }); return; }
+      catch (error) {
+        if (!isDuplicateKey(error)) throw error;
+        if (await GameModel.exists({ creationActionId: record.creationActionId })) throw new LobbyError("DUPLICATE_ACTION");
+        if (await GameModel.exists({ code: record.code })) throw new LobbyError("CODE_COLLISION");
+      }
+    }
+    throw new LobbyError("ROOM_LIMIT_REACHED");
   }
 
   async deleteLobby(code: string): Promise<void> {
@@ -83,7 +97,7 @@ export class MongoLobbyStore implements LobbyStore {
     await connectDatabase();
     const record = await GameModel.findOne({ code }).lean().exec();
     return record ? {
-      code: record.code, ...(record.emptySince !== undefined ? { emptySince: record.emptySince } : {}), phase: record.phase, version: record.version,
+      code: record.code, ...(record.activeSlot !== undefined ? { activeSlot: record.activeSlot } : {}), ...(record.emptySince !== undefined ? { emptySince: record.emptySince } : {}), phase: record.phase, version: record.version,
       creationActionId: record.creationActionId, hostPlayerId: record.hostPlayerId,
       playerLimit: record.playerLimit, discussionSeconds: record.discussionSeconds,
       players: record.players.map(({ id, displayName, seatIndex, ready, connected, avatarId }) => ({ id, displayName, seatIndex, ready, connected, avatarId })),
@@ -94,7 +108,9 @@ export class MongoLobbyStore implements LobbyStore {
 
   async replaceLobby(code: string, expectedVersion: number, next: LobbyRecord): Promise<boolean> {
     await connectDatabase();
-    const result = await GameModel.replaceOne({ code, version: expectedVersion }, next).exec();
+    const replacement = { ...next };
+    if (replacement.phase === "FINISHED") delete replacement.activeSlot;
+    const result = await GameModel.replaceOne({ code, version: expectedVersion }, replacement).exec();
     return result.modifiedCount === 1;
   }
 

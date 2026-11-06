@@ -33,6 +33,7 @@ export class MemoryLobbyStore implements LobbyStore {
   async createLobby(record: LobbyRecord): Promise<void> {
     if ([...this.lobbies.values()].some((item) => item.creationActionId === record.creationActionId)) throw new LobbyError("DUPLICATE_ACTION");
     if (this.lobbies.has(record.code)) throw new LobbyError("CODE_COLLISION");
+    if ([...this.lobbies.values()].filter((item) => item.phase !== "FINISHED").length >= 2) throw new LobbyError("ROOM_LIMIT_REACHED");
     this.lobbies.set(record.code, structuredClone(record));
     this.updatedAt.set(record.code, Date.now());
   }

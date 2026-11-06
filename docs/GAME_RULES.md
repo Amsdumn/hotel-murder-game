@@ -4,6 +4,8 @@
 
 The hotel has seven floors and three rooms per floor: `101–103`, `201–203`, `301–303`, `401–403`, `501–503`, `601–603`, `701–703`. Each player receives a unique room. Games support 5–10 players; ten gives every role one seat.
 
+At most two game rooms may be active at once, counting both waiting lobbies and games in progress. Reject creation of a third active room with a localized room-limit error. A finished room no longer uses one of the two active slots, so another room can be created while its result remains available for reconnect.
+
 The lobby shows only player names, seats, connection, and readiness. It never exposes character identities, including on preview or reconnect. When the host starts the game, the server randomly assigns each player a public 3D anime character alongside separate secret roles, teams, rooms, and skills. There is no player choice. The server draws from twelve public characters without repeats, so ten-player games use ten distinct characters. The assignments are saved with game state and restored on reconnect. Irina Volkova, the receptionist character, is a 39-year-old red-haired Russian woman; being assigned her does not grant the Receptionist role.
 
 Before the game starts, each player may edit their own display name. The host may remove another player from the lobby; this invalidates that player's reconnect session and compacts the remaining seat numbers. Neither action is available after game start.

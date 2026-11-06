@@ -12,6 +12,7 @@ const lobbyPlayerSchema = new Schema({
 
 const gameSchema = new Schema<LobbyRecord>({
   code: { type: String, required: true },
+  activeSlot: { type: Number, required: false, enum: [0, 1] },
   emptySince: { type: Number, required: false },
   phase: { type: String, required: true, enum: ["LOBBY", "ROLE_REVEAL", "INITIAL_CRIME", "SKILL_PHASE", "DISCUSSION", "VOTING", "RESOLUTION", "FINISHED"] },
   version: { type: Number, required: true },

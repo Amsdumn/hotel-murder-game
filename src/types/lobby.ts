@@ -34,6 +34,7 @@ export type LobbyErrorCode =
   | "INVALID_INPUT"
   | "LOBBY_NOT_FOUND"
   | "LOBBY_FULL"
+  | "ROOM_LIMIT_REACHED"
   | "STALE_STATE"
   | "DUPLICATE_ACTION"
   | "CODE_COLLISION"

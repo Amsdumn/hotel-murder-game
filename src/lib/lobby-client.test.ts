@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Socket } from "socket.io-client";
-import { acceptNewerLobbyState, forgetLobbyIdentity, joinOrResumeLobby, readGuestProfile, readLobbyToken, saveGuestProfile, saveLobbyIdentity } from "./lobby-client";
+import { acceptNewerLobbyState, forgetLobbyIdentity, joinOrResumeLobby, lobbyErrorMessage, readGuestProfile, readLobbyToken, saveGuestProfile, saveLobbyIdentity } from "./lobby-client";
 import type { LobbyIdentity } from "@/types/lobby";
 
 function memoryStorage(): Storage {
@@ -22,6 +22,10 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("browser guest identity", () => {
+  it("explains the two-room creation limit in Thai and English", () => {
+    expect(lobbyErrorMessage("ROOM_LIMIT_REACHED", "th")).toContain("2 ห้อง");
+    expect(lobbyErrorMessage("ROOM_LIMIT_REACHED", "en")).toContain("Two game rooms");
+  });
   it("keeps the latest lobby version when broadcasts or acknowledgements arrive out of order", () => {
     const latest = { code: "ABC234", version: 3, players: ["Host", "Guest"] };
     expect(acceptNewerLobbyState(latest, { code: "ABC234", version: 2, players: ["Host"] })).toBe(latest);
