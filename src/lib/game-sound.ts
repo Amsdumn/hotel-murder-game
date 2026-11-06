@@ -36,16 +36,23 @@ export function primeGameAudio(): void {
   if (context?.state === "suspended") void context.resume().catch(() => {});
 }
 
-const motifs: Record<GameSoundCue, Array<[frequency: number, duration: number, delay: number, volume: number]>> = {
+const motifs: Record<Exclude<GameSoundCue, "murder">, Array<[frequency: number, duration: number, delay: number, volume: number]>> = {
   start: [[392, 0.32, 0, 0.055], [523, 0.42, 0.17, 0.05], [659, 0.55, 0.35, 0.045]],
   skill: [[587, 0.2, 0, 0.06], [784, 0.38, 0.16, 0.05]],
   vote: [[440, 0.16, 0, 0.045], [440, 0.16, 0.22, 0.045], [554, 0.3, 0.44, 0.045]],
   room: [[330, 0.22, 0, 0.055], [247, 0.38, 0.18, 0.05], [196, 0.52, 0.38, 0.04]],
   result: [[392, 0.4, 0, 0.055], [494, 0.4, 0.24, 0.05], [587, 0.7, 0.48, 0.05]],
-  murder: [[110, 0.9, 0, 0.08]],
 };
 
 export function playGameSound(cue: GameSoundCue): void {
+  if (cue === "murder") {
+    if (typeof Audio === "undefined") return;
+    const audio = new Audio("/sound-effect/sounded-kill.mp3");
+    audio.volume = 1;
+    audio.currentTime = 0;
+    void audio.play().catch(() => {});
+    return;
+  }
   const context = getAudioContext();
   if (!context) return;
   const play = () => {
@@ -54,9 +61,8 @@ export function playGameSound(cue: GameSoundCue): void {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       const start = context.currentTime + delay;
-      oscillator.type = cue === "murder" || cue === "room" ? "sine" : "triangle";
+      oscillator.type = cue === "room" ? "sine" : "triangle";
       oscillator.frequency.setValueAtTime(frequency, start);
-      if (cue === "murder") oscillator.frequency.exponentialRampToValueAtTime(55, start + duration);
       gain.gain.setValueAtTime(0.0001, start);
       gain.gain.linearRampToValueAtTime(volume, start + 0.035);
       gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);

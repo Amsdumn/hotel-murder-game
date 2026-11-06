@@ -1,10 +1,28 @@
-import { describe, expect, it } from "vitest";
-import { getGameSoundEvent, type GameSoundSnapshot } from "./game-sound";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { getGameSoundEvent, playGameSound, type GameSoundSnapshot } from "./game-sound";
+
+afterEach(() => vi.unstubAllGlobals());
 
 const prologue: GameSoundSnapshot = { code: "ABC", phase: "ROLE_REVEAL", turn: 1, canUseSkill: false, resultReady: false, openedRoomCount: 0 };
 const skill: GameSoundSnapshot = { ...prologue, phase: "SKILL_PHASE" };
 
 describe("game sound events", () => {
+  it("plays the murder recording at maximum app volume", () => {
+    const audio = { volume: 0, currentTime: 5, play: vi.fn().mockResolvedValue(undefined) };
+    const Audio = vi.fn(function (source: string) {
+      expect(source).toBe("/sound-effect/sounded-kill.mp3");
+      return audio;
+    });
+    vi.stubGlobal("Audio", Audio);
+
+    playGameSound("murder");
+
+    expect(Audio).toHaveBeenCalledOnce();
+    expect(audio.volume).toBe(1);
+    expect(audio.currentTime).toBe(0);
+    expect(audio.play).toHaveBeenCalledOnce();
+  });
+
   it("plays start only when entering a new game's prologue", () => {
     expect(getGameSoundEvent(null, prologue)).toEqual({ cue: "start", key: "ABC:start" });
     expect(getGameSoundEvent(prologue, prologue)).toBeNull();
