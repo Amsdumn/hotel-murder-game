@@ -61,7 +61,7 @@ describe("game privacy and turn UI", () => {
     expect(nine).toContain("ห้อง 903");
   });
 
-  it("places guests above the hotel map in an equal-width game column", () => {
+  it("places the map on the left and guests above private information on the right", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, {
       state: publicState, privateState, teamState: null, result: null,
       murderSequence: 0, connected: true, connectionMessage: "",
@@ -69,8 +69,8 @@ describe("game privacy and turn UI", () => {
     }));
     expect(html).toContain("lg:grid-cols-2");
     expect(html.indexOf(">ผู้เข้าพัก</h2>")).toBeGreaterThan(-1);
-    expect(html.indexOf(">ผู้เข้าพัก</h2>")).toBeLessThan(html.indexOf(">แผนผัง</p>"));
-    expect(html.indexOf(">แผนผัง</p>")).toBeLessThan(html.indexOf("ข้อมูลลับ · เฉพาะคุณ"));
+    expect(html.indexOf(">แผนผัง</p>")).toBeLessThan(html.indexOf(">ผู้เข้าพัก</h2>"));
+    expect(html.indexOf(">ผู้เข้าพัก</h2>")).toBeLessThan(html.indexOf("ข้อมูลลับ · เฉพาะคุณ"));
   });
 
   it("shows only a newly received private skill result", () => {

@@ -35,8 +35,8 @@ const roleNotes: Record<Role, Record<Language, RoleNote>> = {
     en: { action: "No action is needed. The skill resolves automatically on your slot in turn 3.", note: "Privately learn the Assassin's name and player number, but not their room. You receive nothing if dead or blacked out before your slot." },
   },
   ACCOMPLICE: {
-    th: { action: "แตะการ์ดผู้เข้าพักคนอื่นเหนือแผนผัง แล้วกดยืนยัน", note: "รู้ชั้นที่ผู้เล่นคนนั้นพักและส่งผลให้ฝ่ายฆาตกร หากเลือกคนที่ตายแล้วจะไม่ได้ข้อมูล แต่ยังเสียสิทธิ์ใช้สกิลเทิร์นนี้" },
-    en: { action: "Select another guest card above the map, then confirm.", note: "Learn that player's floor and share the result with the Murderer team. Choosing a dead player yields no floor, but still consumes this turn's skill." },
+    th: { action: "แตะการ์ดคนอื่นในส่วนผู้เข้าพัก แล้วกดยืนยัน", note: "รู้ชั้นที่ผู้เล่นคนนั้นพักและส่งผลให้ฝ่ายฆาตกร หากเลือกคนที่ตายแล้วจะไม่ได้ข้อมูล แต่ยังเสียสิทธิ์ใช้สกิลเทิร์นนี้" },
+    en: { action: "Select another card in the guest list, then confirm.", note: "Learn that player's floor and share the result with the Murderer team. Choosing a dead player yields no floor, but still consumes this turn's skill." },
   },
   KILLER: {
     th: { action: "แตะห้องบนแผนผัง แล้วกดยืนยัน", note: "สังหารได้เมื่อมีผู้พักที่ยังมีชีวิตและห้องไม่ถูกล็อก; ห้องว่างหรือถูกล็อกจะล้มเหลว การสังหารสำเร็จเผยห้องที่เกิดเหตุ แต่ไม่บอกชื่อเหยื่อ" },

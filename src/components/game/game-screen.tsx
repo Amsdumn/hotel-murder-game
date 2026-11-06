@@ -181,7 +181,7 @@ export const skillActionInstructions: Record<Role, string> = {
   DETECTIVE: "แตะห้องบนแผนผังที่ต้องการตรวจ แล้วกดยืนยันสกิลด้านล่าง",
   RECEPTIONIST: "เทิร์นที่ 3 ระบบจะเปิดทะเบียนห้องพักให้คุณอัตโนมัติ ตรวจผลในข้อมูลลับ",
   PHOTOGRAPHER: "เทิร์นที่ 3 ระบบจะให้คุณตรวจภาพถ่ายและบอกว่าใครคือนักฆ่าแบบส่วนตัว ตรวจผลในข้อมูลลับ",
-  ACCOMPLICE: "แตะการ์ดผู้เข้าพักหนึ่งคนในรายชื่อด้านข้าง แล้วกดยืนยันสกิลด้านล่าง",
+  ACCOMPLICE: "แตะการ์ดหนึ่งคนในส่วนผู้เข้าพัก แล้วกดยืนยันสกิลด้านล่าง",
   KILLER: "แตะห้องบนแผนผังที่ต้องการลอบสังหาร แล้วกดยืนยันสกิลด้านล่าง",
 };
 
@@ -389,10 +389,10 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {privateState?.canUseSkill && skillDeadlineAt !== undefined && <p className="mb-5 text-sm text-[#e7ce98]" role="timer" aria-live="off">{skillSecondsLeft === null ? en ? "Checking skill time…" : "กำลังตรวจเวลาใช้สกิล…" : skillSecondsLeft > 0 ? en ? `${skillSecondsLeft} seconds left to use your skill` : `เวลาใช้สกิลเหลือ ${skillSecondsLeft} วินาที` : en ? "Skill time expired. Waiting for the next phase." : "หมดเวลาใช้สกิลแล้ว กำลังรอขั้นตอนถัดไป"}</p>}
     {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-2">
       <div className="min-w-0 space-y-5">
-        <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : undefined} /></div>
         <div ref={boardRef} className="scroll-mt-4"><HotelBoard state={state} selfId={privateState?.playerId} ownRoomNumber={privateState?.roomNumber} unavailableSkillRooms={privateState?.role === "LOCKSMITH" ? privateState.locksmithUsedRooms : undefined} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} onSkillRoomSelect={roomSkillActive ? (roomNumber) => selectBoardTarget("room", roomNumber) : undefined} onSkillFloorSelect={floorSkillActive ? (floor) => selectBoardTarget("floor", floor) : undefined} onSkillColumnSelect={columnSkillActive ? (column) => selectBoardTarget("column", column) : undefined} selectedSkillRoom={selectedSkillRoom} selectedSkillFloor={selectedSkillFloor} selectedSkillColumn={selectedSkillColumn} voteBusy={busy || !connected || voteExpired || ((roomSkillActive || floorSkillActive || columnSkillActive) && skillSecondsLeft === 0)} /></div>
       </div>
       <div className="min-w-0 space-y-5">
+      <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : undefined} /></div>
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage ? gameMessage(state.phaseMessage, language) : null}</p></Paper>}
