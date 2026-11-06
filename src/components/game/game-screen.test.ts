@@ -174,10 +174,16 @@ describe("game privacy and turn UI", () => {
     expect(getTurnNotice(publicState, { ...privateState, canUseSkill: true }, "en")).toContain("Choose a target");
     expect(getTurnNotice(publicState, null, "en")).toBe("Skill phase: waiting for the active player.");
   });
-  it("provides a home button after the result", () => {
-    const html = renderToStaticMarkup(createElement(GameResultScreen, { result: { winner: "INNOCENT", turnsPlayed: 2, players: [], events: [] } }));
-    expect(html).toContain("กลับหน้าแรก");
-    expect(html).toContain('href="/"');
+  it("places the finished game's home button to the right of the sound toggle", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase: "FINISHED" }, privateState: null, teamState: null,
+      result: { winner: "INNOCENT", turnsPlayed: 2, players: [], events: [] },
+      murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    const header = html.match(/<header[^>]*>([\s\S]*?)<\/header>/)?.[1] ?? "";
+    expect(header).toMatch(/aria-label="เปิดเสียง"[\s\S]*?href="\/"[^>]*>กลับหน้าแรก<\/a>/);
+    expect(html.match(/>กลับหน้าแรก<\/a>/g)).toHaveLength(1);
   });
   it("shows team color bars and keeps the final event heading above a 300px scroll area", () => {
     const html = renderToStaticMarkup(createElement(GameResultScreen, { result: {
