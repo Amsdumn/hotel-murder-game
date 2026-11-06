@@ -193,7 +193,7 @@ export function LobbyScreen({ code }: { code: string }) {
     <main className="relative min-h-screen overflow-hidden bg-[#12111c] px-5 py-8 text-[#f8f1e4] sm:px-10">
       <div className="pointer-events-none absolute inset-0"><Image src="/art/hotel-night.webp" alt="" fill sizes="100vw" className="object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(18,17,28,.8),rgba(18,17,28,.94)_70%)]" /></div>
       <div className="relative mx-auto max-w-5xl">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-[#d9b66f]/25 pb-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-[#d9b66f]/25 pb-2">
           <div>
             <p className="text-sm tracking-[.22em] text-[#d9b66f]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."}</p>
             <h1 className="mt-2 font-serif text-3xl sm:text-4xl">{en ? "Waiting room" : "ห้องพักก่อนเริ่มเกม"}</h1>
@@ -207,8 +207,12 @@ export function LobbyScreen({ code }: { code: string }) {
             <div className="min-w-0 flex-1">
               <AlertTitle className="font-serif! text-xl! text-[#f2d79c]!">{en ? "Game status" : "สถานะเกม"}</AlertTitle>
               <p className="text-sm leading-6 text-[#e8ddcb]">{en ? "At least five players must join, and everyone must be ready." : "ต้องมีผู้เล่นอย่างน้อย 5 คน และทุกคนกดพร้อม"}</p>
-              <p className="mt-2 text-sm font-medium text-[#f2d79c]">{settingsDirty ? en ? "Save your room settings before starting" : "บันทึกการตั้งค่าห้องก่อนเริ่มเกม" : view?.canStart ? en ? "Everyone is ready and the roles are set" : "ทุกคนพร้อมและเลือกบทบาทครบแล้ว" : view && view.players.length >= 5 && view.selectedInnocentRoles.length !== requiredInnocentRoleCount(view.playerLimit) ? en ? `Save ${requiredInnocentRoleCount(view.playerLimit)} Innocent roles to start` : `เลือกและบันทึกบทบาทผู้บริสุทธิ์ ${requiredInnocentRoleCount(view.playerLimit)} บทบาทก่อนเริ่มเกม` : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
+              <p className="mt-1 text-sm font-medium text-[#f2d79c]">{settingsDirty ? en ? "Save your room settings before starting" : "บันทึกการตั้งค่าห้องก่อนเริ่มเกม" : view?.canStart ? en ? "Everyone is ready and the roles are set" : "ทุกคนพร้อมและเลือกบทบาทครบแล้ว" : view && view.players.length >= 5 && view.selectedInnocentRoles.length !== requiredInnocentRoleCount(view.playerLimit) ? en ? `Save ${requiredInnocentRoleCount(view.playerLimit)} Innocent roles to start` : `เลือกและบันทึกบทบาทผู้บริสุทธิ์ ${requiredInnocentRoleCount(view.playerLimit)} บทบาทก่อนเริ่มเกม` : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
+              <p className="mt-2 text-xs text-[#c6bdb1]">{en ? "Everyone's character is assigned when the game begins." : "ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม"}</p>
             </div>
+            <Button variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
+              {self?.ready ? en ? "Not ready" : "ยกเลิกความพร้อม" : en ? "Ready" : "พร้อมแล้ว"}
+            </Button>
             {isHost && view?.canStart && <Button className="ml-auto! shrink-0!" variant="contained" disabled={busy || !connected || settingsDirty} onClick={() => void (async () => { setBusy(true); const response = await requestLobby<{ version: number }>(socketRef.current!, "game:start", { actionId: createActionId(), expectedVersion: view.version }); if (!response.ok) setError(lobbyErrorMessage(response.error, language)); setBusy(false); })()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
           </div>
         </Alert>
@@ -236,33 +240,49 @@ export function LobbyScreen({ code }: { code: string }) {
                   {view.players.map((player) => (
                     <div key={player.id} className="flex flex-col items-start justify-between gap-2 rounded-lg border border-[#d9b66f]/15 bg-[#2c2422] px-3 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-4">
                       <div className="flex min-w-0 items-center gap-3">
-                        <div className="min-w-0">
-                        <span className="mr-3 text-[#a9977d]">{player.seatIndex + 1}.</span>
-                        <span className="inline-block max-w-[150px] truncate align-bottom" title={player.displayName}>{player.displayName}</span>
-                        {player.id === view.hostPlayerId && <span className="ml-2 text-xs text-[#d9b66f]">{en ? "Host" : "เจ้าของห้อง"}</span>}
-                        {player.id === playerId && <span className="ml-2 text-xs text-[#c6bdb1]">{en ? "You" : "คุณ"}</span>}
+                        <div className="min-w-0 flex items-center">
+                          <span className="mr-3 text-[#a9977d]">
+                            {player.seatIndex + 1}.
+                          </span>
+                          {editingName ? (
+                            <form className="flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}>
+                              <TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 256 } }} />
+                              <IconButton type="submit" color="primary" size="small" disabled={busy || !connected || draftName.trim().length < 2} aria-label={en ? "Save name" : "บันทึกชื่อ"} title={en ? "Save name" : "บันทึกชื่อ"}>
+                                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4L19 6" /></svg>
+                              </IconButton>
+                              <IconButton type="button" color="error" size="small" onClick={() => setEditingName(false)} aria-label={en ? "Cancel" : "ยกเลิก"} title={en ? "Cancel" : "ยกเลิก"}>
+                                <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5 19 19M19 5 5 19" /></svg>
+                              </IconButton>
+                            </form>
+                          ) : (
+                            <span className="inline-block max-w-37.5 truncate align-bottom" title={player.displayName}>
+                              {player.displayName}
+                            </span>
+                          )}
+                          {player.id === view.hostPlayerId && <span className="ml-2 text-xs text-[#d9b66f]">{en ? "Host" : "เจ้าของห้อง"}</span>}
+                          {player.id === playerId && <span className="ml-2 text-xs text-[#c6bdb1]">{en ? "You" : "คุณ"}</span>}
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         {!player.connected && <span className="text-xs text-[#9f9486]">{en ? "Offline" : "ออฟไลน์"}</span>}
                         <Chip size="small" label={player.ready ? en ? "Ready" : "พร้อม" : en ? "Waiting" : "รอ"} color={player.ready ? "success" : "default"} />
-                        {player.id === playerId && <Button size="small" variant="text" disabled={busy} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>{en ? "Rename" : "แก้ชื่อ"}</Button>}
+                        {player.id === playerId && !editingName && <Button size="small" variant="text" disabled={busy} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>{en ? "Rename" : "แก้ชื่อ"}</Button>}
                         {isHost && player.id !== playerId && <Button size="small" color="error" variant="text" disabled={busy || !connected} onClick={() => void act("lobby:kick", { playerId: player.id })}>{en ? "Remove" : "ไล่ออก"}</Button>}
                       </div>
                     </div>
                   ))}
                 </div>
-                {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 256 } }} /><IconButton type="submit" color="primary" size="small" disabled={busy || !connected || draftName.trim().length < 2} aria-label={en ? "Save name" : "บันทึกชื่อ"} title={en ? "Save name" : "บันทึกชื่อ"}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4L19 6" /></svg></IconButton><IconButton type="button" color="error" size="small" onClick={() => setEditingName(false)} aria-label={en ? "Cancel" : "ยกเลิก"} title={en ? "Cancel" : "ยกเลิก"}><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M5 5 19 19M19 5 5 19" /></svg></IconButton></form>}
-                <Button className="mt-6!" variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
+                {/* {editingName && <form className="mt-4 flex flex-wrap items-center gap-2" onSubmit={(event) => { event.preventDefault(); if (draftName.trim().length >= 2) void act("lobby:rename", { displayName: draftName.trim() }); }}><TextField size="small" label={en ? "New player name" : "ชื่อผู้เล่นใหม่"} value={draftName} onChange={(event) => setDraftName(event.target.value)} slotProps={{ htmlInput: { maxLength: 256 } }} /><Button type="submit" variant="contained" disabled={busy || !connected || draftName.trim().length < 2}>{en ? "Save name" : "บันทึกชื่อ"}</Button><Button variant="text" onClick={() => setEditingName(false)}>{en ? "Cancel" : "ยกเลิก"}</Button></form>} */}
+                {/* <Button className="mt-6!" variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
                   {self?.ready ? en ? "Not ready" : "ยกเลิกความพร้อม" : en ? "Ready" : "พร้อมแล้ว"}
-                </Button>
-                {localBotsEnabled && isHost && view.players.length < view.playerLimit && <Button className="mt-3!" variant="outlined" disabled={addingBots || busy || !connected} onClick={() => void (async () => {
+                </Button> */}
+                {localBotsEnabled && isHost && view.players.length < view.playerLimit && <Button className="mt-6! ml-2!" variant="outlined" disabled={addingBots || busy || !connected} onClick={() => void (async () => {
                   setAddingBots(true);
                   try { await addLocalTestBots(code, view.playerLimit - view.players.length, setBotCount); }
                   catch { setError(en ? "Could not add test players. Try again." : "เพิ่มผู้เล่นทดสอบไม่สำเร็จ กรุณาลองใหม่"); }
                   finally { setAddingBots(false); }
                 })()}>{addingBots ? en ? "Adding test players…" : "กำลังเพิ่มผู้เล่นทดสอบ…" : en ? `Fill with test players (${botCount} connected)` : `เพิ่มผู้เล่นทดสอบให้ครบ (${botCount} คนเชื่อมต่อ)`}</Button>}
-                <p className="mt-2 text-xs text-[#c6bdb1]">{en ? "Everyone's character is assigned when the game begins." : "ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม"}</p>
+                {/* <p className="mt-2 text-xs text-[#c6bdb1]">{en ? "Everyone's character is assigned when the game begins." : "ตัวละครของทุกคนจะสุ่มพร้อมกันเมื่อเริ่มเกม"}</p> */}
               </>}
             </Paper>
           </section>

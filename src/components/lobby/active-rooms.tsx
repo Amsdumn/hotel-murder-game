@@ -62,8 +62,18 @@ export function ActiveRooms({ onJoin }: { onJoin: (code: string) => void }) {
       const canResume = savedRooms.has(room.code);
       const canJoin = room.status === "WAITING" && room.playerCount < room.playerLimit;
       return <div key={room.code} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#d9b66f]/20 bg-[#28202c] px-4 py-3">
-        <div><p className="font-mono text-lg font-semibold tracking-[.16em] text-[#f4dfbc]">{room.code}</p><p className="mt-1 text-xs text-[#c6bdb1]">{en ? `${room.playerCount} players` : `ผู้เล่น ${room.playerCount} คน`}</p></div>
-        <div className="flex items-center gap-2"><Chip size="small" variant="outlined" color={canJoin ? "success" : "default"} label={room.status === "IN_PROGRESS" ? en ? "In progress" : "กำลังเล่น" : canJoin ? en ? "Waiting" : "รอผู้เล่น" : en ? "Full" : "ห้องเต็ม"} />{canResume ? <Button component={Link} href={`/lobby/${room.code}`} size="small" variant="contained">{en ? "Resume" : "กลับเข้าห้อง"}</Button> : <Button size="small" variant="contained" disabled={!canJoin} onClick={() => onJoin(room.code)}>{en ? "Join" : "เข้าร่วม"}</Button>}</div>
+        <div className="flex items-center gap-2">
+          <div>
+            <p className="font-mono text-lg font-semibold tracking-[.16em] text-[#f4dfbc]">
+              {room.code}
+            </p>
+            <p className="mt-1 text-xs text-[#c6bdb1]">
+              {en ? `${room.playerCount} players` : `ผู้เล่น ${room.playerCount} คน`}
+            </p>
+          </div>
+          <Chip size="small" variant="outlined" color={canJoin ? "success" : "default"} label={room.status === "IN_PROGRESS" ? en ? "In progress" : "กำลังเล่น" : canJoin ? en ? "Waiting" : "รอผู้เล่น" : en ? "Full" : "ห้องเต็ม"} />
+        </div>
+        {canResume ? <Button component={Link} href={`/lobby/${room.code}`} size="small" variant="contained">{en ? "Resume" : "กลับเข้าห้อง"}</Button> : <Button size="small" variant="contained" disabled={!canJoin} onClick={() => onJoin(room.code)}>{en ? "Join" : "เข้าร่วม"}</Button>}
       </div>;
     })}</div>}
   </section>;
