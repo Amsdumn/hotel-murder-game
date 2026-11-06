@@ -16,10 +16,26 @@ describe("server environment", () => {
     expect(() => getServerEnv({ PORT: "65536" })).toThrow();
   });
 
-  it("requires a MongoDB URI for database operations", () => {
-    expect(() => getDatabaseEnv({})).toThrow();
-    expect(getDatabaseEnv({ MONGODB_URI: "mongodb://127.0.0.1:27017/hotel-murder-online" }).MONGODB_URI)
+  it("uses the locally installed MongoDB by default in development", () => {
+    expect(getDatabaseEnv({ NODE_ENV: "development" }).MONGODB_URI)
       .toBe("mongodb://127.0.0.1:27017/hotel-murder-online");
+  });
+
+  it("selects the Docker localhost port in development", () => {
+    expect(getDatabaseEnv({ NODE_ENV: "development", MONGODB_MODE: "docker" }).MONGODB_URI)
+      .toBe("mongodb://127.0.0.1:27018/hotel-murder-online");
+  });
+
+  it("allows a custom development URI when explicitly selected or already configured", () => {
+    const uri = "mongodb://127.0.0.1:27019/custom";
+    expect(getDatabaseEnv({ NODE_ENV: "development", MONGODB_MODE: "custom", MONGODB_URI: uri }).MONGODB_URI).toBe(uri);
+    expect(getDatabaseEnv({ NODE_ENV: "development", MONGODB_URI: uri }).MONGODB_URI).toBe(uri);
+  });
+
+  it("requires MONGODB_URI in production regardless of the development mode", () => {
+    expect(() => getDatabaseEnv({ NODE_ENV: "production", MONGODB_MODE: "docker" })).toThrow();
+    expect(getDatabaseEnv({ NODE_ENV: "production", MONGODB_MODE: "docker", MONGODB_URI: "mongodb+srv://example.mongodb.net/hotel-murder-online" }).MONGODB_URI)
+      .toBe("mongodb+srv://example.mongodb.net/hotel-murder-online");
   });
 
   it("rejects a non-MongoDB protocol", () => {

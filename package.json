@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch server.ts",
+    "dev:local": "cross-env MONGODB_MODE=local tsx watch server.ts",
+    "dev:docker": "npm run db:up && cross-env MONGODB_MODE=docker tsx watch server.ts",
+    "db:up": "docker compose up -d mongo",
+    "db:down": "docker compose down",
     "build": "next build --webpack",
     "start": "cross-env NODE_ENV=production tsx server.ts",
     "typecheck": "tsc --noEmit --incremental false",

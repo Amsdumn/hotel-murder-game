@@ -9,15 +9,19 @@ Use the ไทย / EN control on the menu, lobby, or game screen to change the 
 - Node.js 20.9 or newer
 - npm
 - MongoDB for persistent lobby data. The menu can render without MongoDB, but creating or joining a room requires a running database.
+- Docker with Compose if using the local container option.
 
 ## Local setup
 
 1. Run `npm install`.
-2. Copy `.env.example` to `.env.local` and adjust `PORT`, `BIND_HOST`, and `MONGODB_URI` for your environment. `BIND_HOST=0.0.0.0` lets the server accept connections on the LAN; the unrelated machine `HOSTNAME` variable is ignored.
-3. Start MongoDB locally or set `MONGODB_URI` to a reachable MongoDB instance.
-4. Run `npm run dev` and open the `Local` URL printed by the server. Share a printed `Network` URL with friends on the same LAN. If their browser cannot reach it, allow the Node.js process through the host firewall on private networks.
+2. Copy `.env.example` to `.env.local` and adjust `PORT` and `BIND_HOST` for your environment. `BIND_HOST=0.0.0.0` lets the server accept connections on the LAN; the unrelated machine `HOSTNAME` variable is ignored.
+3. Choose a development database:
+   - **Installed MongoDB:** Start MongoDB on `127.0.0.1:27017`, then run `npm run dev:local`.
+   - **Docker MongoDB:** Run `npm run dev:docker`. This starts the `mongo` Compose service and connects to its localhost port `27018`. Run `npm run db:down` to stop it; the named volume retains its data.
+   - **Other database:** Set `MONGODB_MODE=custom` and `MONGODB_URI` in `.env.local`, then run `npm run dev`. Existing `.env.local` files with only `MONGODB_URI` continue to use that URI.
+4. Open the `Local` URL printed by the server. Share a printed `Network` URL with friends on the same LAN. If their browser cannot reach it, allow the Node.js process through the host firewall on private networks.
 
-The custom server loads `.env.local` before reading its settings. `MONGODB_URI` is validated when a lobby operation first requests a connection. Do not commit `.env.local`.
+The custom server loads `.env.local` before reading its settings. `npm run dev` uses `MONGODB_MODE` from that file, or an existing `MONGODB_URI` when no mode is set. The database setting is validated when a lobby operation first requests a connection. Do not commit `.env.local`.
 
 Create a room in one browser and join from another with its six-character code. The first successful create or join saves a guest profile and a room-specific reconnect token in that browser. Returning to a room from the same browser resumes the existing player, including after closing the tab; it does not create another character. This is a browser-local profile, so another device or cleared browser storage cannot recover it. Do not share the token. Rooms are removed after everyone has been disconnected for 10 minutes, after which their players cannot resume. Players can ready or unready. The host can set a player limit from 5 to 10, discussion time from 30 to 600 seconds, and an Innocent role pool of four roles for a five-seat room or the maximum player count minus two otherwise. The game randomly draws the roles needed for the current players from that pool. All changes are validated and versioned on the server.
 
@@ -27,7 +31,7 @@ The build and custom server use Next.js's webpack path. In this environment, the
 
 ## Render deployment
 
-The `render.yaml` Blueprint configures a free Node web service in Virginia from the `main` branch. It builds with `npm ci && npm run build`, starts the custom Socket.IO server with `npm start`, and checks `/` for health. During Blueprint creation, set `MONGODB_URI` to the Atlas application connection string with the database username and password filled in. Keep this value in Render's environment settings; never commit it.
+The `render.yaml` Blueprint configures a free Node web service in Virginia from the `main` branch. It builds with `npm ci && npm run build`, starts the custom Socket.IO server with `npm start`, and checks `/` for health. Production always requires `MONGODB_URI` and ignores the development `MONGODB_MODE`. During Blueprint creation, set `MONGODB_URI` to the Atlas application connection string with the database username and password filled in. Keep this value in Render's environment settings; never commit it.
 
 Add the service's outbound IP ranges from Render's **Connect > Outbound** panel to the Atlas project Network Access list. Without those ranges, the site can load but lobby actions cannot reach MongoDB.
 
