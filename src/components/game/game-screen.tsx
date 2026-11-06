@@ -456,12 +456,14 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       <div className="min-w-0 space-y-5">
       <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} selectedPlayerIds={selectedLawyerTargets} selectionCount={privateState?.role === "LAWYER" ? 2 : 1} onlinePlayerIds={onlinePlayerIds} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : privateState?.canUseSkill && privateState.role === "LAWYER" ? (targetId) => setLawyerSelection((current) => ({ turn: state.turn, playerId: privateState.playerId, targetIds: selectLawyerTargets(current?.turn === state.turn && current.playerId === privateState.playerId ? current.targetIds : [], targetId) })) : undefined} /></div>
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
-      {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
+      {/* {privateState?.mode === "SPECTATOR" && <SpectatorPanel />} */}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage ? gameMessage(state.phaseMessage, language) : null}</p></Paper>}
       {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} selectedRoom={selectedSkillRoom} selectedRooms={doubleKillRooms} doubleKillActive={doubleKillActive} selectedFloor={selectedSkillFloor} selectedColumn={selectedSkillColumn} selectedPlayerId={selectedSkillPlayer} selectedPlayerIds={selectedLawyerTargets} />}
-      {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p className="text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p></Paper>}
+      {/* {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!">
+      <p className="text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p>
+      </Paper>} */}
       {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p></Paper>}
-      <Paper className="flex! h-[300px]! flex-col! border! border-[#353440]! bg-[#191a22]! p-5!">
+      <Paper className="flex! h-75! flex-col! border! border-[#353440]! bg-[#191a22]! p-5!">
         <h2 id="public-event-history-title" className="shrink-0 font-serif text-xl">{en ? "Public event history" : "ประวัติเหตุการณ์สาธารณะ"}</h2>
         <ol aria-labelledby="public-event-history-title" tabIndex={0} className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto wrap-break-word pr-2 text-sm text-[#c6bdb1]">
           {state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{gameMessage(event.message, language)}</li>)}

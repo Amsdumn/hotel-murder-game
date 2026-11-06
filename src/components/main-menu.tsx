@@ -133,10 +133,10 @@ export function MainMenu() {
                 {en ? "Tonight?" : "ใครฆ่า..."}
               </span>
             </h1>
-            <p className="mt-5 max-w-lg text-base leading-6 text-[#c6bdb1] sm:text-lg">
+            <p className="mt-3 max-w-lg text-base leading-6 text-[#c6bdb1] sm:text-lg">
               {en ? "Every guest has a secret. One is the Assassin. Uncover the truth before the final night." : "แขกทุกคนมีความลับ หนึ่งคนคือนักฆ่า ร่วมสืบหาความจริงก่อนจะถึงคืนสุดท้าย"}
             </p>
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
               <Button variant="contained" size="large" onClick={() => openEntry("create")} className="px-8! py-3!">
                 {en ? "Create room" : "สร้างห้องเกม"}
               </Button>
