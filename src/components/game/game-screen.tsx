@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Alert, Button, Dialog, DialogContent, DialogTitle, Paper } from "@mui/material";
+import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Paper } from "@mui/material";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { avatarEnglish } from "@/lib/avatar-translations";
 import { gameMessage } from "@/lib/game-copy";
@@ -130,6 +130,15 @@ export function SkillResultOverlay({ message, language }: { message: string; lan
   return <Dialog open keepMounted disablePortal fullWidth maxWidth="sm" aria-labelledby="skill-result-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" } }}>
     <DialogTitle id="skill-result-title" className="pt-7! text-center! text-sm! font-semibold! tracking-[.2em]! text-[#e3c88e]!">{title}</DialogTitle>
     <DialogContent className="px-7! pb-10! text-center! font-serif! text-2xl! leading-relaxed! sm:text-3xl!">{gameMessage(result, language)}</DialogContent>
+  </Dialog>;
+}
+
+function SkillTurnDialog({ open, language, onContinue }: { open: boolean; language: Language; onContinue: () => void }) {
+  const en = language === "en";
+  return <Dialog open={open} onClose={onContinue} disablePortal fullWidth maxWidth="xs" aria-labelledby="skill-turn-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" } }}>
+    <DialogTitle id="skill-turn-title" className="pt-8! text-center! font-serif! text-3xl! text-[#f2d79c]!">{en ? "It's your turn to use a skill" : "ถึงตาคุณใช้สกิล"}</DialogTitle>
+    <DialogContent className="text-center! leading-7!">{en ? "Choose your target and confirm before your time runs out." : "เลือกเป้าหมายและยืนยันการใช้สกิลก่อนหมดเวลา"}</DialogContent>
+    <DialogActions className="justify-center! px-6! pb-8!"><Button variant="contained" onClick={onContinue}>{en ? "Use skill" : "เริ่มใช้สกิล"}</Button></DialogActions>
   </Dialog>;
 }
 
@@ -287,10 +296,12 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [showSecret, setShowSecret] = useState(false);
+  const [dismissedSkillTurnKey, setDismissedSkillTurnKey] = useState<string | null>(null);
   const previousPrivateState = useRef<PrivatePlayerState | null>(privateState);
   const nextSkillResultId = useRef(0);
   const [skillResultQueue, setSkillResultQueue] = useState<Array<{ id: number; message: string }>>([]);
   const skillResult = skillResultQueue[0] ?? null;
+  const skillTurnKey = state.phase === "SKILL_PHASE" && privateState?.canUseSkill && connected ? `${state.code}:${state.turn}:${privateState.playerId}` : null;
   const activeSkillResultId = skillResult?.id;
   useEffect(() => {
     const freshResults = getFreshSkillResults(previousPrivateState.current, privateState);
@@ -347,6 +358,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} privateState={privateState} avatarId={state.players.find((player) => player.id === privateState?.playerId)?.avatarId} />;
   return <main className={`min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8 ${privateState?.canUseSkill ? "pb-32" : ""} ${state.phase === "DISCUSSION" ? "pt-24" : ""}`}><div className="mx-auto max-w-6xl">
     {skillResult && <SkillResultOverlay message={skillResult.message} language={language} />}
+    <SkillTurnDialog open={!!skillTurnKey && skillTurnKey !== dismissedSkillTurnKey && !skillResult} language={language} onContinue={() => setDismissedSkillTurnKey(skillTurnKey)} />
     {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <div className="fixed inset-x-0 top-3 z-30 flex justify-center px-4" role="timer"><div className="rounded-2xl border border-[#e3c88e]/60 bg-[#211923]/95 px-5 py-3 text-center shadow-[0_12px_40px_rgba(0,0,0,.6)] backdrop-blur-md"><DiscussionTimer deadline={state.phaseDeadlineAt} /></div></div>}
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || (en ? "Reconnecting…" : "กำลังเชื่อมต่อใหม่…")}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."} · {state.code}</p><h1 className="mt-2 font-serif text-3xl">{en ? "Turn" : "รอบ"} {state.turn} · {en ? state.phase === "SKILL_PHASE" ? "Skill phase" : state.phase === "DISCUSSION" ? "Discussion" : state.phase === "VOTING" ? "Voting" : state.phase === "RESOLUTION" ? "Room result" : "Game over" : state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : state.phase === "RESOLUTION" ? "ผลการเปิดห้อง" : "จบเกม"}</h1></div><div className="flex items-center gap-2"><LanguageSwitcher /><SoundSettings muted={muted} onChange={changeMuted} /></div></header>

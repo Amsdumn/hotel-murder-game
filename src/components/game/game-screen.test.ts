@@ -305,6 +305,22 @@ describe("game privacy and turn UI", () => {
     expect(html).not.toContain("แสดงข้อมูลลับและวิธีใช้สกิล");
   });
 
+  it("opens a centered skill-turn dialog only for the connected player whose skill is ready", () => {
+    const render = (canUseSkill: boolean, connected = true, phase: PublicGameState["phase"] = "SKILL_PHASE") => renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase },
+      privateState: { ...privateState, canUseSkill },
+      teamState: null, result: null, murderSequence: 0, connected, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    const active = render(true);
+    expect(active).toContain('role="dialog"');
+    expect(active).toContain("ถึงตาคุณใช้สกิล");
+    expect(active).toContain("เริ่มใช้สกิล");
+    expect(render(false)).not.toContain('role="dialog"');
+    expect(render(true, false)).not.toContain('role="dialog"');
+    expect(render(true, true, "VOTING")).not.toContain('role="dialog"');
+  });
+
   it("starts with private role, room, and action history hidden", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, { state: publicState, privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }) }));
     expect(html).toContain("แสดงข้อมูลลับ");
