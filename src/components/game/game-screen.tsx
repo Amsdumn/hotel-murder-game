@@ -44,9 +44,12 @@ export function SoundSettings({ muted, onChange }: { muted: boolean; onChange: (
   return <SoundToggleButton muted={muted} onChange={onChange} />;
 }
 
-export function DiscussionTimer({ deadline }: { deadline: number }) {
-  const en = useLanguage() === "en";
-  return <PhaseTimer deadline={deadline} label={en ? "Discussion" : "เวลาพูดคุย"} />;
+function GameTimerBanner({ deadline, label }: { deadline: number; label: string }) {
+  return <div className="fixed inset-x-0 top-3 z-30 flex justify-center px-4" role="timer">
+    <div className="rounded-2xl border border-[#e3c88e]/60 bg-[#211923]/95 px-5 py-3 text-center shadow-[0_12px_40px_rgba(0,0,0,.6)] backdrop-blur-md">
+      <PhaseTimer deadline={deadline} label={label} />
+    </div>
+  </div>;
 }
 
 function PhaseTimer({ deadline, label }: { deadline: number; label: string }) {
@@ -250,18 +253,11 @@ export function RoleRevealCard({ privateState }: { privateState: PrivatePlayerSt
 
 export function StoryPrologue({ deadline, connected, connectionMessage, privateState, avatarId, muted, onMuteChange }: { deadline?: number; connected: boolean; connectionMessage: string; privateState: PrivatePlayerState | null; avatarId?: AvatarId | null; muted?: boolean; onMuteChange?: (muted: boolean) => void }) {
   const en = useLanguage() === "en";
-  const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
   const [showRole, setShowRole] = useState(false);
   const avatar = avatarById(avatarId);
-  useEffect(() => {
-    if (deadline === undefined) return;
-    const tick = () => setSecondsLeft(Math.max(0, Math.ceil((deadline - Date.now()) / 1000)));
-    tick();
-    const interval = window.setInterval(tick, 250);
-    return () => window.clearInterval(interval);
-  }, [deadline]);
   return <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_50%_20%,#452433,#100f17_68%)] px-5 py-10 text-[#f4efe8]">
-    <div className="fixed right-4 top-4 z-30 flex gap-2"><LanguageSwitcher />{onMuteChange && <SoundSettings muted={!!muted} onChange={onMuteChange} />}</div>
+    {deadline !== undefined && <GameTimerBanner deadline={deadline} label={en ? "First clue in" : "เบาะแสแรกใน"} />}
+    <div className="fixed right-4 top-20 z-30 flex gap-2 sm:top-4"><LanguageSwitcher />{onMuteChange && <SoundSettings muted={!!muted} onChange={onMuteChange} />}</div>
     <section className="w-full max-w-2xl rounded-3xl border border-[#c8a46b]/35 bg-[#17141d]/90 px-7 py-10 text-center shadow-2xl sm:px-14 sm:py-14" aria-labelledby="prologue-title">
       <p className="text-xs tracking-[.35em] text-[#c8a46b]">HOTEL MURDER ONLINE</p>
       <p className="mt-8 text-sm tracking-[.22em] text-[#d8bc86]">{en ? "BEFORE THE STORY BEGINS" : "ก่อนเรื่องราวจะเริ่ม"}</p>
@@ -274,7 +270,7 @@ export function StoryPrologue({ deadline, connected, connectionMessage, privateS
       </div>
       {avatar && <div className="mx-auto mt-7 flex max-w-xs items-center gap-3 rounded-xl border border-[#c8a46b]/30 bg-[#29202b] p-2 text-left"><div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg"><Image src={avatar.portrait} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="56px" className="object-cover object-top" /></div><div><p className="text-xs text-[#c8a46b]">{en ? "Your character" : "อวาตาร์ของคุณ"}</p><p>{en ? avatarEnglish[avatar.id].name : avatar.name}</p></div></div>}
       {privateState && <div className="mt-7"><Button variant="outlined" aria-expanded={showRole} onClick={() => setShowRole((open) => !open)}>{showRole ? en ? "Hide my role" : "ปิดบทบาทของฉัน" : en ? "Reveal my role" : "เปิดดูบทบาทของฉัน"}</Button>{showRole && <RoleRevealCard privateState={privateState} />}</div>}
-      <p className="mt-9 text-sm text-[#c8a46b]" role="status">{!connected ? connectionMessage || (en ? "Reconnecting…" : "กำลังเชื่อมต่อใหม่…") : secondsLeft === null ? en ? "Preparing the first clue…" : "กำลังเตรียมเปิดเผยเบาะแส…" : secondsLeft > 0 ? en ? `First clue in ${secondsLeft} seconds` : `เบาะแสแรกจะปรากฏใน ${secondsLeft} วินาที` : en ? "Revealing clues…" : "กำลังเปิดเผยเบาะแส…"}</p>
+      {(!connected || deadline === undefined) && <p className="mt-9 text-sm text-[#c8a46b]" role="status">{!connected ? connectionMessage || (en ? "Reconnecting…" : "กำลังเชื่อมต่อใหม่…") : en ? "Preparing the first clue…" : "กำลังเตรียมเปิดเผยเบาะแส…"}</p>}
     </section>
   </main>;
 }
@@ -412,6 +408,12 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     return response.ok;
   };
   if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} privateState={privateState} avatarId={state.players.find((player) => player.id === privateState?.playerId)?.avatarId} muted={muted} onMuteChange={changeMuted} />;
+  const timerDeadline = state.phase === "SKILL_PHASE" ? skillDeadlineAt ?? teamState?.chatDeadlineAt : state.phaseDeadlineAt;
+  let timerLabel = "";
+  if (state.phase === "SKILL_PHASE") timerLabel = skillDeadlineAt !== undefined ? en ? "Skill time" : "เวลาใช้สกิล" : en ? "Murderer chat" : "เวลาแชทฝ่ายฆาตกร";
+  else if (state.phase === "DISCUSSION") timerLabel = en ? "Discussion" : "เวลาพูดคุย";
+  else if (state.phase === "VOTING") timerLabel = en ? "Voting" : "เวลาลงคะแนน";
+  else if (state.phase === "RESOLUTION") timerLabel = state.turn >= 4 ? en ? "Final result in" : "สรุปผลเกมใน" : en ? "Next turn in" : "เริ่มรอบถัดไปใน";
   return <main className={`min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8 ${privateState?.canUseSkill ? "pb-32" : ""} ${state.phase === "DISCUSSION" ? "pt-24" : ""}`}><div className="mx-auto max-w-6xl">
     {skillResult && <SkillResultOverlay message={skillResult.message} language={language} players={state.players} />}
     <SkillTurnDialog open={!!skillTurnKey && skillTurnKey !== dismissedSkillTurnKey && !skillResult} language={language} onContinue={() => {
@@ -422,7 +424,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       pendingSkillScrollRole.current = null;
       if (role) window.requestAnimationFrame(() => scrollToSkillTarget(role, guestsRef.current, boardRef.current, true));
     }} />
-    {state.phase === "DISCUSSION" && state.phaseDeadlineAt && <div className="fixed inset-x-0 top-3 z-30 flex justify-center px-4" role="timer"><div className="rounded-2xl border border-[#e3c88e]/60 bg-[#211923]/95 px-5 py-3 text-center shadow-[0_12px_40px_rgba(0,0,0,.6)] backdrop-blur-md"><DiscussionTimer deadline={state.phaseDeadlineAt} /></div></div>}
+    {timerDeadline !== undefined && timerLabel && <GameTimerBanner deadline={timerDeadline} label={timerLabel} />}
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || (en ? "Reconnecting…" : "กำลังเชื่อมต่อใหม่…")}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."} · {state.code}</p><h1 className="mt-2 font-serif text-3xl">{en ? "Turn" : "รอบ"} {state.turn} · {en ? state.phase === "SKILL_PHASE" ? "Skill phase" : state.phase === "DISCUSSION" ? "Discussion" : state.phase === "VOTING" ? "Voting" : state.phase === "RESOLUTION" ? "Room result" : "Game over" : state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : state.phase === "RESOLUTION" ? "ผลการเปิดห้อง" : "จบเกม"}</h1></div><div className="flex items-center gap-2"><LanguageSwitcher /><SoundSettings muted={muted} onChange={changeMuted} /></div></header>
     <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="mb-5!">{turnNotice}</Alert>
@@ -432,7 +434,6 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {showSecret && privateState && (privateState.role === "RECEPTIONIST" || privateState.role === "PHOTOGRAPHER") && state.turn === 3 && <div role="status" className="mb-5 rounded-xl border border-[#e3c88e]/60 bg-[#30202d] p-4 font-semibold text-[#f2d79c]">{en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</div>}
     {privateState?.privateResults.some((message) => message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") || message.startsWith("ภาพถ่ายเทิร์นที่ 3:")) && !showSecret && <Alert severity="info" className="mb-5!">{en ? "A new private investigation result is available. Open your private information to view it." : "มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู"}</Alert>}
     {state.phase !== "SKILL_PHASE" && privateState?.skillBlockReason && <Alert severity="warning" className="mb-5!">{privateState.skillBlockReason === "BLACKOUT" ? en ? "Your floor is dark. You cannot use your skill this turn." : "ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้" : en ? "Your Electrician skill is cooling down this turn." : "สกิลช่างไฟกำลังพักหนึ่งรอบ รอบนี้ใช้สกิลไม่ได้"}</Alert>}
-    {privateState?.canUseSkill && skillDeadlineAt !== undefined && <p className="mb-5 text-sm text-[#e7ce98]" role="timer" aria-live="off">{skillSecondsLeft === null ? en ? "Checking skill time…" : "กำลังตรวจเวลาใช้สกิล…" : skillSecondsLeft > 0 ? en ? `${skillSecondsLeft} seconds left to use your skill` : `เวลาใช้สกิลเหลือ ${skillSecondsLeft} วินาที` : en ? "Skill time expired. Waiting for the next phase." : "หมดเวลาใช้สกิลแล้ว กำลังรอขั้นตอนถัดไป"}</p>}
     {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-2">
       <div className="min-w-0 space-y-5">
         <div ref={boardRef} className="scroll-mt-4"><HotelBoard state={state} selfId={privateState?.playerId} ownRoomNumber={privateState?.roomNumber} unavailableSkillRooms={privateState?.role === "LOCKSMITH" ? privateState.locksmithUsedRooms : undefined} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} onSkillRoomSelect={roomSkillActive ? (roomNumber) => selectBoardTarget("room", roomNumber) : undefined} onSkillFloorSelect={floorSkillActive ? (floor) => selectBoardTarget("floor", floor) : undefined} onSkillColumnSelect={columnSkillActive ? (column) => selectBoardTarget("column", column) : undefined} selectedSkillRoom={selectedSkillRoom} selectedSkillRooms={doubleKillRooms} selectedSkillFloor={selectedSkillFloor} selectedSkillColumn={selectedSkillColumn} voteBusy={busy || !connected || voteExpired || ((roomSkillActive || floorSkillActive || columnSkillActive) && skillSecondsLeft === 0)} /></div>
@@ -443,8 +444,8 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage ? gameMessage(state.phaseMessage, language) : null}</p></Paper>}
       {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} selectedRoom={selectedSkillRoom} selectedRooms={doubleKillRooms} doubleKillActive={doubleKillActive} selectedFloor={selectedSkillFloor} selectedColumn={selectedSkillColumn} selectedPlayerId={selectedSkillPlayer} />}
-      {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><PhaseTimer deadline={state.phaseDeadlineAt} label={en ? "Voting" : "เวลาลงคะแนน"} /><p className="mt-2 text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p></Paper>}
-      {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p>{state.phaseDeadlineAt && <div className="mt-4"><PhaseTimer deadline={state.phaseDeadlineAt} label={state.turn >= 4 ? en ? "Final result in" : "สรุปผลเกมใน" : en ? "Next turn in" : "เริ่มรอบถัดไปใน"} /></div>}</Paper>}
+      {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p className="text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p></Paper>}
+      {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p></Paper>}
       <Paper className="flex! h-[300px]! flex-col! border! border-[#353440]! bg-[#191a22]! p-5!">
         <h2 id="public-event-history-title" className="shrink-0 font-serif text-xl">{en ? "Public event history" : "ประวัติเหตุการณ์สาธารณะ"}</h2>
         <ol aria-labelledby="public-event-history-title" tabIndex={0} className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto wrap-break-word pr-2 text-sm text-[#c6bdb1]">

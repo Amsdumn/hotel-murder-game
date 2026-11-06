@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
-import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, getFreshSkillResults, getTurnNotice, scrollToSkillTarget, skillActionInstructions } from "./game-screen";
+import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, StoryPrologue, getFreshSkillResults, getTurnNotice, scrollToSkillTarget, skillActionInstructions } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
 import { roleSkillDescriptions } from "@/lib/role-skills";
 import { roleNames } from "../role-portrait";
@@ -22,6 +22,43 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("uses the discussion timer banner for every timed game phase", () => {
+    const deadline = Date.now() + 30_000;
+    for (const [phase, label] of [
+      ["SKILL_PHASE", "เวลาใช้สกิล"],
+      ["DISCUSSION", "เวลาพูดคุย"],
+      ["VOTING", "เวลาลงคะแนน"],
+      ["RESOLUTION", "เริ่มรอบถัดไปใน"],
+    ] as const) {
+      const html = renderToStaticMarkup(createElement(GameScreen, {
+        state: { ...publicState, phase, phaseDeadlineAt: deadline },
+        privateState: phase === "SKILL_PHASE" ? { ...privateState, canUseSkill: true, skillDeadlineAt: deadline } : privateState,
+        teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
+        onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+      }));
+      expect(html.match(/role="timer"/g), phase).toHaveLength(1);
+      expect(html).toContain("fixed inset-x-0 top-3 z-30 flex justify-center px-4");
+      expect(html).toContain(label);
+    }
+    const prologue = renderToStaticMarkup(createElement(StoryPrologue, {
+      deadline, connected: true, connectionMessage: "", privateState,
+    }));
+    expect(prologue.match(/role="timer"/g)).toHaveLength(1);
+    expect(prologue).toContain("fixed inset-x-0 top-3 z-30 flex justify-center px-4");
+    expect(prologue).toContain("เบาะแสแรก");
+  });
+
+  it("shows the same timer for a teammate's private chat window", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: publicState, privateState,
+      teamState: { teammates: [], privateResults: [], chatMessages: [], canChat: true, chatDeadlineAt: Date.now() + 30_000 },
+      result: null, murderSequence: 0, connected: true, connectionMessage: "",
+      onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html.match(/role="timer"/g)).toHaveLength(1);
+    expect(html).toContain("เวลาแชทฝ่ายฆาตกร");
+  });
+
   it("prompts living Murderers to open their private team chat during a Murderer skill turn", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, {
       state: publicState,
