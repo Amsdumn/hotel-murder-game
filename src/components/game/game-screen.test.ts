@@ -186,6 +186,20 @@ describe("game privacy and turn UI", () => {
     }
     expect(roleNames.PHOTOGRAPHER).toBe("ช่างภาพ");
   });
+  it("shows the Killer's portrait and name only when the Photographer opens private information", () => {
+    const players = [
+      { id: "a", displayName: "Photographer", seatIndex: 0, avatarId: "irina-volkova" as const },
+      { id: "b", displayName: "Guest B", seatIndex: 1, avatarId: "adrian-blackwood" as const },
+    ];
+    const viewer = { ...privateState, role: "PHOTOGRAPHER" as const, team: "INNOCENT" as const, privateResults: ["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 2 Guest B"] };
+    const render = (open: boolean) => renderToStaticMarkup(createElement(PrivateInfoPanel, { privateState: viewer, teamState: null, players, open, onToggle: () => {} }));
+    expect(render(false)).not.toContain("adrian-blackwood-portrait.webp");
+    expect(render(true)).toContain("adrian-blackwood-portrait.webp");
+    expect(render(true)).toContain("Guest B");
+    const overlay = renderToStaticMarkup(createElement(SkillResultOverlay, { message: viewer.privateResults[0], language: "th", players }));
+    expect(overlay).toContain("adrian-blackwood-portrait.webp");
+    expect(overlay).toContain("Guest B");
+  });
   it("offers voting on the hotel board only to an eligible player", () => {
     const render = (viewer: PrivatePlayerState | null) => renderToStaticMarkup(createElement(GameScreen, {
       state: { ...publicState, phase: "VOTING" }, privateState: viewer, teamState: null,

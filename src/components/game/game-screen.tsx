@@ -16,6 +16,7 @@ import type { LobbyAck } from "@/types/lobby";
 import { MurderEventOverlay } from "./murder-event-overlay";
 import { PrivateRoomScene } from "./private-room-scene";
 import { ReceptionistRegister } from "./receptionist-register";
+import { PhotographerResult } from "./photographer-result";
 import { avatarById, type AvatarId } from "@/lib/avatars";
 
 export function PublicGuests({ players, selfId, selectedPlayerId, onSelectPlayer }: { players: PublicGameState["players"]; selfId?: string; selectedPlayerId?: string | null; onSelectPlayer?: (playerId: string) => void }) {
@@ -110,7 +111,7 @@ export function PrivateInfoPanel({ privateState, teamState, players, open, onTog
       <PrivateRoomScene role={privateState.role} roomNumber={privateState.roomNumber} team={privateState.team} isAlive={privateState.isAlive} isActive={privateState.canUseSkill} avatarId={players.find((player) => player.id === privateState.playerId)?.avatarId} />
       {teamState && <section><h3 className="font-semibold text-[#d8bc86]">{en ? "Murderer team" : "ฝ่ายฆาตกร"}</h3>{teamState.teammates.map((mate) => <p className="mt-2 text-sm" key={mate.playerId}>{players.find((player) => player.id === mate.playerId)?.displayName} · {en ? roleNamesEn[mate.role] : roleNames[mate.role]} · {en ? "Room" : "ห้อง"} {mate.roomNumber}</p>)}</section>}
       {privateState.actionHistory.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">{en ? "Your action history" : "ประวัติการกระทำของคุณ"}</h3><ol className="mt-2 space-y-2 text-sm text-[#d6d2dc]">{privateState.actionHistory.map((entry, index) => <li key={`${entry.turn}-${index}`}>{en ? "Turn" : "รอบ"} {entry.turn} · {gameMessage(entry.message, language)}</li>)}</ol></section>}
-      {privateState.privateResults.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">{en ? "Private investigation results" : "ผลสืบสวนส่วนตัว"}</h3><div className="mt-2 space-y-3">{privateState.privateResults.map((message, index) => privateState.role === "RECEPTIONIST" && message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") ? <ReceptionistRegister key={index} message={message} players={players} /> : <p key={index} className="text-sm leading-7">{gameMessage(message, language)}</p>)}</div></section>}
+      {privateState.privateResults.length > 0 && <section><h3 className="font-semibold text-[#d8bc86]">{en ? "Private investigation results" : "ผลสืบสวนส่วนตัว"}</h3><div className="mt-2 space-y-3">{privateState.privateResults.map((message, index) => privateState.role === "RECEPTIONIST" && message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") ? <ReceptionistRegister key={index} message={message} players={players} /> : privateState.role === "PHOTOGRAPHER" && message.startsWith("ภาพถ่ายเทิร์นที่ 3:") ? <PhotographerResult key={index} message={message} players={players} language={language} /> : <p key={index} className="text-sm leading-7">{gameMessage(message, language)}</p>)}</div></section>}
     </div>}
   </Paper>;
 }
@@ -123,13 +124,13 @@ export function getFreshSkillResults(previous: PrivatePlayerState | null, curren
     .map((action) => action.message);
 }
 
-export function SkillResultOverlay({ message, language }: { message: string; language: Language }) {
+export function SkillResultOverlay({ message, language, players = [] }: { message: string; language: Language; players?: PublicGameState["players"] }) {
   const fromAccomplice = message.startsWith("ข้อมูลจากผู้สมรู้ร่วมคิด: ");
   const title = fromAccomplice ? language === "en" ? "Accomplice report" : "ข้อมูลจากผู้สมรู้ร่วมคิด" : language === "en" ? "Skill result" : "ผลลัพธ์สกิล";
   const result = fromAccomplice ? message.slice("ข้อมูลจากผู้สมรู้ร่วมคิด: ".length) : message;
   return <Dialog open keepMounted disablePortal fullWidth maxWidth="sm" aria-labelledby="skill-result-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" } }}>
     <DialogTitle id="skill-result-title" className="pt-7! text-center! text-sm! font-semibold! tracking-[.2em]! text-[#e3c88e]!">{title}</DialogTitle>
-    <DialogContent className="px-7! pb-10! text-center! font-serif! text-2xl! leading-relaxed! sm:text-3xl!">{gameMessage(result, language)}</DialogContent>
+    <DialogContent className="px-7! pb-10! text-center! font-serif! text-2xl! leading-relaxed! sm:text-3xl!">{result.startsWith("ภาพถ่ายเทิร์นที่ 3:") ? <PhotographerResult message={result} players={players} language={language} /> : gameMessage(result, language)}</DialogContent>
   </Dialog>;
 }
 
@@ -367,7 +368,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   };
   if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} privateState={privateState} avatarId={state.players.find((player) => player.id === privateState?.playerId)?.avatarId} />;
   return <main className={`min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8 ${privateState?.canUseSkill ? "pb-32" : ""} ${state.phase === "DISCUSSION" ? "pt-24" : ""}`}><div className="mx-auto max-w-6xl">
-    {skillResult && <SkillResultOverlay message={skillResult.message} language={language} />}
+    {skillResult && <SkillResultOverlay message={skillResult.message} language={language} players={state.players} />}
     <SkillTurnDialog open={!!skillTurnKey && skillTurnKey !== dismissedSkillTurnKey && !skillResult} language={language} onContinue={() => {
       pendingSkillScrollRole.current = privateState && window.matchMedia("(max-width: 767px)").matches ? privateState.role : null;
       setDismissedSkillTurnKey(skillTurnKey);
