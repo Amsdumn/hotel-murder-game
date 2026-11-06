@@ -69,15 +69,13 @@ function resolveBallot(state: GameEngineState, now: number, chooseTie: (length: 
   return { state: next, publicEvents, privateEvents: opened.privateEvents };
 }
 
-export function castRoomVote(state: GameEngineState, playerId: string, roomNumber: number, chooseTie: (length: number) => number = randomInt, now = Date.now()): EngineResult {
+export function castRoomVote(state: GameEngineState, playerId: string, roomNumber: number, now = Date.now()): EngineResult {
   if (state.phaseDeadlineAt !== undefined && now >= state.phaseDeadlineAt) throw new Error("Voting deadline has passed");
   if (state.runoffRooms?.length && !state.runoffRooms.includes(roomNumber)) throw new Error("Room is not in the runoff");
   const submitted = submitVote(state, playerId, roomNumber);
   const voteEvent: PublicGameEvent = { type: "VOTE_CAST", turn: state.turn, playerName: state.players.find((player) => player.id === playerId)!.displayName, roomNumber };
   const voted = { ...submitted.state, publicHistory: [...(submitted.state.publicHistory ?? []), voteEvent] };
-  if (!submitted.complete) return { state: voted, publicEvents: [voteEvent], privateEvents: [] };
-  const resolved = resolveBallot(voted, now, chooseTie);
-  return { ...resolved, publicEvents: [voteEvent, ...resolved.publicEvents] };
+  return { state: voted, publicEvents: [voteEvent], privateEvents: [] };
 }
 
 export function projectGameResult(state: GameEngineState): GameResultState {

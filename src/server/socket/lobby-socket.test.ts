@@ -164,6 +164,10 @@ describe("Socket.IO lobby", () => {
       if (!ready.ok) return;
       version = ready.data.version;
     }
+    const configured = await host.emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    expect(configured.ok).toBe(true);
+    if (!configured.ok) return;
+    version = configured.data.version;
     const publicState = new Promise<unknown>((resolve) => members[1].once("game:state", resolve));
     const privateState = new Promise<unknown>((resolve) => members[1].once("game:private", resolve));
     const start = await host.emitWithAck("game:start", { actionId: crypto.randomUUID(), expectedVersion: version });
@@ -195,6 +199,10 @@ describe("Socket.IO lobby", () => {
       if (!ready.ok) return;
       version = ready.data.version;
     }
+    const configured = await members[0].emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    expect(configured.ok).toBe(true);
+    if (!configured.ok) return;
+    version = configured.data.version;
     expect((await members[0].emitWithAck("game:start", { actionId: crypto.randomUUID(), expectedVersion: version })).ok).toBe(true);
     const record = await store.findLobby(code);
     expect(record?.gameState).toBeDefined();

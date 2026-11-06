@@ -99,7 +99,7 @@ export class MongoLobbyStore implements LobbyStore {
     return record ? {
       code: record.code, ...(record.activeSlot !== undefined ? { activeSlot: record.activeSlot } : {}), ...(record.emptySince !== undefined ? { emptySince: record.emptySince } : {}), phase: record.phase, version: record.version,
       creationActionId: record.creationActionId, hostPlayerId: record.hostPlayerId,
-      playerLimit: record.playerLimit, discussionSeconds: record.discussionSeconds,
+      playerLimit: record.playerLimit, discussionSeconds: record.discussionSeconds, selectedInnocentRoles: record.selectedInnocentRoles,
       players: record.players.map(({ id, displayName, seatIndex, ready, connected, avatarId }) => ({ id, displayName, seatIndex, ready, connected, avatarId })),
       appliedActionIds: [...record.appliedActionIds],
       ...(record.gameState ? { gameState: record.gameState } : {}),

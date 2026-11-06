@@ -37,9 +37,13 @@ describe("persisted server deadlines", () => {
       const view = await lobbies.preview(host.code);
       await lobbies.setReady(id, { actionId: crypto.randomUUID(), expectedVersion: view.version, ready: true });
     }
+    const beforeRoles = await lobbies.preview(host.code);
+    await expect(games.start(host.code, host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await lobbies.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
     const ready = await lobbies.preview(host.code);
     expect(ready.canStart).toBe(true);
     const started = await games.start(host.code, host.playerId, { actionId: crypto.randomUUID(), expectedVersion: ready.version });
+    expect(started.state.players.filter((player) => player.team === "INNOCENT").map((player) => player.role).sort()).toEqual(["HOUSEKEEPER", "LOCKSMITH", "WITNESS"]);
     const avatars = started.state.players.map((player) => player.avatarId);
     expect(new Set(avatars).size).toBe(5);
     expect(avatars.every((avatar) => AVATAR_ORDER.includes(avatar!))).toBe(true);
@@ -73,8 +77,8 @@ describe("persisted server deadlines", () => {
     expect(snapshot?.publicState.publicRooms.find((room) => room.roomNumber === 101)?.state).toBe("UNKNOWN");
     expect(snapshot?.privateState).toMatchObject({ version: 5, playerId: "a", isAlive: true, canVote: true });
     expect(snapshot?.privateState.deathNotice).toBeUndefined();
-    const vote = await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 101 });
-    expect(vote.state.votes.a).toBe(101);
+    const vote = await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 102 });
+    expect(vote.state.votes.a).toBe(102);
   });
 
   it("reports a missed first Locksmith turn as expired rather than forbidden", async () => {
@@ -107,8 +111,8 @@ describe("persisted server deadlines", () => {
     expect(result[0].state).toMatchObject({ phase: "VOTING", version: 6 });
     expect(result[0].state.phaseDeadlineAt).toBe(61000);
     expect((await store.findLobby("ABC234"))?.gameState?.phase).toBe("VOTING");
-    await expect(service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 101 })).rejects.toMatchObject({ code: "STALE_STATE" });
-    expect((await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 6, roomNumber: 101 }, 1001)).state.votes.a).toBe(101);
+    await expect(service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 102 })).rejects.toMatchObject({ code: "STALE_STATE" });
+    expect((await service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 6, roomNumber: 102 }, 1001)).state.votes.a).toBe(102);
   });
 
   it("skips an expired skill without a public actor event", async () => {
@@ -154,11 +158,11 @@ describe("persisted server deadlines", () => {
     const store = new MemoryLobbyStore();
     const voting = record("VOTING");
     voting.gameState!.phaseDeadlineAt = 1000;
-    voting.gameState!.votes = { a: 101 };
+    voting.gameState!.votes = { a: 203 };
     await store.createLobby(voting);
     const result = await new GameService(store).advanceDue(1000);
     expect(result).toHaveLength(1);
-    expect(result[0].state).toMatchObject({ phase: "RESOLUTION", openedRooms: [101], phaseDeadlineAt: 7000 });
+    expect(result[0].state).toMatchObject({ phase: "RESOLUTION", openedRooms: [203], phaseDeadlineAt: 7000 });
   });
 
   it("rejects a vote submitted at the deadline before the timer sweep", async () => {
@@ -183,23 +187,26 @@ describe("persisted server deadlines", () => {
 });
 
 describe("voting from independent players", () => {
-  it("accepts votes in any order, retries concurrent writes, and keeps each first vote", async () => {
+  it("accepts vote changes and concurrent votes, then resolves at the deadline", async () => {
     const store = new MemoryLobbyStore();
     await store.createLobby(record("VOTING"));
     const service = new GameService(store);
     const originalVersion = 5;
     const first = await service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101 });
     expect(first.state.votes.e).toBe(101);
-    await expect(service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 102 }))
-      .rejects.toMatchObject({ code: "FORBIDDEN" });
+    const changed = await service.vote("ABC234", "e", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 102 });
+    expect(changed.state.votes.e).toBe(102);
+    expect(projectPrivatePlayerState(changed.state, "e").canVote).toBe(true);
+    await expect(service.vote("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101 })).rejects.toMatchObject({ code: "FORBIDDEN" });
     const others = await Promise.all(["d", "b", "a", "c"].map((playerId) => service.vote("ABC234", playerId, {
-      actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 101,
+      actionId: crypto.randomUUID(), expectedVersion: originalVersion, roomNumber: 203,
     })));
     expect(others).toHaveLength(4);
     const final = (await store.findLobby("ABC234"))!.gameState!;
-    expect(final.openedRooms).toEqual([101]);
-    expect(final.phase).toBe("RESOLUTION");
-    expect(final.players.find((player) => player.id === "a")?.isAlive).toBe(false);
+    expect(final.openedRooms).toEqual([]);
+    expect(final.phase).toBe("VOTING");
+    const resolved = await service.advanceDue(final.phaseDeadlineAt);
+    expect(resolved[0].state).toMatchObject({ phase: "RESOLUTION", openedRooms: [203] });
   });
 });
 
@@ -223,13 +230,13 @@ describe("viewer-specific action history", () => {
     const store = new MemoryLobbyStore();
     await store.createLobby(record("VOTING"));
     const result = await new GameService(store).vote("ABC234", "b", {
-      actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 102,
+      actionId: crypto.randomUUID(), expectedVersion: 5, roomNumber: 103,
     });
     expect(projectPrivatePlayerState(result.state, "b").actionHistory).toEqual([
-      { turn: 1, type: "VOTE", message: "โหวตห้อง 102" },
+      { turn: 1, type: "VOTE", message: "โหวตห้อง 103" },
     ]);
     expect(projectPrivatePlayerState(result.state, "a").actionHistory).toEqual([]);
-    expect(projectPublicState(result.state).votes).toEqual([{ playerId: "b", roomNumber: 102 }]);
-    expect(projectPublicState(result.state).publicHistory).toContainEqual({ type: "VOTE_CAST", message: "B โหวตห้อง 102" });
+    expect(projectPublicState(result.state).votes).toEqual([{ playerId: "b", roomNumber: 103 }]);
+    expect(projectPublicState(result.state).publicHistory).toContainEqual({ type: "VOTE_CAST", message: "B โหวตห้อง 103" });
   });
 });

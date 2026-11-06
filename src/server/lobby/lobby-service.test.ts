@@ -231,10 +231,34 @@ describe("LobbyService", () => {
       const view = await service.preview(host.view.code);
       await service.setReady(playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, ready: true });
     }
+    const beforeRoles = await service.preview(host.view.code);
+    await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
     expect((await service.preview(host.view.code)).canStart).toBe(true);
     await service.setConnected(host.playerId, false);
     expect((await service.preview(host.view.code)).canStart).toBe(false);
     await service.setConnected(host.playerId, true);
     expect((await service.preview(host.view.code)).canStart).toBe(true);
+  });
+
+  it("requires the host to save exactly one distinct innocent role per non-Murderer seat", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    for (let index = 1; index < 5; index += 1) {
+      const view = await service.preview(host.code);
+      await service.join({ code: host.code, displayName: `Guest ${index}`, actionId: crypto.randomUUID(), expectedVersion: view.version });
+    }
+    for (const player of (await service.preview(host.code)).players) {
+      const view = await service.preview(host.code);
+      await service.setReady(player.id, { actionId: crypto.randomUUID(), expectedVersion: view.version, ready: true });
+    }
+    let view = await service.preview(host.code);
+    expect(view.canStart).toBe(false);
+    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["DETECTIVE", "DETECTIVE"] })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["KILLER", "DETECTIVE", "WITNESS"] })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    view = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["DETECTIVE", "WITNESS", "HOUSEKEEPER"] });
+    expect(view.selectedInnocentRoles).toEqual(["DETECTIVE", "WITNESS", "HOUSEKEEPER"]);
+    expect(view.canStart).toBe(true);
+    await service.join({ code: host.code, displayName: "Sixth", actionId: crypto.randomUUID(), expectedVersion: view.version });
+    expect((await service.preview(host.code)).canStart).toBe(false);
   });
 });

@@ -16,9 +16,9 @@ function choose() {
 }
 
 describe("gameplay setup and skills", () => {
-  it("scales new games from five through nine floors for five through ten players", () => {
+  it("uses five floors for five players, seven normally, and nine for ten", () => {
     for (const playerCount of [5, 6, 7, 8, 9, 10]) {
-      const floorCount = Math.min(playerCount, 9);
+      const floorCount = playerCount === 5 ? 5 : playerCount === 10 ? 9 : 7;
       const seats = Array.from({ length: playerCount }, (_, seatIndex) => ({ id: `seat-${seatIndex}`, displayName: `Guest ${seatIndex}`, seatIndex }));
       const initial = createInitialGame("ABC234", seats, 1, choose(), 1000).state;
       expect(initial.floorCount).toBe(floorCount);
@@ -31,6 +31,14 @@ describe("gameplay setup and skills", () => {
       expect(isSelectableRoom(initial, floorCount * 100 + 1)).toBe(true);
       expect(isSelectableRoom(initial, (floorCount + 1) * 100 + 1)).toBe(false);
     }
+  });
+
+  it("randomly assigns only the innocent roles selected by the host", () => {
+    const selected = ["WITNESS", "DETECTIVE", "HOUSEKEEPER"] as const;
+    const game = createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, [...selected]).state;
+    expect(game.players.filter((player) => player.team === "INNOCENT").map((player) => player.role).sort()).toEqual([...selected].sort());
+    expect(game.players.filter((player) => player.team === "MURDERER").map((player) => player.role).sort()).toEqual(["ACCOMPLICE", "KILLER"]);
+    expect(() => createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, ["WITNESS"])).toThrow();
   });
 
   it("keeps seven floors for an existing game without a stored floor count", () => {
@@ -49,7 +57,7 @@ describe("gameplay setup and skills", () => {
     expect(() => performSkill(state, detective.id, 901, 1000, 180)).not.toThrow();
     const housekeeper = initial.players.find((player) => player.role === "HOUSEKEEPER")!;
     expect(() => performSkill({ ...state, activePlayerId: housekeeper.id }, housekeeper.id, 9, 1000, 180)).not.toThrow();
-    expect(castRoomVote({ ...initial, phase: "VOTING", phaseDeadlineAt: 2000 }, detective.id, 901, () => 0, 1000).state.votes[detective.id]).toBe(901);
+    expect(castRoomVote({ ...initial, phase: "VOTING", phaseDeadlineAt: 2000 }, detective.id, 901, 1000).state.votes[detective.id]).toBe(901);
   });
 
   it("lets a living witness act before a successful assassination resolves", () => {

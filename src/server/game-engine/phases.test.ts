@@ -8,6 +8,7 @@ const players: GameEngineState["players"] = [
   { id: "c", displayName: "C", seatIndex: 2, role: "WITNESS", team: "INNOCENT", roomNumber: 103, isAlive: true },
   { id: "d", displayName: "D", seatIndex: 3, role: "ACCOMPLICE", team: "MURDERER", roomNumber: 201, isAlive: true },
   { id: "e", displayName: "E", seatIndex: 4, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
+  { id: "f", displayName: "F", seatIndex: 5, role: "DETECTIVE", team: "INNOCENT", roomNumber: 203, isAlive: true },
 ];
 
 function game(overrides: Partial<GameEngineState> = {}): GameEngineState {
@@ -15,6 +16,25 @@ function game(overrides: Partial<GameEngineState> = {}): GameEngineState {
 }
 
 describe("server-owned phases", () => {
+  it("lets a living player replace a vote until the deadline but never vote for their own room", () => {
+    const initial = game({ phase: "VOTING", phaseDeadlineAt: 1000 });
+    expect(() => castRoomVote(initial, "a", 101, 100)).toThrow();
+    const first = castRoomVote(initial, "a", 102, 100).state;
+    const changed = castRoomVote(first, "a", 103, 200).state;
+    expect(changed.votes.a).toBe(103);
+    expect(changed.phase).toBe("VOTING");
+    expect(() => castRoomVote(changed, "a", 102, 1000)).toThrow();
+  });
+
+  it("waits for the deadline even when all living players have voted", () => {
+    let state = game({ phase: "VOTING", phaseDeadlineAt: 1000 });
+    for (const [id, room] of [["a", 102], ["b", 103], ["c", 101], ["d", 102], ["e", 101], ["f", 102]] as const) state = castRoomVote(state, id, room, 100).state;
+    expect(state.phase).toBe("VOTING");
+    expect(state.openedRooms).toEqual([]);
+    expect(advanceTimedPhase(state, 999).state.phase).toBe("VOTING");
+    expect(advanceTimedPhase(state, 1000).state.phase).toBe("RESOLUTION");
+  });
+
   it("starts discussion only after the skill queue ends and transitions at its deadline", () => {
     expect(() => beginDiscussion(game({ activePlayerId: "a" }), 1000, 180)).toThrow();
     const discussion = finishSkillPhase(game({ usedSkillPlayerIds: players.map((player) => player.id) }), 1000, 180).state;
@@ -77,19 +97,21 @@ describe("server-owned phases", () => {
     expect(finished.state).toMatchObject({ phase: "FINISHED", winner: "MURDERER" });
   });
 
-  it("records each vote publicly and resolves a runoff tie", () => {
-    let state = game({ phase: "VOTING" });
-    for (const [id, room] of [["a", 101], ["b", 102], ["c", 101], ["d", 102], ["e", 103]] as const) {
-      const result = castRoomVote(state, id, room);
+  it("records each vote publicly and resolves a runoff tie at the deadline", () => {
+    let state = game({ phase: "VOTING", phaseDeadlineAt: 1000 });
+    for (const [id, room] of [["a", 102], ["b", 101], ["c", 101], ["d", 102], ["e", 103]] as const) {
+      const result = castRoomVote(state, id, room, 100);
       state = result.state;
       expect(result.publicEvents[0]).toMatchObject({ type: "VOTE_CAST", playerName: state.players.find((player) => player.id === id)?.displayName, roomNumber: room });
     }
     expect(state.phase).toBe("VOTING");
+    state = advanceTimedPhase(state, 1000).state;
     expect(state.runoffRooms).toEqual([101, 102]);
     expect(state.publicHistory).toContainEqual({ type: "RUNOFF_STARTED", turn: 1 });
     expect(state.votes).toEqual({});
-    expect(() => castRoomVote(state, "a", 103)).toThrow();
-    for (const [id, room] of [["a", 101], ["b", 102], ["c", 101], ["d", 102], ["e", 101]] as const) state = castRoomVote(state, id, room).state;
+    expect(() => castRoomVote(state, "a", 103, 1100)).toThrow();
+    for (const [id, room] of [["a", 102], ["b", 101], ["c", 101], ["d", 102], ["e", 101], ["f", 101]] as const) state = castRoomVote(state, id, room, 1100).state;
+    state = advanceTimedPhase(state, 61000).state;
     expect(state.openedRooms).toEqual([101]);
     expect(state.players.find((player) => player.id === "a")?.isAlive).toBe(false);
   });
@@ -102,9 +124,9 @@ describe("server-owned phases", () => {
   });
 
   it("uses the server's random choice after a runoff remains tied", () => {
-    let state = game({ phase: "VOTING", runoffRooms: [101, 102], players: players.map((player) => player.id === "c" ? { ...player, isAlive: false } : player) });
-    for (const [id, room] of [["a", 101], ["b", 102], ["d", 101]] as const) state = castRoomVote(state, id, room, () => 1).state;
-    const result = castRoomVote(state, "e", 102, () => 1);
+    let state = game({ phase: "VOTING", runoffRooms: [101, 102], phaseDeadlineAt: 1000, players: players.map((player) => player.id === "c" ? { ...player, isAlive: false } : player) });
+    for (const [id, room] of [["a", 102], ["b", 101], ["d", 101], ["e", 102]] as const) state = castRoomVote(state, id, room, 100).state;
+    const result = advanceTimedPhase(state, 1000, () => 1);
     expect(result.state.openedRooms).toEqual([102]);
     expect(result.publicEvents).toContainEqual(expect.objectContaining({ type: "ROOM_OPENED", roomNumber: 102 }));
   });

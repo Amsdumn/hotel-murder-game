@@ -1,6 +1,6 @@
 # Hotel Murder Online
 
-A real-time Thai and English social deduction browser game set in a hotel with 5–9 floors based on the player count. The custom Next.js and Socket.IO server runs the lobby, assigns hidden roles and rooms, resolves skills and voting, and sends each player only the information they may see. Players can inspect the twelve 3D anime characters on the main menu. Character identities stay hidden in the lobby and are randomly assigned when the game starts, independently of secret roles.
+A real-time Thai and English social deduction browser game set in a hotel with five floors for five players, seven floors for six to nine players, and nine floors for ten players. The custom Next.js and Socket.IO server runs the lobby, assigns hidden roles and rooms, resolves skills and voting, and sends each player only the information they may see. Players can inspect the twelve 3D anime characters on the main menu. Character identities stay hidden in the lobby and are randomly assigned when the game starts, independently of secret roles.
 
 Use the ไทย / EN control on the menu, lobby, or game screen to change the interface language. The choice is stored in that browser and restored after refresh or reconnect. Players in the same room can use different interface languages; game state and privacy rules stay the same.
 
@@ -19,7 +19,7 @@ Use the ไทย / EN control on the menu, lobby, or game screen to change the 
 
 The custom server loads `.env.local` before reading its settings. `MONGODB_URI` is validated when a lobby operation first requests a connection. Do not commit `.env.local`.
 
-Create a room in one browser and join from another with its six-character code. The first successful create or join saves a guest profile and a room-specific reconnect token in that browser. Returning to a room from the same browser resumes the existing player, including after closing the tab; it does not create another character. This is a browser-local profile, so another device or cleared browser storage cannot recover it. Do not share the token. Rooms are removed after everyone has been disconnected for 10 minutes, after which their players cannot resume. Players can ready or unready. The host can set a player limit from 5 to 10 and discussion time from 30 to 600 seconds. All changes are validated and versioned on the server.
+Create a room in one browser and join from another with its six-character code. The first successful create or join saves a guest profile and a room-specific reconnect token in that browser. Returning to a room from the same browser resumes the existing player, including after closing the tab; it does not create another character. This is a browser-local profile, so another device or cleared browser storage cannot recover it. Do not share the token. Rooms are removed after everyone has been disconnected for 10 minutes, after which their players cannot resume. Players can ready or unready. The host can set a player limit from 5 to 10, discussion time from 30 to 600 seconds, and the Innocent roles for the current player count minus two. All changes are validated and versioned on the server.
 
 Up to two game rooms can be open at the same time, including games in progress. When a game finishes, its slot becomes available for a new room.
 

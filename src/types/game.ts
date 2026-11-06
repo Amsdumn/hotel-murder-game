@@ -12,6 +12,7 @@ export const ROLE_ORDER = [
 ] as const;
 
 export type Role = (typeof ROLE_ORDER)[number];
+export const INNOCENT_ROLES: Role[] = ROLE_ORDER.filter((role) => role !== "KILLER" && role !== "ACCOMPLICE");
 export type Team = "INNOCENT" | "MURDERER";
 export type GamePhase =
   | "LOBBY"

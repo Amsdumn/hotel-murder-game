@@ -201,6 +201,16 @@ describe("game privacy and turn UI", () => {
     expect(render(null)).not.toContain('aria-label="โหวตห้อง');
   });
 
+  it("does not offer the player's own room as a voting button", () => {
+    const state: PublicGameState = { ...publicState, phase: "VOTING", publicRooms: [{ roomNumber: 101, state: "UNKNOWN" }, { roomNumber: 102, state: "UNKNOWN" }] };
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state, privateState: { ...privateState, roomNumber: 101, canVote: true }, teamState: null, result: null,
+      murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).not.toContain('aria-label="โหวตห้อง 101');
+    expect(html).toContain('aria-label="โหวตห้อง 102');
+  });
+
   it("shows vote counts on rooms and voter names in public history", () => {
     const state: PublicGameState = {
       ...publicState, phase: "VOTING", players: [

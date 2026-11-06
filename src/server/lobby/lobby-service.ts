@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { LobbyIdentity, LobbyView, LobbyErrorCode, PublicLobbySummary } from "../../types/lobby";
+import { INNOCENT_ROLES, ROLE_ORDER } from "../../types/game";
 import type { LobbyEventRecord, LobbyRecord, LobbyStore, SessionRecord } from "./lobby-store";
 
 const nameSchema = z.string().trim().min(2).max(24).refine((name) => !/[\x00-\x1f\x7f]/.test(name));
@@ -9,7 +10,7 @@ const codeSchema = z.string().trim().toUpperCase().regex(/^[A-HJ-NP-Z2-9]{6}$/);
 const createSchema = z.object({ displayName: nameSchema, actionId: actionIdSchema });
 const joinSchema = createSchema.extend({ code: codeSchema, expectedVersion: z.number().int().nonnegative() });
 const readySchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), ready: z.boolean() });
-const configSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerLimit: z.number().int().min(5).max(10), discussionSeconds: z.number().int().min(30).max(600) });
+const configSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerLimit: z.number().int().min(5).max(10), discussionSeconds: z.number().int().min(30).max(600), selectedInnocentRoles: z.array(z.enum(ROLE_ORDER)).max(INNOCENT_ROLES.length).refine((roles) => roles.every((role) => INNOCENT_ROLES.includes(role)) && new Set(roles).size === roles.length).optional() });
 const renameSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), displayName: nameSchema });
 const kickSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerId: z.uuid() });
 
@@ -37,7 +38,8 @@ function project(record: LobbyRecord): LobbyView {
     hostPlayerId: record.hostPlayerId,
     playerLimit: record.playerLimit,
     discussionSeconds: record.discussionSeconds,
-    canStart: record.phase === "LOBBY" && record.players.length >= 5 && record.players.every((player) => player.ready && player.connected),
+    selectedInnocentRoles: [...(record.selectedInnocentRoles ?? [])],
+    canStart: record.phase === "LOBBY" && record.players.length >= 5 && record.players.every((player) => player.ready && player.connected) && (record.selectedInnocentRoles === undefined || record.selectedInnocentRoles.length === record.players.length - 2),
     players: record.players.map(({ id, displayName, seatIndex, ready, connected }) => ({ id, displayName, seatIndex, ready: record.phase === "LOBBY" && ready, connected: record.phase === "LOBBY" ? connected : true })),
   };
 }
@@ -80,7 +82,7 @@ export class LobbyService {
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const candidate: LobbyRecord = {
         code: makeCode(), phase: "LOBBY", version: 0, creationActionId: actionId,
-        hostPlayerId: playerId, playerLimit: 10, discussionSeconds: 180,
+        hostPlayerId: playerId, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: [],
         players: [{ id: playerId, displayName, seatIndex: 0, ready: false, connected: true }],
         appliedActionIds: [actionId],
       };
@@ -156,16 +158,16 @@ export class LobbyService {
   }
 
   async configure(playerId: string, input: unknown): Promise<LobbyView> {
-    const { actionId, expectedVersion, playerLimit, discussionSeconds } = parse(configSchema, input);
+    const { actionId, expectedVersion, playerLimit, discussionSeconds, selectedInnocentRoles } = parse(configSchema, input);
     const { session, lobby } = await this.actor(playerId);
     if (lobby.phase !== "LOBBY") throw new LobbyError("FORBIDDEN");
     if (lobby.hostPlayerId !== playerId) throw new LobbyError("FORBIDDEN");
     if (lobby.appliedActionIds.includes(actionId)) throw new LobbyError("DUPLICATE_ACTION");
     if (lobby.version !== expectedVersion) throw new LobbyError("STALE_STATE");
     if (playerLimit < lobby.players.length) throw new LobbyError("INVALID_INPUT");
-    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, playerLimit, discussionSeconds, appliedActionIds: [...lobby.appliedActionIds, actionId] };
+    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, playerLimit, discussionSeconds, selectedInnocentRoles: selectedInnocentRoles ?? lobby.selectedInnocentRoles, appliedActionIds: [...lobby.appliedActionIds, actionId] };
     if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
-    await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "CONFIG_CHANGED", payload: { playerLimit, discussionSeconds } });
+    await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "CONFIG_CHANGED", payload: { playerLimit, discussionSeconds, innocentRoleCount: next.selectedInnocentRoles?.length ?? 0 } });
     return project(next);
   }
 

@@ -44,7 +44,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
     ...(player.role === "LOCKSMITH" ? { locksmithUsedRooms: [...(state.locksmithUsedRooms ?? [])] } : {}),
     ...(blockedAction ? { skillBlockReason: blockedAction.message.startsWith("ใช้สกิลไม่ได้") ? "BLACKOUT" as const : "COOLDOWN" as const } : {}),
     ...(canUseSkill && state.phaseDeadlineAt !== undefined ? { skillDeadlineAt: state.phaseDeadlineAt } : {}),
-    canVote: player.isAlive && state.phase === "VOTING" && !Object.hasOwn(state.votes ?? {}, player.id),
+    canVote: player.isAlive && state.phase === "VOTING",
     ...(deathNotice ? { deathNotice } : {}),
     privateResults: [...(state.privateResultMessages?.[player.id] ?? [])],
     actionHistory: [...(state.privateActionHistory?.[player.id] ?? [])],

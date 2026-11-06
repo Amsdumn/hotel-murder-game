@@ -12,6 +12,7 @@ export interface LobbyView {
   hostPlayerId: string;
   playerLimit: number;
   discussionSeconds: number;
+  selectedInnocentRoles: import("./game").Role[];
   canStart: boolean;
   players: LobbyPlayerView[];
 }

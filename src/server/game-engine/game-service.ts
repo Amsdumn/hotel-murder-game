@@ -41,8 +41,8 @@ export class GameService {
 
   async start(code: string, playerId: string, input: unknown): Promise<EngineResult> {
     const { record, actionId } = await this.record(code, playerId, input);
-    if (record.phase !== "LOBBY" || record.hostPlayerId !== playerId || record.players.length < 5 || !record.players.every((player) => player.ready && player.connected)) throw new LobbyError("FORBIDDEN");
-    const result = createInitialGame(code, record.players, record.version + 1);
+    if (record.phase !== "LOBBY" || record.hostPlayerId !== playerId || record.players.length < 5 || !record.players.every((player) => player.ready && player.connected) || (record.selectedInnocentRoles !== undefined && record.selectedInnocentRoles.length !== record.players.length - 2)) throw new LobbyError("FORBIDDEN");
+    const result = createInitialGame(code, record.players, record.version + 1, undefined, undefined, record.selectedInnocentRoles);
     return this.commit(record, actionId, result);
   }
 
@@ -75,7 +75,7 @@ export class GameService {
       if (!record.gameState) throw new LobbyError("FORBIDDEN");
       if (record.gameState.phase === "VOTING" && record.gameState.phaseDeadlineAt !== undefined && now >= record.gameState.phaseDeadlineAt) throw new LobbyError("VOTE_EXPIRED");
       let result: EngineResult;
-      try { result = castRoomVote(record.gameState, playerId, parsed.data.roomNumber, undefined, now); }
+      try { result = castRoomVote(record.gameState, playerId, parsed.data.roomNumber, now); }
       catch { throw new LobbyError("FORBIDDEN"); }
       result = { ...result, state: appendPrivateAction(result.state, playerId, {
         turn: record.gameState.turn, type: "VOTE",

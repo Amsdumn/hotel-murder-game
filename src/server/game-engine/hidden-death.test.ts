@@ -11,6 +11,7 @@ function game(overrides: Partial<GameEngineState> = {}): GameEngineState {
       { id: "innocent", displayName: "Innocent", seatIndex: 0, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 101, isAlive: true },
       { id: "victim", displayName: "Victim", seatIndex: 1, role: "HOUSEKEEPER", team: "INNOCENT", roomNumber: 102, isAlive: true },
       { id: "witness", displayName: "Witness", seatIndex: 2, role: "WITNESS", team: "INNOCENT", roomNumber: 103, isAlive: true },
+      { id: "extra", displayName: "Extra", seatIndex: 5, role: "DETECTIVE", team: "INNOCENT", roomNumber: 203, isAlive: true },
       { id: "accomplice", displayName: "Accomplice", seatIndex: 3, role: "ACCOMPLICE", team: "MURDERER", roomNumber: 201, isAlive: true },
       { id: "killer", displayName: "Killer", seatIndex: 4, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
     ],
@@ -20,6 +21,13 @@ function game(overrides: Partial<GameEngineState> = {}): GameEngineState {
 }
 
 describe("hidden deaths", () => {
+  it("ends with a Murderer win when living teams become equal", () => {
+    const result = resolveAssassination(game({ players: game().players.filter((player) => player.id !== "extra") }), 102);
+    expect(result.state.phase).toBe("FINISHED");
+    expect(result.state.winner).toBe("MURDERER");
+    expect(result.publicEvents).toContainEqual({ type: "GAME_FINISHED", winner: "MURDERER" });
+  });
+
   it("validates vote room geometry against the game's floor count", () => {
     expect(canVoteForRoom(901, [], [], [], 9)).toBe(true);
     expect(canVoteForRoom(601, [], [], [], 5)).toBe(false);
@@ -59,11 +67,11 @@ describe("hidden deaths", () => {
     expect(result.publicEvents).toContainEqual({ type: "GAME_FINISHED", winner: "INNOCENT" });
   });
 
-  it("keeps playing at equal living team counts and ends when an assassination gives Murderers a majority", () => {
-    const tied = resolveAssassination(game(), 102);
-    expect(tied.state.phase).toBe("SKILL_PHASE");
-    expect(tied.state.winner).toBeNull();
-    expect(tied.publicEvents).not.toContainEqual(expect.objectContaining({ type: "GAME_FINISHED" }));
+  it("keeps playing while Innocents outnumber Murderers and ends when counts become equal", () => {
+    const ahead = resolveAssassination(game(), 102);
+    expect(ahead.state.phase).toBe("SKILL_PHASE");
+    expect(ahead.state.winner).toBeNull();
+    expect(ahead.publicEvents).not.toContainEqual(expect.objectContaining({ type: "GAME_FINISHED" }));
 
     const majority = resolveAssassination(game({
       players: game().players.map((player) => player.id === "innocent" ? { ...player, isAlive: false } : player),
@@ -95,7 +103,7 @@ describe("hidden deaths", () => {
   it("keeps dead players in public roster without status or private data", () => {
     const result = resolveAssassination(game(), 102);
     const publicState = projectPublicState(result.state);
-    expect(publicState.players).toHaveLength(5);
+    expect(publicState.players).toHaveLength(6);
     expect(publicState.players.map((player) => player.id)).toContain("victim");
     expect(publicState.players.every((player) => Object.keys(player).sort().join(",") === "avatarId,displayName,id,seatIndex")).toBe(true);
     expect(JSON.stringify(publicState.players)).not.toMatch(/isAlive|isDead|deathReason|deathTurn|roomNumber|HOUSEKEEPER/);
@@ -115,7 +123,7 @@ describe("hidden deaths", () => {
   });
 
   it("skips dead skill actors without a public identity event", () => {
-    const state = game({ activePlayerId: null, players: game().players.map((player) => player.id === "victim" ? { ...player, isAlive: false } : player) });
+    const state = game({ activePlayerId: null, players: game().players.filter((player) => player.id !== "extra").map((player) => player.id === "victim" ? { ...player, isAlive: false } : player) });
     const result = advanceSkillTurn(state, "innocent");
     expect(result.state.activePlayerId).toBe("accomplice");
     expect(result.publicEvents).toEqual([]);
@@ -124,7 +132,7 @@ describe("hidden deaths", () => {
 
   it("privately reveals every guest-room assignment to the living receptionist only on turn three", () => {
     const receptionist = { id: "receptionist", displayName: "Receptionist", seatIndex: 5, role: "RECEPTIONIST" as const, team: "INNOCENT" as const, roomNumber: 303, isAlive: true };
-    const base = game({ players: [...game().players, receptionist], activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim"] });
+    const base = game({ players: [...game().players.filter((player) => player.id !== "extra"), receptionist], activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim"] });
     const third = advanceSkillTurn({ ...base, turn: 3 }, "victim");
     expect(third.state.activePlayerId).toBe("accomplice");
     expect(third.state.usedSkillPlayerIds).toContain("receptionist");
@@ -154,7 +162,7 @@ describe("hidden deaths", () => {
 
   it("reveals the killer's identity only to the living photographer on turn three", () => {
     const photographer = { id: "photographer", displayName: "Photographer", seatIndex: 5, role: "PHOTOGRAPHER" as const, team: "INNOCENT" as const, roomNumber: 303, isAlive: true };
-    const base = game({ players: [...game().players, photographer], activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim"] });
+    const base = game({ players: [...game().players.filter((player) => player.id !== "extra"), photographer], activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim"] });
     const third = advanceSkillTurn({ ...base, turn: 3 }, "victim");
     expect(third.state.activePlayerId).toBe("accomplice");
     expect(third.state.usedSkillPlayerIds).toContain("photographer");
@@ -192,10 +200,11 @@ describe("hidden deaths", () => {
 });
 
 describe("voting eligibility and results", () => {
-  it("allows a living player to vote for their own room", () => {
+  it("rejects a player's own room while allowing another eligible room", () => {
     const state = game({ phase: "VOTING" });
     expect(canVoteForRoom(101, [], [])).toBe(true);
-    expect(submitVote(state, "innocent", 101).state.votes).toEqual({ innocent: 101 });
+    expect(() => submitVote(state, "innocent", 101)).toThrow("Cannot vote for your own room");
+    expect(submitVote(state, "innocent", 102).state.votes).toEqual({ innocent: 102 });
   });
 
   it("rejects crime scenes, opened rooms, and invalid numbers", () => {

@@ -20,6 +20,7 @@ const gameSchema = new Schema<LobbyRecord>({
   hostPlayerId: { type: String, required: true },
   playerLimit: { type: Number, required: true },
   discussionSeconds: { type: Number, required: true },
+  selectedInnocentRoles: { type: [String], required: false, default: undefined },
   players: { type: [lobbyPlayerSchema], required: true },
   appliedActionIds: { type: [String], required: true },
   gameState: { type: Schema.Types.Mixed, required: false },

@@ -17,6 +17,7 @@ export interface LobbyRecord {
   hostPlayerId: string;
   playerLimit: number;
   discussionSeconds: number;
+  selectedInnocentRoles?: import("../../types/game").Role[];
   players: LobbyPlayerRecord[];
   appliedActionIds: string[];
   gameState?: import("../game-engine/state").GameEngineState;

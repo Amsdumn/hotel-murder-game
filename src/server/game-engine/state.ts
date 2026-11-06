@@ -128,7 +128,7 @@ export function killPlayer(state: GameEngineState, playerId: string, cause: Deat
   const survivors = state.players.filter((item) => item.isAlive && item.id !== playerId);
   const murderers = survivors.filter((item) => item.team === "MURDERER").length;
   const innocents = survivors.length - murderers;
-  const winner = player.role === "KILLER" ? "INNOCENT" : state.winner ?? (murderers > innocents ? "MURDERER" : null);
+  const winner = player.role === "KILLER" ? "INNOCENT" : state.winner ?? (murderers >= innocents ? "MURDERER" : null);
   return {
     state: appendPrivateAction({
       ...state,
