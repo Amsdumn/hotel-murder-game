@@ -37,6 +37,7 @@ export interface GameEngineState {
   activePlayerId: string | null;
   usedSkillPlayerIds: string[];
   pendingAssassinationRoom?: number;
+  assassinationTargetRoom?: number;
   votes: Record<string, number>;
   winner: Team | null;
   deathNotices: Record<string, DeathNotice>;

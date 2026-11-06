@@ -27,8 +27,8 @@ describe("gameplay setup and skills", () => {
     expect(chosen.state.activePlayerId).toBe("witness");
     expect(chosen.state.players.find((player) => player.id === "witness")?.isAlive).toBe(true);
     expect(chosen.publicEvents).toEqual([]);
-    const witnessed = performSkill(chosen.state, "witness", 1, 2000, 180);
-    expect(projectPrivatePlayerState(witnessed.state, "witness").privateResults).toContain("ทิศทางชั้นนักฆ่า: ABOVE");
+    const witnessed = performSkill(chosen.state, "witness", 3, 2000, 180);
+    expect(projectPrivatePlayerState(witnessed.state, "witness").privateResults).toContain("ทิศทางชั้นนักฆ่า: BELOW");
     expect(witnessed.state.players.find((player) => player.id === "witness")?.isAlive).toBe(false);
     expect(witnessed.publicEvents).toContainEqual({ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: 1 });
   });
@@ -45,6 +45,39 @@ describe("gameplay setup and skills", () => {
     const timedOut = advanceTimedSkill({ ...chosen.state, phaseDeadlineAt: 2000 }, 2000, 180);
     expect(timedOut.state.players.find((player) => player.id === "victim")?.isAlive).toBe(false);
     expect(timedOut.publicEvents).toContainEqual({ type: "MURDER_OCCURRED", message: "เกิดเหตุฆาตกรรมขึ้นภายในโรงแรม", turn: 1 });
+  });
+
+  it("gives the witness a clue for the killer's chosen floor even when the attempt fails", () => {
+    const base = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;
+    const players: GameEngineState["players"] = [
+      { id: "killer", displayName: "Killer", seatIndex: 0, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
+      { id: "witness", displayName: "Witness", seatIndex: 1, role: "WITNESS", team: "INNOCENT", roomNumber: 301, isAlive: true },
+      { id: "guest", displayName: "Guest", seatIndex: 2, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 401, isAlive: true },
+    ];
+    for (const [room, lockedRooms, floor, expected] of [
+      [102, [], 1, "ทิศทางชั้นนักฆ่า: ABOVE"],
+      [401, [401], 4, "ทิศทางชั้นนักฆ่า: BELOW"],
+    ] as const) {
+      const state: GameEngineState = { ...base, phase: "SKILL_PHASE", players, crimeRooms: [103], lockedRooms: [...lockedRooms], activePlayerId: "killer", usedSkillPlayerIds: ["guest"] };
+      const attempted = performSkill(state, "killer", room, 1000, 180);
+      expect(projectPrivatePlayerState(attempted.state, "killer").privateResults).toContain("ลอบสังหารไม่สำเร็จ");
+      const witnessed = performSkill(attempted.state, "witness", floor, 2000, 180);
+      expect(projectPrivatePlayerState(witnessed.state, "witness").privateResults).toContain(expected);
+    }
+  });
+
+  it("does not give a clue for an old crime scene or a different target floor", () => {
+    const base = createInitialGame("ABC234", lobbyPlayers, 1, choose()).state;
+    const players: GameEngineState["players"] = [
+      { id: "killer", displayName: "Killer", seatIndex: 0, role: "KILLER", team: "MURDERER", roomNumber: 202, isAlive: true },
+      { id: "witness", displayName: "Witness", seatIndex: 1, role: "WITNESS", team: "INNOCENT", roomNumber: 301, isAlive: true },
+    ];
+    const state: GameEngineState = { ...base, phase: "SKILL_PHASE", players, crimeRooms: [103], activePlayerId: "killer", usedSkillPlayerIds: [] };
+    const attempted = performSkill(state, "killer", 401, 1000, 180);
+    const witnessed = performSkill(attempted.state, "witness", 1, 2000, 180);
+    expect(projectPrivatePlayerState(witnessed.state, "witness").privateResults).toContain("ไม่พบเบาะแสทิศทาง");
+    const noAttempt = performSkill({ ...state, activePlayerId: "witness", usedSkillPlayerIds: ["killer"] }, "witness", 1, 2000, 180);
+    expect(projectPrivatePlayerState(noAttempt.state, "witness").privateResults).toContain("ไม่พบเบาะแสทิศทาง");
   });
   it("keeps assigned avatars public without changing secret role assignment", () => {
     const withAvatars = lobbyPlayers.map((player) => ({ ...player, avatarId: "irina-volkova" as const }));

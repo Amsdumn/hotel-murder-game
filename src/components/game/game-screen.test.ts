@@ -320,7 +320,7 @@ describe("game privacy and turn UI", () => {
       LOCKSMITH: "ล็อกห้องหนึ่งห้อง",
       HOUSEKEEPER: "จำนวนผู้เล่นที่ยังมีชีวิตบนชั้น",
       WINDOW_CLEANER: "แนวห้อง 01, 02 หรือ 03",
-      WITNESS: "ชั้นสูงกว่า ต่ำกว่า หรือชั้นเดียวกัน",
+      WITNESS: "นักฆ่าเลือกห้อง",
       RECEPTIONIST: "เทิร์นที่ 3",
       PHOTOGRAPHER: "ภาพถ่าย",
       DETECTIVE: "ตรวจหนึ่งห้อง",

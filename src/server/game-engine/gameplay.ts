@@ -91,12 +91,13 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
   let publicEvents: EngineResult["publicEvents"] = [];
   if (actor.role === "KILLER") {
     const room = requireSelectableRoom(state, target);
+    const selectedState = { ...state, assassinationTargetRoom: room };
     const occupant = state.players.find((player) => player.roomNumber === room && player.isAlive);
     const witness = state.players.find((player) => player.role === "WITNESS" && player.isAlive && !state.usedSkillPlayerIds.includes(player.id) && !state.darkFloors?.includes(Math.floor(player.roomNumber / 100)));
     if (occupant && witness && !state.lockedRooms.includes(room)) {
-      next = addPrivateResult({ ...state, usedSkillPlayerIds: [...state.usedSkillPlayerIds, playerId], pendingAssassinationRoom: room }, playerId, "เลือกเป้าหมายแล้ว กำลังประมวลผล");
+      next = addPrivateResult({ ...selectedState, usedSkillPlayerIds: [...state.usedSkillPlayerIds, playerId], pendingAssassinationRoom: room }, playerId, "เลือกเป้าหมายแล้ว กำลังประมวลผล");
     } else {
-      const assassination = resolveAssassination(state, room);
+      const assassination = resolveAssassination(selectedState, room);
       next = assassination.state;
       privateEvents.push(...assassination.privateEvents);
       publicEvents = assassination.publicEvents;
@@ -126,7 +127,7 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
       const killer = state.players.find((player) => player.role === "KILLER");
       if (!killer) throw new Error("Killer is missing");
       const direction = Math.floor(killer.roomNumber / 100) > floor ? "ABOVE" : Math.floor(killer.roomNumber / 100) < floor ? "BELOW" : "SAME_FLOOR";
-      message = state.crimeRooms.some((room) => Math.floor(room / 100) === floor) ? `ทิศทางชั้นนักฆ่า: ${direction}` : "ไม่พบเบาะแสทิศทาง";
+      message = state.assassinationTargetRoom !== undefined && Math.floor(state.assassinationTargetRoom / 100) === floor ? `ทิศทางชั้นนักฆ่า: ${direction}` : "ไม่พบเบาะแสทิศทาง";
     } else if (actor.role === "DETECTIVE") {
       const room = requireSelectableRoom(state, target);
       const occupant = state.players.find((player) => player.roomNumber === room && player.isAlive);

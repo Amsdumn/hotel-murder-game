@@ -33,7 +33,7 @@ export function advanceTimedPhase(state: GameEngineState, now: number, chooseTie
       return { state: { ...state, phase: "FINISHED", winner: "MURDERER", phaseDeadlineAt: undefined, publicHistory: [...(state.publicHistory ?? []), event] }, publicEvents: [event], privateEvents: [] };
     }
     const event: PublicGameEvent = { type: "PHASE_CHANGED", phase: "SKILL_PHASE", turn: state.turn + 1 };
-    const next: GameEngineState = { ...state, turn: state.turn + 1, phase: "SKILL_PHASE", activePlayerId: null, usedSkillPlayerIds: [], lockedRooms: [], darkFloors: [], votes: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] };
+    const next: GameEngineState = { ...state, turn: state.turn + 1, phase: "SKILL_PHASE", activePlayerId: null, usedSkillPlayerIds: [], lockedRooms: [], darkFloors: [], assassinationTargetRoom: undefined, votes: {}, runoffRooms: [], publicHistory: [...(state.publicHistory ?? []), event] };
     const first = advanceSkillTurn(next, null);
     return { state: { ...first.state, phaseDeadlineAt: now + 60_000 }, publicEvents: [event], privateEvents: first.privateEvents };
   }

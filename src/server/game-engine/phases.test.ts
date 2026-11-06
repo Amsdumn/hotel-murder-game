@@ -28,7 +28,7 @@ describe("server-owned phases", () => {
   });
 
   it("resolves a partial ballot at its deadline and gives players time to see the opened room", () => {
-    const voting = game({ phase: "VOTING", phaseDeadlineAt: 1000, votes: { a: 101 } });
+    const voting = game({ phase: "VOTING", phaseDeadlineAt: 1000, votes: { a: 101 }, assassinationTargetRoom: 401 });
     expect(advanceTimedPhase(voting, 999).state).toBe(voting);
     const opened = advanceTimedPhase(voting, 1000, () => 0);
     expect(opened.state.phase).toBe("RESOLUTION");
@@ -37,6 +37,7 @@ describe("server-owned phases", () => {
     expect(advanceTimedPhase(opened.state, 6999).state).toBe(opened.state);
     const next = advanceTimedPhase(opened.state, 7000);
     expect(next.state).toMatchObject({ phase: "SKILL_PHASE", turn: 2, phaseDeadlineAt: 67000 });
+    expect(next.state.assassinationTargetRoom).toBeUndefined();
   });
 
   it("opens a server-chosen eligible room when nobody votes and advances an empty runoff", () => {
