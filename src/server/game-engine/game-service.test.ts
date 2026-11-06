@@ -39,11 +39,15 @@ describe("persisted server deadlines", () => {
     }
     const beforeRoles = await lobbies.preview(host.code);
     await expect(games.start(host.code, host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version })).rejects.toMatchObject({ code: "FORBIDDEN" });
-    await lobbies.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    const selectedRoles = ["LOCKSMITH", "HOUSEKEEPER", "WITNESS", "DETECTIVE", "PHOTOGRAPHER"] as const;
+    await lobbies.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: beforeRoles.version, playerLimit: 7, discussionSeconds: 180, selectedInnocentRoles: [...selectedRoles] });
     const ready = await lobbies.preview(host.code);
     expect(ready.canStart).toBe(true);
     const started = await games.start(host.code, host.playerId, { actionId: crypto.randomUUID(), expectedVersion: ready.version });
-    expect(started.state.players.filter((player) => player.team === "INNOCENT").map((player) => player.role).sort()).toEqual(["HOUSEKEEPER", "LOCKSMITH", "WITNESS"]);
+    const assignedRoles = started.state.players.filter((player) => player.team === "INNOCENT").map((player) => player.role);
+    expect(assignedRoles).toHaveLength(3);
+    expect(new Set(assignedRoles).size).toBe(3);
+    expect(assignedRoles.every((role) => selectedRoles.includes(role as typeof selectedRoles[number]))).toBe(true);
     const avatars = started.state.players.map((player) => player.avatarId);
     expect(new Set(avatars).size).toBe(5);
     expect(avatars.every((avatar) => AVATAR_ORDER.includes(avatar!))).toBe(true);

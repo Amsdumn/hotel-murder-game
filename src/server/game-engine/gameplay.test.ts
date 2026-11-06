@@ -41,6 +41,15 @@ describe("gameplay setup and skills", () => {
     expect(() => createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, ["WITNESS"])).toThrow();
   });
 
+  it("draws the needed Innocent roles from a larger host-selected pool", () => {
+    const pool = ["WITNESS", "DETECTIVE", "HOUSEKEEPER", "LOCKSMITH", "ELECTRICIAN"] as const;
+    const game = createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, [...pool]).state;
+    const assigned = game.players.filter((player) => player.team === "INNOCENT").map((player) => player.role);
+    expect(assigned).toHaveLength(3);
+    expect(assigned.every((role) => pool.includes(role as typeof pool[number]))).toBe(true);
+    expect(new Set(assigned).size).toBe(3);
+  });
+
   it("keeps seven floors for an existing game without a stored floor count", () => {
     const legacy = { ...createInitialGame("ABC234", lobbyPlayers, 1, choose()).state };
     delete legacy.floorCount;

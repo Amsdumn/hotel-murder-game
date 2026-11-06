@@ -22,7 +22,7 @@ export function createInitialGame(code: string, seats: Array<Pick<EnginePlayer, 
   if (seats.length < 5 || seats.length > 10 || new Set(seats.map((seat) => seat.id)).size !== seats.length) throw new Error("Invalid player seats");
   if (seats.length > AVATAR_ORDER.length) throw new Error("Not enough public characters");
   const innocentRoles = selectedInnocentRoles ?? ROLE_ORDER.filter((role) => role !== "KILLER" && role !== "ACCOMPLICE");
-  if (selectedInnocentRoles && (innocentRoles.length !== seats.length - 2 || new Set(innocentRoles).size !== innocentRoles.length || innocentRoles.some((role) => role === "KILLER" || role === "ACCOMPLICE" || !ROLE_ORDER.includes(role)))) throw new Error("Invalid innocent role selection");
+  if (selectedInnocentRoles && (innocentRoles.length < seats.length - 2 || new Set(innocentRoles).size !== innocentRoles.length || innocentRoles.some((role) => role === "KILLER" || role === "ACCOMPLICE" || !ROLE_ORDER.includes(role)))) throw new Error("Invalid innocent role selection");
   const needed = seats.length - 2;
   if (needed > innocentRoles.length) throw new Error("Not enough innocent roles");
   const roles: Role[] = shuffle(["KILLER", "ACCOMPLICE", ...shuffle(innocentRoles, choose).slice(0, needed)], choose);

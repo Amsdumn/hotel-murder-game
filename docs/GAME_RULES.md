@@ -10,7 +10,7 @@ The lobby shows only player names, seats, connection, and readiness. It never ex
 
 Before the game starts, each player may edit their own display name. The host may remove another player from the lobby; this invalidates that player's reconnect session and compacts the remaining seat numbers. Neither action is available after game start.
 
-Every game has exactly one Killer and one Accomplice. Before starting, the host selects exactly one distinct Innocent role for every other player currently in the lobby. The server randomly assigns those selected roles, the Killer, and the Accomplice to players. If another player joins, the host must update the selected roles before starting. Existing lobbies without a stored role selection retain the original random selection behavior.
+Every game has exactly one Killer and one Accomplice. Before starting, the host selects a pool of distinct Innocent roles equal to the maximum player count minus two. The server randomly draws as many Innocent roles from that pool as the current players need, then randomly assigns them with the Killer and Accomplice. Existing lobbies without a stored role selection retain the original random selection behavior.
 
 The Killer and Accomplice know each other's identities and rooms. Each innocent initially knows only their own role and room; private skills can reveal more during play. Dead players enter Spectator Mode: they stay in the public player list, may remain connected, and may watch the board, discussion, voting phases, and public events. They cannot use skills, vote, access another player's private data, or return as living players. Spectators do not gain access to all roles before the game finishes.
 

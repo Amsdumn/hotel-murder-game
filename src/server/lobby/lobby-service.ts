@@ -39,7 +39,7 @@ function project(record: LobbyRecord): LobbyView {
     playerLimit: record.playerLimit,
     discussionSeconds: record.discussionSeconds,
     selectedInnocentRoles: [...(record.selectedInnocentRoles ?? [])],
-    canStart: record.phase === "LOBBY" && record.players.length >= 5 && record.players.every((player) => player.ready && player.connected) && (record.selectedInnocentRoles === undefined || record.selectedInnocentRoles.length === record.players.length - 2),
+    canStart: record.phase === "LOBBY" && record.players.length >= 5 && record.players.every((player) => player.ready && player.connected) && (record.selectedInnocentRoles === undefined || record.selectedInnocentRoles.length === record.playerLimit - 2),
     players: record.players.map(({ id, displayName, seatIndex, ready, connected }) => ({ id, displayName, seatIndex, ready: record.phase === "LOBBY" && ready, connected: record.phase === "LOBBY" ? connected : true })),
   };
 }
@@ -164,8 +164,9 @@ export class LobbyService {
     if (lobby.hostPlayerId !== playerId) throw new LobbyError("FORBIDDEN");
     if (lobby.appliedActionIds.includes(actionId)) throw new LobbyError("DUPLICATE_ACTION");
     if (lobby.version !== expectedVersion) throw new LobbyError("STALE_STATE");
-    if (playerLimit < lobby.players.length) throw new LobbyError("INVALID_INPUT");
-    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, playerLimit, discussionSeconds, selectedInnocentRoles: selectedInnocentRoles ?? lobby.selectedInnocentRoles, appliedActionIds: [...lobby.appliedActionIds, actionId] };
+    const roles = selectedInnocentRoles ?? lobby.selectedInnocentRoles;
+    if (playerLimit < lobby.players.length || (roles !== undefined && roles.length > playerLimit - 2)) throw new LobbyError("INVALID_INPUT");
+    const next: LobbyRecord = { ...lobby, version: lobby.version + 1, playerLimit, discussionSeconds, selectedInnocentRoles: roles, appliedActionIds: [...lobby.appliedActionIds, actionId] };
     if (!await this.store.replaceLobby(session.gameCode, expectedVersion, next)) throw new LobbyError("STALE_STATE");
     await this.event({ gameCode: session.gameCode, actorId: playerId, actionId, kind: "CONFIG_CHANGED", payload: { playerLimit, discussionSeconds, innocentRoleCount: next.selectedInnocentRoles?.length ?? 0 } });
     return project(next);

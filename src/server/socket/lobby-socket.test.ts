@@ -164,7 +164,7 @@ describe("Socket.IO lobby", () => {
       if (!ready.ok) return;
       version = ready.data.version;
     }
-    const configured = await host.emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    const configured = await host.emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
     expect(configured.ok).toBe(true);
     if (!configured.ok) return;
     version = configured.data.version;
@@ -199,7 +199,7 @@ describe("Socket.IO lobby", () => {
       if (!ready.ok) return;
       version = ready.data.version;
     }
-    const configured = await members[0].emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 10, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
+    const configured = await members[0].emitWithAck("lobby:configure", { actionId: crypto.randomUUID(), expectedVersion: version, playerLimit: 5, discussionSeconds: 180, selectedInnocentRoles: ["LOCKSMITH", "HOUSEKEEPER", "WITNESS"] });
     expect(configured.ok).toBe(true);
     if (!configured.ok) return;
     version = configured.data.version;
