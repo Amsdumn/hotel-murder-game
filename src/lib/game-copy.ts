@@ -32,7 +32,7 @@ function dynamic(message: string): string | null {
   if ((match = message.match(/^ชั้น (\d+) มีผู้เล่นที่ยังมีชีวิต (\d+) คน$/))) return `Floor ${match[1]} has ${match[2]} living players`;
   if ((match = message.match(/^แนวห้อง 0(\d) มีผู้เล่นที่ยังมีชีวิต (\d+) คน$/))) return `Column 0${match[1]} has ${match[2]} living players`;
   if ((match = message.match(/^ทิศทางชั้นนักฆ่า: (ABOVE|BELOW|SAME_FLOOR)$/))) return `Assassin's floor: ${match[1] === "SAME_FLOOR" ? "same floor" : match[1].toLowerCase()}`;
-  if ((match = message.match(/^ผลตรวจห้อง (\d+): (INNOCENT|MURDERER|EMPTY)$/))) return `Room ${match[1]}: ${({ INNOCENT: "Innocent", MURDERER: "Murderer", EMPTY: "empty" } as Record<string, string>)[match[2]]}`;
+  if ((match = message.match(/^ผลตรวจห้อง (\d+): (INNOCENT|MURDERER|EMPTY)$/))) return `Room ${match[1]}: ${({ INNOCENT: "Innocent", MURDERER: "Murderer", EMPTY: "Empty" } as Record<string, string>)[match[2]]}`;
   if ((match = message.match(/^ผู้เล่นที่เลือกอยู่ชั้น (\d+)$/))) return `The selected player is on floor ${match[1]}`;
   if ((match = message.match(/^ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น (\d+) (.+)$/))) return `Turn 3 photograph: the Assassin is player ${match[1]} ${match[2]}`;
   if ((match = message.match(/^(.+) โหวตห้อง (\d+)$/))) return `${match[1]} voted for room ${match[2]}`;
@@ -42,8 +42,12 @@ function dynamic(message: string): string | null {
 }
 
 export function gameMessage(message: string, language: Language): string {
-  if (language === "th") return message;
-  if (message.startsWith("ข้อมูลจากผู้สมรู้ร่วมคิด: ")) return `Accomplice report: ${gameMessage(message.slice("ข้อมูลจากผู้สมรู้ร่วมคิด: ".length), language)}`;
-  if (message.startsWith("ใช้สกิล: ")) return `Skill: ${gameMessage(message.slice("ใช้สกิล: ".length), language)}`;
+  if (message.startsWith("ข้อมูลจากผู้สมรู้ร่วมคิด: ")) return `${language === "en" ? "Accomplice report" : "ข้อมูลจากผู้สมรู้ร่วมคิด"}: ${gameMessage(message.slice("ข้อมูลจากผู้สมรู้ร่วมคิด: ".length), language)}`;
+  if (message.startsWith("ใช้สกิล: ")) return `${language === "en" ? "Skill" : "ใช้สกิล"}: ${gameMessage(message.slice("ใช้สกิล: ".length), language)}`;
+  if (language === "th") {
+    const match = message.match(/^ผลตรวจห้อง (\d+): (INNOCENT|MURDERER|EMPTY)$/);
+    if (match) return `ผลตรวจห้อง ${match[1]}: ${({ INNOCENT: "ผู้บริสุทธิ์", MURDERER: "ฆาตรกร", EMPTY: "ว่าง" } as Record<string, string>)[match[2]]}`;
+    return message;
+  }
   return exact[message] ?? dynamic(message) ?? message;
 }

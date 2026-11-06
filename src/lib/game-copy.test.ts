@@ -16,4 +16,16 @@ describe("game message translation", () => {
     expect(gameMessage("Alex โหวตห้อง 102", "en")).toBe("Alex voted for room 102");
     expect(gameMessage("ข้อมูลจากผู้สมรู้ร่วมคิด: ผู้เล่นที่เลือกอยู่ชั้น 4", "en")).toBe("Accomplice report: The selected player is on floor 4");
   });
+  it("localizes every Detective inspection outcome in results and action history", () => {
+    for (const [code, thai, english] of [
+      ["EMPTY", "ว่าง", "Empty"],
+      ["INNOCENT", "ผู้บริสุทธิ์", "Innocent"],
+      ["MURDERER", "ฆาตรกร", "Murderer"],
+    ]) {
+      expect(gameMessage(`ผลตรวจห้อง 203: ${code}`, "th")).toBe(`ผลตรวจห้อง 203: ${thai}`);
+      expect(gameMessage(`ผลตรวจห้อง 203: ${code}`, "en")).toBe(`Room 203: ${english}`);
+      expect(gameMessage(`ใช้สกิล: ผลตรวจห้อง 203: ${code}`, "th")).toBe(`ใช้สกิล: ผลตรวจห้อง 203: ${thai}`);
+      expect(gameMessage(`ใช้สกิล: ผลตรวจห้อง 203: ${code}`, "en")).toBe(`Skill: Room 203: ${english}`);
+    }
+  });
 });
