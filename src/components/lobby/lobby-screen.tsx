@@ -202,14 +202,14 @@ export function LobbyScreen({ code }: { code: string }) {
           <div className="flex items-center gap-2"><LanguageSwitcher /><Button component={Link} href="/" variant="text">{en ? "Back to home" : "กลับหน้าแรก"}</Button></div>
         </div>
 
-        <Alert severity="warning" variant="outlined" className="mb-6! border-[#d9b66f]/50! bg-[#32291d]/95! text-[#f8f1e4]!">
-          <AlertTitle className="font-serif! text-xl! text-[#f2d79c]!">{en ? "Game status" : "สถานะเกม"}</AlertTitle>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+        <Alert severity="warning" variant="outlined" className="mb-6! border-[#d9b66f]/50! bg-[#32291d]/95! text-[#f8f1e4]! [&_.MuiAlert-message]:w-full!">
+          <div className="flex w-full flex-wrap items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <AlertTitle className="font-serif! text-xl! text-[#f2d79c]!">{en ? "Game status" : "สถานะเกม"}</AlertTitle>
               <p className="text-sm leading-6 text-[#e8ddcb]">{en ? "At least five players must join, and everyone must be ready." : "ต้องมีผู้เล่นอย่างน้อย 5 คน และทุกคนกดพร้อม"}</p>
               <p className="mt-2 text-sm font-medium text-[#f2d79c]">{settingsDirty ? en ? "Save your room settings before starting" : "บันทึกการตั้งค่าห้องก่อนเริ่มเกม" : view?.canStart ? en ? "Everyone is ready and the roles are set" : "ทุกคนพร้อมและเลือกบทบาทครบแล้ว" : view && view.players.length >= 5 && view.selectedInnocentRoles.length !== requiredInnocentRoleCount(view.playerLimit) ? en ? `Save ${requiredInnocentRoleCount(view.playerLimit)} Innocent roles to start` : `เลือกและบันทึกบทบาทผู้บริสุทธิ์ ${requiredInnocentRoleCount(view.playerLimit)} บทบาทก่อนเริ่มเกม` : en ? "Waiting for players and readiness" : "รอผู้เล่นและความพร้อม"}</p>
             </div>
-            {isHost && view?.canStart && <Button className="shrink-0!" variant="contained" disabled={busy || !connected || settingsDirty} onClick={() => void (async () => { setBusy(true); const response = await requestLobby<{ version: number }>(socketRef.current!, "game:start", { actionId: createActionId(), expectedVersion: view.version }); if (!response.ok) setError(lobbyErrorMessage(response.error, language)); setBusy(false); })()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
+            {isHost && view?.canStart && <Button className="ml-auto! shrink-0!" variant="contained" disabled={busy || !connected || settingsDirty} onClick={() => void (async () => { setBusy(true); const response = await requestLobby<{ version: number }>(socketRef.current!, "game:start", { actionId: createActionId(), expectedVersion: view.version }); if (!response.ok) setError(lobbyErrorMessage(response.error, language)); setBusy(false); })()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
           </div>
         </Alert>
 
