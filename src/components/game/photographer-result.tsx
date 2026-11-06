@@ -22,7 +22,7 @@ export function PhotographerResult({ message, players, language }: { message: st
       <div className="relative h-28 w-20 shrink-0 overflow-hidden rounded-md">
         {avatar ? <Image src={avatar.portrait} alt={en ? `Portrait of ${killer.displayName}` : `ภาพของ ${killer.displayName}`} fill sizes="80px" className="object-cover object-top" /> : <RolePortrait role="KILLER" className="h-full w-full" sizes="80px" />}
       </div>
-      <div className="min-w-0"><p className="text-sm text-[#d8bc86]">{en ? "The Assassin is" : "นักฆ่าคือ"}</p><p className="mt-1 break-words font-serif text-xl font-semibold text-[#f4efe8]">{killer.displayName}</p><p className="mt-1 text-xs text-[#bdb5bd]">{en ? "Player" : "ผู้เล่น"} {killer.seatIndex + 1}</p></div>
+      <div className="min-w-0"><p className="text-sm text-[#d8bc86]">{en ? "The Assassin is" : "นักฆ่าคือ"}</p><p className="mt-1 max-w-[150px] truncate font-serif text-xl font-semibold text-[#f4efe8]" title={killer.displayName}>{killer.displayName}</p><p className="mt-1 text-xs text-[#bdb5bd]">{en ? "Player" : "ผู้เล่น"} {killer.seatIndex + 1}</p></div>
     </div>
   </section>;
 }

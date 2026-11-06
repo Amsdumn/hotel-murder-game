@@ -13,6 +13,7 @@ describe("role book", () => {
     expect(html).toContain("ล็อกห้องเดิมซ้ำไม่ได้");
     expect(html).toContain("เทิร์นที่ 3");
     expect(html).toContain("ชั้นที่นักฆ่าเลือก");
+    expect(html).toContain("30–420 วินาที");
   });
 
   it("explains the same roles and exceptions in English", () => {
@@ -24,5 +25,6 @@ describe("role book", () => {
     expect(html).toContain("at least one targeted room is on your chosen floor");
     expect(html).toContain("Five-player games have one Assassin and four different Innocent roles");
     expect(html).toContain("both can kill their occupants");
+    expect(html).toContain("30–420 seconds");
   });
 });

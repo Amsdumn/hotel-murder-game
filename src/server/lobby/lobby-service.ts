@@ -5,13 +5,13 @@ import { INNOCENT_ROLES, ROLE_ORDER } from "../../types/game";
 import { requiredInnocentRoleCount } from "../../lib/game-balance";
 import type { LobbyEventRecord, LobbyRecord, LobbyStore, SessionRecord } from "./lobby-store";
 
-const nameSchema = z.string().trim().min(2).max(24).refine((name) => !/[\x00-\x1f\x7f]/.test(name));
+const nameSchema = z.string().trim().min(2).max(256).refine((name) => !/[\x00-\x1f\x7f]/.test(name));
 const actionIdSchema = z.uuid();
 const codeSchema = z.string().trim().toUpperCase().regex(/^[A-HJ-NP-Z2-9]{6}$/);
 const createSchema = z.object({ displayName: nameSchema, actionId: actionIdSchema });
 const joinSchema = createSchema.extend({ code: codeSchema, expectedVersion: z.number().int().nonnegative() });
 const readySchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), ready: z.boolean() });
-const configSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerLimit: z.number().int().min(5).max(10), discussionSeconds: z.number().int().min(30).max(600), selectedInnocentRoles: z.array(z.enum(ROLE_ORDER)).max(INNOCENT_ROLES.length).refine((roles) => roles.every((role) => INNOCENT_ROLES.includes(role)) && new Set(roles).size === roles.length).optional() });
+const configSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerLimit: z.number().int().min(5).max(10), discussionSeconds: z.number().int().min(30).max(420).refine((seconds) => seconds % 30 === 0), selectedInnocentRoles: z.array(z.enum(ROLE_ORDER)).max(INNOCENT_ROLES.length).refine((roles) => roles.every((role) => INNOCENT_ROLES.includes(role)) && new Set(roles).size === roles.length).optional() });
 const renameSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), displayName: nameSchema });
 const kickSchema = z.object({ actionId: actionIdSchema, expectedVersion: z.number().int().nonnegative(), playerId: z.uuid() });
 

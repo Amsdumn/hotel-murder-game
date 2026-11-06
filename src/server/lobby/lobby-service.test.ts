@@ -3,6 +3,22 @@ import { LobbyService } from "./lobby-service";
 import { MemoryLobbyStore } from "./test-memory-store";
 
 describe("LobbyService", () => {
+  it("accepts player names up to 256 characters and rejects longer names", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const name = "ก".repeat(256);
+    const host = await service.create({ displayName: name, actionId: crypto.randomUUID() });
+    expect(host.view.players[0].displayName).toBe(name);
+    await expect(service.rename(host.playerId, { displayName: `${name}ก`, actionId: crypto.randomUUID(), expectedVersion: host.view.version })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
+
+  it("accepts discussion durations in 30-second steps through seven minutes", async () => {
+    const service = new LobbyService(new MemoryLobbyStore());
+    const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    const configured = await service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: host.view.version, playerLimit: 10, discussionSeconds: 420 });
+    expect(configured.discussionSeconds).toBe(420);
+    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: configured.version, playerLimit: 10, discussionSeconds: 45 })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+    await expect(service.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: configured.version, playerLimit: 10, discussionSeconds: 450 })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+  });
   it("lets a guest rename only themself before game start", async () => {
     const service = new LobbyService(new MemoryLobbyStore());
     const host = await service.create({ displayName: "Host", actionId: crypto.randomUUID() });

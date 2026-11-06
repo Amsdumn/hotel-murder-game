@@ -25,7 +25,7 @@ export function ReceptionistRegister({ message, players }: { message: string; pl
       const avatar = avatarById(player.avatarId);
       return <li key={player.id} data-register-entry="" className="flex min-w-0 items-center gap-3 rounded-lg border border-[#d8bc86]/20 bg-[#1d1d26] p-2">
         {avatar && <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-md"><Image src={avatar.portrait} alt="" fill sizes="44px" className="object-cover object-top" /></div>}
-        <div className="min-w-0 flex-1"><p className="text-xs text-[#bdb5bd]">{en ? "Player" : "ผู้เล่น"} {player.seatIndex + 1}</p><p className="truncate text-sm font-semibold text-[#f4efe8]" title={player.displayName}>{player.displayName}</p></div>
+        <div className="min-w-0 flex-1"><p className="text-xs text-[#bdb5bd]">{en ? "Player" : "ผู้เล่น"} {player.seatIndex + 1}</p><p className="max-w-[150px] truncate text-sm font-semibold text-[#f4efe8]" title={player.displayName}>{player.displayName}</p></div>
         <span className="shrink-0 rounded-md border border-[#d8bc86]/35 bg-[#3d3038] px-2 py-1 font-mono text-sm text-[#f2d79c]">{en ? "Room" : "ห้อง"} {room}</span>
       </li>;
     })}</ol> : <p className="mt-4 text-sm leading-7 text-[#f4efe8]">{en ? (message.startsWith(registerPrefix) ? message.slice(registerPrefix.length).trim() : message).replace(/ผู้เล่น (\d+) /g, "Player $1 ").replace(/ · ห้อง (\d+)/g, " · room $1") : message.startsWith(registerPrefix) ? message.slice(registerPrefix.length).trim() : message}</p>}
