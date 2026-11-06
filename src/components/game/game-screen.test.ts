@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ROLE_ORDER, type PrivatePlayerState, type PublicGameState } from "@/types/game";
-import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, getFreshSkillResults, getTurnNotice, skillActionInstructions } from "./game-screen";
+import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuests, RoleRevealCard, SkillConfirmBar, SkillPanel, SkillResultOverlay, getFreshSkillResults, getTurnNotice, scrollToSkillTarget, skillActionInstructions } from "./game-screen";
 import { PrivateRoomScene } from "./private-room-scene";
 import { roleSkillDescriptions } from "@/lib/role-skills";
 import { roleNames } from "../role-portrait";
@@ -22,6 +22,29 @@ const publicState: PublicGameState = {
 };
 
 describe("game privacy and turn UI", () => {
+  it("scrolls mobile skill turns to the required guest or map target", () => {
+    const guests = { scrollIntoView: vi.fn() } as unknown as HTMLElement;
+    const board = { scrollIntoView: vi.fn() } as unknown as HTMLElement;
+    scrollToSkillTarget("ACCOMPLICE", guests, board, true);
+    expect(guests.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    expect(board.scrollIntoView).not.toHaveBeenCalled();
+    for (const role of ["KILLER", "LOCKSMITH", "DETECTIVE", "ELECTRICIAN", "HOUSEKEEPER", "WITNESS", "WINDOW_CLEANER"] as const) {
+      scrollToSkillTarget(role, guests, board, true);
+    }
+    expect(board.scrollIntoView).toHaveBeenCalledTimes(7);
+    scrollToSkillTarget("ACCOMPLICE", guests, board, false);
+    scrollToSkillTarget("KILLER", guests, board, false);
+    expect(guests.scrollIntoView).toHaveBeenCalledTimes(1);
+    expect(board.scrollIntoView).toHaveBeenCalledTimes(7);
+  });
+
+  it("outlines selectable guest cards like selectable rooms", () => {
+    const players = [{ id: "a", displayName: "Self", seatIndex: 0 }, { id: "b", displayName: "Guest B", seatIndex: 1 }];
+    const html = renderToStaticMarkup(createElement(PublicGuests, { players, selfId: "a", onSelectPlayer: () => {} }));
+    expect(html).toMatch(/aria-label="เลือกผู้เข้าพัก Guest B[^>]+ring-1 ring-\[#c8a46b\]\/50/);
+    expect(html).not.toMatch(/aria-label="เลือกผู้เข้าพัก Self/);
+  });
+
   it("renders the room map for the active game's floor count", () => {
     const renderMap = (floors: number) => renderToStaticMarkup(createElement(HotelBoard, {
       state: {
