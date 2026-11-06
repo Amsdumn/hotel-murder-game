@@ -23,6 +23,12 @@ Create a room in one browser and join from another with its six-character code. 
 
 The build and custom server use Next.js's webpack path. In this environment, the default Turbopack build exited while starting its CSS worker; the webpack build completed successfully.
 
+## Render deployment
+
+The `render.yaml` Blueprint configures a free Node web service in Virginia from the `main` branch. It builds with `npm ci && npm run build`, starts the custom Socket.IO server with `npm start`, and checks `/` for health. During Blueprint creation, set `MONGODB_URI` to the Atlas application connection string with the database username and password filled in. Keep this value in Render's environment settings; never commit it.
+
+Add the service's outbound IP ranges from Render's **Connect > Outbound** panel to the Atlas project Network Access list. Without those ranges, the site can load but lobby actions cannot reach MongoDB.
+
 ## Checks
 
 Run `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`. To run the production custom server after building, use `npm start`.

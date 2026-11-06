@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: hotel-murder-game
+    runtime: node
+    plan: free
+    region: virginia
+    branch: main
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: MONGODB_URI
+        sync: false
