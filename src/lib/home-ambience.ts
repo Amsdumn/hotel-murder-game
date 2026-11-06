@@ -1,32 +1,32 @@
-import { getAudioContext } from "./game-sound";
+const homeSound = "/sound-effect/sound-bg-horror-trailer.mp3";
 
 export function startHomeAmbience(): () => void {
-  const context = getAudioContext();
-  if (!context) return () => {};
-  const master = context.createGain();
-  master.gain.value = 0.012;
-  master.connect(context.destination);
-  const voices = [110, 164.81, 220].map((frequency) => {
-    const oscillator = context.createOscillator();
-    oscillator.type = "sine";
-    oscillator.frequency.value = frequency;
-    oscillator.connect(master);
-    oscillator.start();
-    return oscillator;
-  });
-  const pulse = context.createOscillator();
-  const pulseDepth = context.createGain();
-  pulse.type = "sine";
-  pulse.frequency.value = 0.09;
-  pulseDepth.gain.value = 0.003;
-  pulse.connect(pulseDepth).connect(master.gain);
-  pulse.start();
+  const audio = new Audio(homeSound);
+  audio.loop = true;
+  audio.volume = 0.35;
+  audio.preload = "auto";
+  let stopped = false;
+
+  const play = () => {
+    if (stopped || document.hidden) return;
+    void audio.play().catch(() => { /* Retry after the next user gesture. */ });
+  };
+  const onVisibilityChange = () => {
+    if (document.hidden) audio.pause();
+    else play();
+  };
+
+  document.addEventListener("pointerdown", play);
+  document.addEventListener("keydown", play);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  play();
+
   return () => {
-    for (const oscillator of [...voices, pulse]) {
-      oscillator.stop();
-      oscillator.disconnect();
-    }
-    pulseDepth.disconnect();
-    master.disconnect();
+    stopped = true;
+    document.removeEventListener("pointerdown", play);
+    document.removeEventListener("keydown", play);
+    document.removeEventListener("visibilitychange", onVisibilityChange);
+    audio.pause();
+    audio.currentTime = 0;
   };
 }

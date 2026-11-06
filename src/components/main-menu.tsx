@@ -76,14 +76,7 @@ export function MainMenu() {
   }, []);
   useEffect(() => {
     if (!soundReady || muted) return;
-    let stop: (() => void) | null = null;
-    const sync = () => {
-      stop?.();
-      stop = document.hidden ? null : startHomeAmbience();
-    };
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => { document.removeEventListener("visibilitychange", sync); stop?.(); };
+    return startHomeAmbience();
   }, [soundReady, muted]);
   const profileName = useSyncExternalStore(subscribeToProfile, profileNameSnapshot, () => "");
   const [entryMode, setEntryMode] = useState<"create" | "join" | null>(null);
