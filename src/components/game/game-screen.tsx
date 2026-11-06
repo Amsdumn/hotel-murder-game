@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Alert, Button, Dialog, DialogActions, DialogContent, DialogTitle, Paper } from "@mui/material";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
+import { SoundToggleButton } from "@/components/sound-toggle-button";
 import { avatarEnglish } from "@/lib/avatar-translations";
 import { gameMessage } from "@/lib/game-copy";
 import { getGameSoundEvent, playGameSound, type GameSoundSnapshot } from "@/lib/game-sound";
@@ -40,8 +41,7 @@ export function PublicGuests({ players, selfId, selectedPlayerId, onSelectPlayer
 }
 
 export function SoundSettings({ muted, onChange }: { muted: boolean; onChange: (muted: boolean) => void }) {
-  const en = useLanguage() === "en";
-  return <Button size="small" variant="outlined" onClick={() => onChange(!muted)} aria-label={muted ? en ? "Unmute" : "เปิดเสียง" : en ? "Mute" : "ปิดเสียง"}>{muted ? en ? "Unmute" : "เปิดเสียง" : en ? "Mute" : "ปิดเสียง"}</Button>;
+  return <SoundToggleButton muted={muted} onChange={onChange} />;
 }
 
 export function DiscussionTimer({ deadline }: { deadline: number }) {
@@ -309,7 +309,6 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const previousSoundSnapshot = useRef<GameSoundSnapshot | null>(null);
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      try { setMuted(localStorage.getItem("hotel-game-muted") === "true"); } catch { setMuted(false); }
       setSoundReady(true);
     }, 0);
     return () => window.clearTimeout(timeout);
@@ -400,10 +399,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   };
   const turnNotice = getTurnNotice(state, privateState, language);
   const ownVotedRoom = state.phase === "VOTING" ? state.votes?.find((vote) => vote.playerId === privateState?.playerId)?.roomNumber : undefined;
-  const changeMuted = (value: boolean) => {
-    setMuted(value);
-    try { localStorage.setItem("hotel-game-muted", String(value)); } catch { /* Keep this tab's preference. */ }
-  };
+  const changeMuted = (value: boolean) => setMuted(value);
   const act = async (event: "game:skill" | "game:vote", payload: Record<string, unknown>) => {
     setBusy(true); setError("");
     const response = await onCommand(event, payload, state.version);

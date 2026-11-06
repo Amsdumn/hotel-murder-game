@@ -12,6 +12,7 @@ import { avatarEnglish } from "@/lib/avatar-translations";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { primeGameAudio } from "@/lib/game-sound";
 import { HOME_AMBIENCE_SRC, startHomeAmbience } from "@/lib/home-ambience";
+import { SoundToggleButton } from "@/components/sound-toggle-button";
 
 const LobbyEntryDialog = dynamic(() => import("@/components/lobby/lobby-entry-dialog").then((module) => module.LobbyEntryDialog));
 const RoleBook = dynamic(() => import("@/components/role-book").then((module) => module.RoleBook));
@@ -59,16 +60,12 @@ export function AvatarDetail({ avatarId }: { avatarId: AvatarId }) {
 
 export function MainMenu() {
   const en = useLanguage() === "en";
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const homeAudioRef = useRef<HTMLAudioElement>(null);
   useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      try { setMuted(localStorage.getItem("hotel-game-muted") === "true"); } catch { /* Keep the default sound setting. */ }
-    }, 0);
     window.addEventListener("pointerdown", primeGameAudio, { once: true });
     window.addEventListener("keydown", primeGameAudio, { once: true });
     return () => {
-      window.clearTimeout(timeout);
       window.removeEventListener("pointerdown", primeGameAudio);
       window.removeEventListener("keydown", primeGameAudio);
     };
@@ -100,7 +97,7 @@ export function MainMenu() {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#10101b] text-[#f8f1e4]">
-      <audio ref={homeAudioRef} src={HOME_AMBIENCE_SRC} autoPlay loop preload="auto" className="hidden" />
+      <audio ref={homeAudioRef} src={HOME_AMBIENCE_SRC} loop preload="auto" className="hidden" />
       <div className="pointer-events-none absolute inset-0"><Image src="/art/hotel-night.webp" alt="" fill priority sizes="100vw" className="object-cover object-[62%_center]" /><div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,11,23,.97)_0%,rgba(13,11,23,.86)_35%,rgba(13,11,23,.26)_75%),linear-gradient(0deg,rgba(13,11,23,.9),transparent_48%)]" /></div>
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-6 sm:px-10 lg:px-14">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#d9b66f]/20 pb-5">
@@ -111,7 +108,7 @@ export function MainMenu() {
           <div className="flex flex-wrap items-center justify-end gap-2">
             {profileName && <span className="flex max-w-full items-center gap-1 rounded-full border border-[#d9b66f]/30 px-3 py-1 text-xs text-[#e7ce98]">{en ? "Player" : "ผู้เล่น"}: <span className="min-w-0 max-w-[150px] truncate" title={profileName}>{profileName}</span></span>}
             <LanguageSwitcher />
-            <Button color="primary" variant="text" size="small" aria-label={muted ? en ? "Turn on ambience" : "เปิดเสียงบรรยากาศ" : en ? "Mute ambience" : "ปิดเสียงบรรยากาศ"} onClick={() => { const next = !muted; setMuted(next); try { localStorage.setItem("hotel-game-muted", String(next)); } catch {} if (!next) primeGameAudio(); }}>{muted ? en ? "Sound on" : "เปิดเสียง" : en ? "Sound off" : "ปิดเสียง"}</Button>
+            <SoundToggleButton muted={muted} onChange={(next) => { setMuted(next); if (!next) primeGameAudio(); }} />
             <Button color="primary" variant="text" size="small" onClick={() => setAboutOpen(true)}>{en ? "How to play" : "วิธีเล่น"}</Button>
           </div>
         </header>
