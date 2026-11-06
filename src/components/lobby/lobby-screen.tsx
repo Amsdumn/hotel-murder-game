@@ -3,15 +3,24 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { Button, Chip, CircularProgress, MenuItem, Paper, Stack, TextField } from "@mui/material";
 import type { Socket } from "socket.io-client";
 import { acceptNewerLobbyState, connectLobbySocket, forgetLobbyIdentity, lobbyErrorMessage, readLobbyToken, requestLobby, saveGuestProfile, saveLobbyIdentity } from "@/lib/lobby-client";
 import type { LobbyIdentity, LobbyView } from "@/types/lobby";
 import type { GameResultState, PrivatePlayerState, PublicGameState, VersionedTeamState } from "@/types/game";
-import { GameScreen } from "@/components/game/game-screen";
 import { createActionId } from "@/lib/action-id";
 import { acceptNewerGameState } from "@/lib/game-state-version";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
+
+function GameLoadingScreen() {
+  const en = useLanguage() === "en";
+  return <main role="status" className="flex min-h-screen items-center justify-center bg-[#11101b] px-5 text-[#f8f1e4]">{en ? "Loading game…" : "กำลังโหลดเกม…"}</main>;
+}
+
+const GameScreen = dynamic(() => import("@/components/game/game-screen").then((module) => module.GameScreen), {
+  loading: () => <GameLoadingScreen />,
+});
 
 export function LobbyScreen({ code }: { code: string }) {
   const language = useLanguage();

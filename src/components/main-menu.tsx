@@ -2,9 +2,9 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle } from "@mui/material";
 import { useUiStore } from "@/stores/use-ui-store";
-import { LobbyEntryDialog } from "@/components/lobby/lobby-entry-dialog";
 import { ActiveRooms } from "@/components/lobby/active-rooms";
 import { roleNames } from "@/components/role-portrait";
 import { roleNamesEn } from "@/components/role-portrait";
@@ -15,6 +15,8 @@ import { roleSkillDescriptionsEn } from "@/lib/role-skills";
 import { AVATARS, avatarById, type AvatarId } from "@/lib/avatars";
 import { avatarEnglish } from "@/lib/avatar-translations";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
+
+const LobbyEntryDialog = dynamic(() => import("@/components/lobby/lobby-entry-dialog").then((module) => module.LobbyEntryDialog));
 
 function subscribeToProfile(onChange: () => void) {
   window.addEventListener("storage", onChange);
@@ -40,7 +42,7 @@ export function AvatarGallery({ onSelect }: { onSelect: (avatarId: AvatarId) => 
       onClick={() => onSelect(avatar.id)}
       className="group relative overflow-hidden rounded-lg border border-[#e5bd82]/30 bg-[#211727]/85 text-left shadow-[0_12px_35px_rgba(0,0,0,.5)] transition-colors hover:border-[#e5bd82] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e5bd82]"
     >
-      <div className="relative aspect-4/5 w-full overflow-hidden"><Image src={avatar.portrait} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="(max-width: 640px) 45vw, 125px" className="object-cover object-top transition-transform duration-500 group-hover:scale-105" /></div>
+      <div className="relative aspect-4/5 w-full overflow-hidden" style={{ backgroundImage: `radial-gradient(circle at 50% 35%, ${avatar.color}99, #211727 75%)` }}><Image src={avatar.portrait} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="(max-width: 640px) 45vw, 125px" quality={65} className="object-cover object-top transition-transform duration-500 group-hover:scale-105" /></div>
       <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#100d1a] via-[#100d1a]/75 to-transparent px-1 pb-1.5 pt-6 text-center text-[10px] font-semibold leading-tight text-[#f5e4cf] sm:px-2 sm:pb-2 sm:text-xs">{en ? avatarEnglish[avatar.id].name : avatar.name}</span>
     </button>)}
   </div>;
@@ -168,7 +170,7 @@ export function MainMenu() {
         </DialogContent>
         <DialogActions><Button onClick={() => setAboutOpen(false)}>{en ? "Close" : "ปิด"}</Button></DialogActions>
       </Dialog>
-      <LobbyEntryDialog key={`${entryMode}-${selectedCode}`} mode={entryMode} initialCode={selectedCode} initialDisplayName={initialDisplayName} initialSavedSeat={initialSavedSeat} onClose={() => setEntryMode(null)} />
+      {entryMode && <LobbyEntryDialog key={`${entryMode}-${selectedCode}`} mode={entryMode} initialCode={selectedCode} initialDisplayName={initialDisplayName} initialSavedSeat={initialSavedSeat} onClose={() => setEntryMode(null)} />}
     </main>
   );
 }

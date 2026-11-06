@@ -1,6 +1,9 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { ImageConfigContext } from "next/dist/shared/lib/image-config-context.shared-runtime";
+import { imageConfigDefault } from "next/dist/shared/lib/image-config";
+import nextConfig from "../../next.config";
 import { AVATARS } from "@/lib/avatars";
 import { AvatarDetail, AvatarGallery } from "./main-menu";
 
@@ -19,6 +22,15 @@ describe("homepage avatars", () => {
     expect(html).toContain("anaya-mehta-portrait.webp");
     expect(html).toContain("yusuf-demir-portrait.webp");
     expect(html).not.toContain("locksmith.webp");
+  });
+
+  it("requests compact gallery portraits from the image optimizer", () => {
+    const html = renderToStaticMarkup(createElement(ImageConfigContext.Provider, {
+      value: { ...imageConfigDefault, ...nextConfig.images },
+    }, createElement(AvatarGallery, { onSelect: () => {} })));
+    const images = html.match(/<img\b[^>]*>/g) ?? [];
+    expect(images).toHaveLength(12);
+    for (const image of images) expect(image).toContain("q=65");
   });
 
   it("opens each character's full-body art and story without assigning a skill", () => {
