@@ -33,3 +33,22 @@ export function GameChat({ channel, messages, canSend, language, onSend }: { cha
     {failed && <p role="alert" className="mt-2 text-sm text-red-200">{en ? "Message could not be sent. Try again." : "ส่งข้อความไม่สำเร็จ ลองอีกครั้ง"}</p>}
   </Paper>;
 }
+
+export function FloatingGameChat({ channel, messages, canSend, language, deadline, onSend }: { channel: "PUBLIC" | "MURDERER"; messages: GameChatMessage[]; canSend: boolean; language: Language; deadline: number; onSend: (text: string) => Promise<boolean> }) {
+  const [open, setOpen] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (now >= deadline) return null;
+  const en = language === "en";
+  const team = channel === "MURDERER";
+  const label = team ? en ? "Murderer chat" : "แชทฝ่ายฆาตกร" : en ? "Discussion chat" : "แชทพูดคุย";
+  const bottom = team ? "bottom-24" : "bottom-4";
+  const panelBottom = team ? "bottom-40" : "bottom-20";
+  return <>
+    {open && <div id="floating-game-chat" className={`fixed left-4 z-40 w-[min(24rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-xl shadow-2xl ${panelBottom}`}><GameChat channel={channel} messages={messages} canSend={canSend && now < deadline} language={language} onSend={onSend} /></div>}
+    <button type="button" aria-label={open ? en ? "Close chat" : "ปิดแชท" : en ? `Open ${label}` : `เปิด${label}`} aria-expanded={open} aria-controls="floating-game-chat" onClick={() => setOpen((value) => !value)} className={`fixed left-4 z-40 rounded-full border border-[#e3c88e] bg-[#3b2c38] px-5 py-3 text-sm font-semibold text-[#f2d79c] shadow-[0_8px_30px_rgba(0,0,0,.55)] hover:bg-[#4a3942] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e3c88e] ${bottom}`}>{open ? en ? "Close chat" : "ปิดแชท" : label}</button>
+  </>;
+}

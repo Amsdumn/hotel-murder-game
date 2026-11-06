@@ -47,7 +47,7 @@ export interface PublicGameState {
   version: number;
   phase: GamePhase;
   turn: number;
-  players: Array<{ id: string; displayName: string; seatIndex: number; avatarId?: import("../lib/avatars").AvatarId | null }>;
+  players: Array<{ id: string; displayName: string; seatIndex: number; avatarId?: import("../lib/avatars").AvatarId | null; isAlive?: boolean }>;
   phaseMessage: "กำลังดำเนินการสืบสวน..." | null;
   publicRooms: Array<{ roomNumber: number; state: "UNKNOWN" | "CRIME_SCENE" | "MURDERED" | "OPENED_EMPTY" | "OPENED_OCCUPIED" | "OPENED_MURDERED" }>;
   phaseDeadlineAt?: number;

@@ -17,21 +17,23 @@ import { MurderEventOverlay } from "./murder-event-overlay";
 import { PrivateRoomScene } from "./private-room-scene";
 import { ReceptionistRegister } from "./receptionist-register";
 import { PhotographerResult } from "./photographer-result";
-import { GameChat } from "./game-chat";
+import { FloatingGameChat } from "./game-chat";
 import { avatarById, type AvatarId } from "@/lib/avatars";
 
-export function PublicGuests({ players, selfId, selectedPlayerId, onSelectPlayer }: { players: PublicGameState["players"]; selfId?: string; selectedPlayerId?: string | null; onSelectPlayer?: (playerId: string) => void }) {
+export function PublicGuests({ players, selfId, selectedPlayerId, onSelectPlayer, onlinePlayerIds = [] }: { players: PublicGameState["players"]; selfId?: string; selectedPlayerId?: string | null; onSelectPlayer?: (playerId: string) => void; onlinePlayerIds?: string[] }) {
   const en = useLanguage() === "en";
   return <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!">
     <h2 className="font-serif text-xl">{en ? "Guests" : "ผู้เข้าพัก"}</h2>
     <p className="mt-1 text-xs text-[#a9a5af]">{onSelectPlayer ? en ? "Select a guest as your skill target" : "แตะผู้เข้าพักหนึ่งคนเพื่อเลือกเป้าหมายสกิล" : en ? "A character does not reveal a role or team" : "อวาตาร์ไม่บอกบทบาทหรือฝ่าย"}</p>
     <div className="mt-4 grid grid-cols-2 gap-3">{players.map((player) => {
       const avatar = avatarById(player.avatarId);
-      const selectable = !!onSelectPlayer && player.id !== selfId;
+      const dead = player.isAlive === false;
+      const online = onlinePlayerIds.includes(player.id);
+      const selectable = !!onSelectPlayer && player.id !== selfId && !dead;
       const selected = selectable && selectedPlayerId === player.id;
-      const content = <>{avatar && <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md"><Image src={avatar.portrait} alt="" fill sizes="48px" className="object-cover object-top" /></div>}<div className="min-w-0"><p className="truncate text-sm">{player.displayName}</p><p className="truncate text-xs text-[#c8a46b]">{avatar ? en ? avatarEnglish[avatar.id].name : avatar.name : en ? "Guest" : "ผู้เข้าพัก"}</p></div></>;
-      const className = `flex items-center gap-2 rounded-lg border p-2 text-left ${selected ? "border-[#f2d79c] bg-[#4a3942] ring-2 ring-[#f2d79c]" : selectable ? "cursor-pointer border-[#c8a46b]/50 bg-[#29202b] ring-1 ring-[#c8a46b]/50 transition-colors" : "border-[#c8a46b]/15 bg-[#29202b]"}`;
-      return selectable ? <button key={player.id} type="button" aria-label={en ? `Select guest ${player.displayName} as skill target` : `เลือกผู้เข้าพัก ${player.displayName} เป็นเป้าหมายสกิล`} aria-pressed={selected} className={`${className} hover:border-[#e3c88e] focus-visible:outline-2 focus-visible:outline-[#e3c88e]`} onClick={() => onSelectPlayer(player.id)}>{content}</button> : <div key={player.id} className={className}>{content}</div>;
+      const content = <>{avatar && <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md"><Image src={avatar.portrait} alt="" fill sizes="48px" className="object-cover object-top" /></div>}<div className="min-w-0"><p className="truncate text-sm">{player.displayName}</p><p className="truncate text-xs text-[#c8a46b]">{dead ? en ? "Dead" : "เสียชีวิต" : avatar ? en ? avatarEnglish[avatar.id].name : avatar.name : en ? "Guest" : "ผู้เข้าพัก"}</p></div><span aria-label={online ? en ? "Online" : "ออนไลน์" : en ? "Offline" : "ออฟไลน์"} title={online ? en ? "Online" : "ออนไลน์" : en ? "Offline" : "ออฟไลน์"} className={`absolute right-2 top-2 h-2.5 w-2.5 rounded-full ring-2 ring-[#1d1d26] ${online ? "bg-emerald-400" : "bg-[#777683]"}`} /></>;
+      const className = `relative flex items-center gap-2 rounded-lg border p-2 pr-7 text-left ${dead ? "border-[#c8a46b]/10 bg-[#25252b] opacity-50 grayscale" : selected ? "border-[#f2d79c] bg-[#4a3942] ring-2 ring-[#f2d79c]" : selectable ? "cursor-pointer border-[#c8a46b]/50 bg-[#29202b] ring-1 ring-[#c8a46b]/50 transition-colors" : "border-[#c8a46b]/15 bg-[#29202b]"}`;
+      return onSelectPlayer && player.id !== selfId ? <button key={player.id} type="button" aria-label={dead ? en ? `${player.displayName} is dead` : `${player.displayName} เสียชีวิต` : en ? `Select guest ${player.displayName} as skill target` : `เลือกผู้เข้าพัก ${player.displayName} เป็นเป้าหมายสกิล`} aria-pressed={selected} disabled={dead} className={`${className} ${dead ? "cursor-not-allowed" : "hover:border-[#e3c88e] focus-visible:outline-2 focus-visible:outline-[#e3c88e]"}`} onClick={() => onSelectPlayer(player.id)}>{content}</button> : <div key={player.id} aria-disabled={dead || undefined} className={className}>{content}</div>;
     })}</div>
   </Paper>;
 }
@@ -183,7 +185,7 @@ export const skillActionInstructions: Record<Role, string> = {
   DETECTIVE: "แตะห้องบนแผนผังที่ต้องการตรวจ แล้วกดยืนยันสกิลด้านล่าง",
   RECEPTIONIST: "เทิร์นที่ 3 ระบบจะเปิดทะเบียนห้องพักให้คุณอัตโนมัติ ตรวจผลในข้อมูลลับ",
   PHOTOGRAPHER: "เทิร์นที่ 3 ระบบจะให้คุณตรวจภาพถ่ายและบอกว่าใครคือนักฆ่าแบบส่วนตัว ตรวจผลในข้อมูลลับ",
-  ACCOMPLICE: "แตะการ์ดหนึ่งคนในส่วนผู้เข้าพัก แล้วกดยืนยันสกิลด้านล่าง",
+  ACCOMPLICE: "แตะการ์ดผู้เข้าพักที่ยังมีชีวิตหนึ่งคน แล้วกดยืนยันสกิลด้านล่าง",
   KILLER: "แตะห้องบนแผนผังที่ต้องการลอบสังหาร แล้วกดยืนยันสกิลด้านล่าง",
 };
 
@@ -196,7 +198,7 @@ const skillActionInstructionsEn: Record<Role, string> = {
   DETECTIVE: "Select a room on the hotel map to inspect, then confirm below.",
   RECEPTIONIST: "In turn 3, your private room register opens automatically. Read it in your private information.",
   PHOTOGRAPHER: "In turn 3, your photograph privately reveals the Assassin. Read it in your private information.",
-  ACCOMPLICE: "Select a guest card, then confirm below.",
+  ACCOMPLICE: "Select a living guest card, then confirm below.",
   KILLER: "Select a room on the hotel map to assassinate its occupant, then confirm below.",
 };
 
@@ -298,7 +300,7 @@ export function SkillConfirmBar({ targetLabel, canSubmit, onConfirm }: { targetL
   </div>;
 }
 
-export function GameScreen({ state, privateState, teamState, result, murderSequence, connected, connectionMessage, onCommand }: { state: PublicGameState; privateState: PrivatePlayerState | null; teamState: PrivateTeamState | null; result: GameResultState | null; murderSequence: number; connected: boolean; connectionMessage: string; onCommand: (event: "game:skill" | "game:vote" | "game:chat", payload: Record<string, unknown>, version: number) => Promise<LobbyAck<{ version: number }>> }) {
+export function GameScreen({ state, privateState, teamState, result, murderSequence, connected, connectionMessage, onlinePlayerIds = [], onCommand }: { state: PublicGameState; privateState: PrivatePlayerState | null; teamState: PrivateTeamState | null; result: GameResultState | null; murderSequence: number; connected: boolean; connectionMessage: string; onlinePlayerIds?: string[]; onCommand: (event: "game:skill" | "game:vote" | "game:chat", payload: Record<string, unknown>, version: number) => Promise<LobbyAck<{ version: number }>> }) {
   const language = useLanguage();
   const en = language === "en";
   const [muted, setMuted] = useState(false);
@@ -353,7 +355,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const selectedSkillRoom = selectedBoardTarget?.kind === "room" ? selectedBoardTarget.target : null;
   const selectedSkillFloor = selectedBoardTarget?.kind === "floor" ? selectedBoardTarget.target : null;
   const selectedSkillColumn = selectedBoardTarget?.kind === "column" ? selectedBoardTarget.target : null;
-  const selectedSkillPlayer = skillPlayerSelection?.turn === state.turn && skillPlayerSelection.playerId === privateState?.playerId ? skillPlayerSelection.targetId : null;
+  const selectedSkillPlayer = skillPlayerSelection?.turn === state.turn && skillPlayerSelection.playerId === privateState?.playerId && state.players.some((player) => player.id === skillPlayerSelection.targetId && player.isAlive !== false) ? skillPlayerSelection.targetId : null;
   const skillTarget = privateState ? doubleKillActive ? doubleKillRooms.length === 2 ? doubleKillRooms : null : usesRoomTarget(privateState.role) ? selectedSkillRoom : usesFloorTarget(privateState.role) ? selectedSkillFloor : usesColumnTarget(privateState.role) ? selectedSkillColumn : privateState.role === "ACCOMPLICE" ? selectedSkillPlayer : null : null;
   const selectedPlayerName = state.players.find((player) => player.id === selectedSkillPlayer)?.displayName;
   const skillTargetLabel = doubleKillActive ? en ? `Select two rooms: ${doubleKillRooms.join(", ") || "none"} (${doubleKillRooms.length}/2)` : `เลือกสองห้อง: ${doubleKillRooms.join(", ") || "ยังไม่ได้เลือก"} (${doubleKillRooms.length}/2)` : en ? skillTarget === null ? "No target selected" : typeof skillTarget === "string" ? `Guest: ${selectedPlayerName ?? "not found"}` : usesRoomTarget(privateState!.role) ? `Room ${skillTarget}` : usesFloorTarget(privateState!.role) ? `Floor ${skillTarget}` : `Column 0${skillTarget}` : skillTarget === null ? "ยังไม่ได้เลือกเป้าหมาย" : typeof skillTarget === "string" ? `ผู้เข้าพัก: ${selectedPlayerName ?? "ไม่พบผู้เล่น"}` : usesRoomTarget(privateState!.role) ? `ห้อง ${skillTarget}` : usesFloorTarget(privateState!.role) ? `ชั้น ${skillTarget}` : `แนวห้อง 0${skillTarget}`;
@@ -402,7 +404,6 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {error && <p role="alert" className="mb-5 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200">{error}</p>}
     {showSecret && privateState && (privateState.role === "RECEPTIONIST" || privateState.role === "PHOTOGRAPHER") && state.turn === 3 && <div role="status" className="mb-5 rounded-xl border border-[#e3c88e]/60 bg-[#30202d] p-4 font-semibold text-[#f2d79c]">{en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</div>}
     {privateState?.privateResults.some((message) => message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") || message.startsWith("ภาพถ่ายเทิร์นที่ 3:")) && !showSecret && <Alert severity="info" className="mb-5!">{en ? "A new private investigation result is available. Open your private information to view it." : "มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู"}</Alert>}
-    {teamState?.canChat && !showSecret && state.phase === "SKILL_PHASE" && <Alert severity="info" className="mb-5!">{en ? "Murderer team chat is open. Show your private information to send a message." : "เปิดแชทฝ่ายฆาตกรแล้ว กดแสดงข้อมูลลับเพื่อส่งข้อความ"}</Alert>}
     {state.phase !== "SKILL_PHASE" && privateState?.skillBlockReason && <Alert severity="warning" className="mb-5!">{privateState.skillBlockReason === "BLACKOUT" ? en ? "Your floor is dark. You cannot use your skill this turn." : "ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้" : en ? "Your Electrician skill is cooling down this turn." : "สกิลช่างไฟกำลังพักหนึ่งรอบ รอบนี้ใช้สกิลไม่ได้"}</Alert>}
     {privateState?.canUseSkill && skillDeadlineAt !== undefined && <p className="mb-5 text-sm text-[#e7ce98]" role="timer" aria-live="off">{skillSecondsLeft === null ? en ? "Checking skill time…" : "กำลังตรวจเวลาใช้สกิล…" : skillSecondsLeft > 0 ? en ? `${skillSecondsLeft} seconds left to use your skill` : `เวลาใช้สกิลเหลือ ${skillSecondsLeft} วินาที` : en ? "Skill time expired. Waiting for the next phase." : "หมดเวลาใช้สกิลแล้ว กำลังรอขั้นตอนถัดไป"}</p>}
     {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-2">
@@ -410,16 +411,14 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
         <div ref={boardRef} className="scroll-mt-4"><HotelBoard state={state} selfId={privateState?.playerId} ownRoomNumber={privateState?.roomNumber} unavailableSkillRooms={privateState?.role === "LOCKSMITH" ? privateState.locksmithUsedRooms : undefined} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} onSkillRoomSelect={roomSkillActive ? (roomNumber) => selectBoardTarget("room", roomNumber) : undefined} onSkillFloorSelect={floorSkillActive ? (floor) => selectBoardTarget("floor", floor) : undefined} onSkillColumnSelect={columnSkillActive ? (column) => selectBoardTarget("column", column) : undefined} selectedSkillRoom={selectedSkillRoom} selectedSkillRooms={doubleKillRooms} selectedSkillFloor={selectedSkillFloor} selectedSkillColumn={selectedSkillColumn} voteBusy={busy || !connected || voteExpired || ((roomSkillActive || floorSkillActive || columnSkillActive) && skillSecondsLeft === 0)} /></div>
       </div>
       <div className="min-w-0 space-y-5">
-      <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : undefined} /></div>
+      <div ref={guestsRef} className="scroll-mt-4"><PublicGuests players={state.players} selfId={privateState?.playerId} selectedPlayerId={selectedSkillPlayer} onlinePlayerIds={onlinePlayerIds} onSelectPlayer={privateState?.canUseSkill && privateState.role === "ACCOMPLICE" ? (targetId) => setSkillPlayerSelection({ turn: state.turn, playerId: privateState.playerId, targetId }) : undefined} /></div>
       {privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}
-      {showSecret && teamState && teamState.teammates.length > 1 && state.phase === "SKILL_PHASE" && <><GameChat channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={!!teamState.canChat && connected} language={language} onSend={(text) => sendChat("MURDERER", text)} />{teamState.canChat && teamState.chatDeadlineAt !== undefined && <PhaseTimer deadline={teamState.chatDeadlineAt} label={en ? "Team chat closes in" : "เวลาแชทฝ่ายฆาตกร"} />}</>}
       {privateState?.mode === "SPECTATOR" && <SpectatorPanel />}
       {state.phase === "SKILL_PHASE" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><p>{state.phaseMessage ? gameMessage(state.phaseMessage, language) : null}</p></Paper>}
       {privateState?.canUseSkill && <SkillPanel state={state} privateState={privateState} selectedRoom={selectedSkillRoom} selectedRooms={doubleKillRooms} doubleKillActive={doubleKillActive} selectedFloor={selectedSkillFloor} selectedColumn={selectedSkillColumn} selectedPlayerId={selectedSkillPlayer} />}
-      {state.phase === "DISCUSSION" && <GameChat channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} onSend={(text) => sendChat("PUBLIC", text)} />}
       {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><PhaseTimer deadline={state.phaseDeadlineAt} label={en ? "Voting" : "เวลาลงคะแนน"} /><p className="mt-2 text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p></Paper>}
       {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p>{state.phaseDeadlineAt && <div className="mt-4"><PhaseTimer deadline={state.phaseDeadlineAt} label={state.turn >= 4 ? en ? "Final result in" : "สรุปผลเกมใน" : en ? "Next turn in" : "เริ่มรอบถัดไปใน"} /></div>}</Paper>}
       <Paper className="border! border-[#353440]! bg-[#191a22]! p-5!"><h2 className="font-serif text-xl">{en ? "Public event history" : "ประวัติเหตุการณ์สาธารณะ"}</h2><ol className="mt-3 space-y-2 text-sm text-[#c6bdb1]">{state.publicHistory?.map((event, index) => <li key={`${event.type}-${index}`}>{gameMessage(event.message, language)}</li>)}</ol></Paper>
     </div></div>}
-  </div>{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
+  </div>{state.phase === "DISCUSSION" && state.phaseDeadlineAt !== undefined && <FloatingGameChat key={`public:${state.turn}:${state.phaseDeadlineAt}`} channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} deadline={state.phaseDeadlineAt} onSend={(text) => sendChat("PUBLIC", text)} />}{state.phase === "SKILL_PHASE" && teamState?.canChat && teamState.chatDeadlineAt !== undefined && <FloatingGameChat key={`team:${state.turn}:${teamState.chatDeadlineAt}`} channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={connected} language={language} deadline={teamState.chatDeadlineAt} onSend={(text) => sendChat("MURDERER", text)} />}{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
 }

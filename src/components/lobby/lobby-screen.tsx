@@ -54,6 +54,7 @@ export function LobbyScreen({ code }: { code: string }) {
   const [discussionSeconds, setDiscussionSeconds] = useState(180);
   const [selectedInnocentRoles, setSelectedInnocentRoles] = useState<Role[]>([]);
   const [gameState, setGameState] = useState<PublicGameState | null>(null);
+  const [onlinePlayerIds, setOnlinePlayerIds] = useState<string[] | null>(null);
   const [privateState, setPrivateState] = useState<PrivatePlayerState | null>(null);
   const [versionedTeamState, setVersionedTeamState] = useState<VersionedTeamState | null>(null);
   const [result, setResult] = useState<GameResultState | null>(null);
@@ -95,6 +96,7 @@ export function LobbyScreen({ code }: { code: string }) {
         setConnected(true);
         setPlayerId(result.data.playerId);
         setView((current) => acceptNewerLobbyState(current, result.data.view));
+        setOnlinePlayerIds((current) => current ?? result.data.view.players.filter((player) => player.connected).map((player) => player.id));
         setPlayerLimit(result.data.view.playerLimit);
         setDiscussionSeconds(result.data.view.discussionSeconds);
         setSelectedInnocentRoles(result.data.view.selectedInnocentRoles);
@@ -109,6 +111,7 @@ export function LobbyScreen({ code }: { code: string }) {
     };
     const onConnectError = () => setError(languageRef.current === "en" ? "Cannot connect to the server. Retrying…" : "เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กำลังลองอีกครั้ง…");
     const onGameState = (next: PublicGameState) => setGameState((current) => acceptNewerGameState(current, next));
+    const onGamePresence = (next: { onlinePlayerIds: string[] }) => setOnlinePlayerIds(next.onlinePlayerIds);
     const onPrivateState = (next: PrivatePlayerState) => setPrivateState((current) => acceptNewerGameState(current, next));
     const onTeamState = (next: VersionedTeamState) => setVersionedTeamState((current) => acceptNewerGameState(current, next));
     const onResult = (next: GameResultState) => setResult(next);
@@ -116,6 +119,7 @@ export function LobbyScreen({ code }: { code: string }) {
     const onKicked = () => { forgetLobbyIdentity(code); setKicked(true); socket.disconnect(); };
     socket.on("lobby:state", onState);
     socket.on("game:state", onGameState);
+    socket.on("game:presence", onGamePresence);
     socket.on("game:private", onPrivateState);
     socket.on("game:team", onTeamState);
     socket.on("game:result", onResult);
@@ -130,6 +134,7 @@ export function LobbyScreen({ code }: { code: string }) {
       if (retryTimer) window.clearTimeout(retryTimer);
       socket.off("lobby:state", onState);
       socket.off("game:state", onGameState);
+      socket.off("game:presence", onGamePresence);
       socket.off("game:private", onPrivateState);
       socket.off("game:team", onTeamState);
       socket.off("game:result", onResult);
@@ -161,10 +166,11 @@ export function LobbyScreen({ code }: { code: string }) {
   const self = view?.players.find((player) => player.id === playerId);
   const isHost = view?.hostPlayerId === playerId;
   const settingsDirty = !!isHost && !!view && (playerLimit !== view.playerLimit || discussionSeconds !== view.discussionSeconds || selectedInnocentRoles.join(",") !== view.selectedInnocentRoles.join(","));
+  const visibleOnlinePlayerIds = (onlinePlayerIds ?? view?.players.filter((player) => player.connected).map((player) => player.id) ?? []).filter((id) => connected || id !== playerId);
 
   if (kicked) return <main className="flex min-h-screen items-center justify-center bg-[#12111c] px-5 text-[#f8f1e4]"><Paper className="max-w-md border! border-[#d9b66f]/30! bg-[#211c1c]! p-8! text-center"><h1 className="font-serif text-2xl">{en ? "You were removed from this room" : "คุณถูกนำออกจากห้องนี้"}</h1><p className="mt-3 text-sm text-[#c6bdb1]">{en ? "The host removed you before the game started." : "เจ้าของห้องนำคุณออกจากห้องพักก่อนเริ่มเกม"}</p><Button className="mt-6!" component={Link} href="/" variant="contained">{en ? "Back to home" : "กลับหน้าแรก"}</Button></Paper></main>;
 
-  if (gameState) return <GameScreen state={gameState} privateState={privateState} teamState={privateState?.isAlive ? versionedTeamState?.teamState ?? null : null} result={result} murderSequence={murderSequence} connected={connected} connectionMessage={error} onCommand={(event, payload, version) => {
+  if (gameState) return <GameScreen state={gameState} privateState={privateState} teamState={privateState?.isAlive ? versionedTeamState?.teamState ?? null : null} result={result} murderSequence={murderSequence} connected={connected} connectionMessage={error} onlinePlayerIds={visibleOnlinePlayerIds} onCommand={(event, payload, version) => {
     const socket = socketRef.current;
     if (!socket) return Promise.resolve({ ok: false, error: "SERVER_UNAVAILABLE" as const });
     return requestLobby<{ version: number }>(socket, event, { ...payload, actionId: createActionId(), expectedVersion: version });

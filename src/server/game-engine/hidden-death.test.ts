@@ -56,7 +56,7 @@ describe("hidden deaths", () => {
     expect(result.privateEvents).toContainEqual(expect.objectContaining({ recipientPlayerId: "victim", type: "DEATH_NOTICE" }));
     const publicState = projectPublicState(result.state);
     expect(publicState.publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("MURDERED");
-    expect(publicState.players.find((player) => player.id === "victim")).toEqual({ id: "victim", displayName: "Victim", seatIndex: 1, avatarId: null });
+    expect(publicState.players.find((player) => player.id === "victim")).toEqual({ id: "victim", displayName: "Victim", seatIndex: 1, avatarId: null, isAlive: false });
     expect(JSON.stringify(publicState.publicHistory)).not.toContain("victim");
   });
 
@@ -100,13 +100,13 @@ describe("hidden deaths", () => {
     expect(() => resolveAssassination({ ...murdered, usedSkillPlayerIds: [], activePlayerId: "killer" }, 102)).toThrow("Room is not eligible");
   });
 
-  it("keeps dead players in public roster without status or private data", () => {
+  it("keeps dead players in the public roster with death status but no secret role or room", () => {
     const result = resolveAssassination(game(), 102);
     const publicState = projectPublicState(result.state);
     expect(publicState.players).toHaveLength(6);
     expect(publicState.players.map((player) => player.id)).toContain("victim");
-    expect(publicState.players.every((player) => Object.keys(player).sort().join(",") === "avatarId,displayName,id,seatIndex")).toBe(true);
-    expect(JSON.stringify(publicState.players)).not.toMatch(/isAlive|isDead|deathReason|deathTurn|roomNumber|HOUSEKEEPER/);
+    expect(publicState.players.every((player) => Object.keys(player).sort().join(",") === "avatarId,displayName,id,isAlive,seatIndex")).toBe(true);
+    expect(JSON.stringify(publicState.players)).not.toMatch(/isDead|deathReason|deathTurn|roomNumber|HOUSEKEEPER/);
     expect(publicState.publicRooms.find((room) => room.roomNumber === 102)?.state).toBe("MURDERED");
     expect(publicState.phaseMessage).toBe("กำลังดำเนินการสืบสวน...");
   });

@@ -30,7 +30,7 @@ describe("game privacy and turn UI", () => {
       result: null, murderSequence: 0, connected: true, connectionMessage: "",
       onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
     }));
-    expect(html).toContain("เปิดแชทฝ่ายฆาตกรแล้ว กดแสดงข้อมูลลับเพื่อส่งข้อความ");
+    expect(html).toContain('aria-label="เปิดแชทฝ่ายฆาตกร"');
     expect(html).not.toContain('aria-label="แชทฝ่ายฆาตกร"');
   });
   it("scrolls mobile skill turns to the required guest or map target", () => {
@@ -54,6 +54,19 @@ describe("game privacy and turn UI", () => {
     const html = renderToStaticMarkup(createElement(PublicGuests, { players, selfId: "a", onSelectPlayer: () => {} }));
     expect(html).toMatch(/aria-label="เลือกผู้เข้าพัก Guest B[^>]+ring-1 ring-\[#c8a46b\]\/50/);
     expect(html).not.toMatch(/aria-label="เลือกผู้เข้าพัก Self/);
+  });
+
+  it("disables dead guests and marks each guest's connection status", () => {
+    const players = [
+      { id: "a", displayName: "Alive", seatIndex: 0, isAlive: true },
+      { id: "b", displayName: "Dead", seatIndex: 1, isAlive: false },
+    ];
+    const html = renderToStaticMarkup(createElement(PublicGuests, { players, selfId: "a", onlinePlayerIds: ["a"], onSelectPlayer: () => {} }));
+    expect(html).toContain('aria-label="ออนไลน์"');
+    expect(html).toContain('aria-label="ออฟไลน์"');
+    expect(html).toContain('aria-label="Dead เสียชีวิต"');
+    expect(html).toMatch(/aria-label="Dead เสียชีวิต"[^>]*disabled=""/);
+    expect(html).not.toContain('aria-label="เลือกผู้เข้าพัก Dead');
   });
 
   it("renders the room map for the active game's floor count", () => {
@@ -426,7 +439,7 @@ describe("game privacy and turn UI", () => {
       RECEPTIONIST: "เทิร์นที่ 3",
       PHOTOGRAPHER: "ภาพถ่าย",
       DETECTIVE: "ตรวจหนึ่งห้อง",
-      ACCOMPLICE: "เลือกผู้เล่นหนึ่งคน",
+      ACCOMPLICE: "เลือกผู้เล่นที่ยังมีชีวิตหนึ่งคน",
       KILLER: "ลอบสังหารผู้พักที่ยังมีชีวิต",
     };
     for (const role of ROLE_ORDER) {

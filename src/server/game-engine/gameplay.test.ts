@@ -386,22 +386,16 @@ describe("gameplay setup and skills", () => {
     }
   });
 
-  it("consumes the Accomplice's turn when selecting a dead player", () => {
+  it("rejects a dead guest as the Accomplice's target", () => {
     const initial = advancePrologue(createInitialGame("ABC234", [...lobbyPlayers, { id: "p5", displayName: "Player 5", seatIndex: 5 }], 3, choose(), 1000).state, 31000, choose()).state;
     const accomplice = initial.players.find((player) => player.role === "ACCOMPLICE")!;
-    const killer = initial.players.find((player) => player.role === "KILLER")!;
     const target = initial.players.find((player) => player.team === "INNOCENT")!;
     const state = {
       ...initial,
       activePlayerId: accomplice.id,
       players: initial.players.map((player) => player.id === target.id ? { ...player, isAlive: false } : player),
     };
-    const result = performSkill(state, accomplice.id, target.id, 1000, 180);
-    expect(result.state.usedSkillPlayerIds).toContain(accomplice.id);
-    expect(result.state.activePlayerId).toBe(killer.id);
-    expect(projectPrivatePlayerState(result.state, accomplice.id).privateResults).toContain("ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก");
-    expect(projectPrivatePlayerState(result.state, killer.id).privateResults).toContain("ข้อมูลจากผู้สมรู้ร่วมคิด: ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก");
-    expect(result.publicEvents).toEqual([]);
+    expect(() => performSkill(state, accomplice.id, target.id, 1000, 180)).toThrow("Invalid skill target");
     expect(() => performSkill(state, accomplice.id, "unknown-player", 1000, 180)).toThrow("Invalid skill target");
     expect(() => performSkill(state, accomplice.id, accomplice.id, 1000, 180)).toThrow("Invalid skill target");
   });

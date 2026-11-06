@@ -7,7 +7,7 @@ export function projectPublicState(state: GameEngineState): PublicGameState {
     version: state.version,
     phase: state.phase,
     turn: state.turn,
-    players: state.players.map(({ id, displayName, seatIndex, avatarId }) => ({ id, displayName, seatIndex, avatarId: avatarId ?? null })),
+    players: state.players.map(({ id, displayName, seatIndex, avatarId, isAlive }) => ({ id, displayName, seatIndex, avatarId: avatarId ?? null, isAlive })),
     phaseMessage: state.phase === "SKILL_PHASE" ? "กำลังดำเนินการสืบสวน..." : null,
     ...(["ROLE_REVEAL", "DISCUSSION", "VOTING", "RESOLUTION"].includes(state.phase) && state.phaseDeadlineAt !== undefined ? { phaseDeadlineAt: state.phaseDeadlineAt } : {}),
     publicHistory: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),

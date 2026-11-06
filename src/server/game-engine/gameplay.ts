@@ -139,8 +139,8 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
     } else {
       if (target === actor.id) throw new Error("Invalid skill target");
       const selected = state.players.find((player) => player.id === target);
-      if (!selected) throw new Error("Invalid skill target");
-      message = selected.isAlive ? `ผู้เล่นที่เลือกอยู่ชั้น ${Math.floor(selected.roomNumber / 100)}` : "ไม่พบข้อมูลชั้นของผู้เล่นที่เลือก";
+      if (!selected || !selected.isAlive) throw new Error("Invalid skill target");
+      message = `ผู้เล่นที่เลือกอยู่ชั้น ${Math.floor(selected.roomNumber / 100)}`;
       for (const teammate of state.players.filter((player) => player.role === "KILLER" && player.isAlive)) {
         const report = `ข้อมูลจากผู้สมรู้ร่วมคิด: ${message}`;
         next = addPrivateResult(next, teammate.id, report);

@@ -227,12 +227,18 @@ describe("Socket.IO lobby", () => {
     version = configured.data.version;
     const publicState = new Promise<unknown>((resolve) => members[1].once("game:state", resolve));
     const privateState = new Promise<unknown>((resolve) => members[1].once("game:private", resolve));
+    const presence = new Promise<{ onlinePlayerIds: string[] }>((resolve) => members[1].once("game:presence", resolve));
     const start = await host.emitWithAck("game:start", { actionId: crypto.randomUUID(), expectedVersion: version });
     expect(start.ok).toBe(true);
     const publicData = await publicState;
     const privateData = await privateState;
-    expect(JSON.stringify(publicData)).not.toMatch(/roomNumber.{0,30}role|"role"|"team"|"isAlive"/);
+    expect((await presence).onlinePlayerIds).toHaveLength(5);
+    expect(JSON.stringify(publicData)).not.toMatch(/roomNumber.{0,30}role|"role"|"team"/);
+    expect(publicData).toMatchObject({ players: expect.arrayContaining([expect.objectContaining({ isAlive: true })]) });
     expect(privateData).toEqual(expect.objectContaining({ playerId: expect.any(String), role: expect.any(String), roomNumber: expect.any(Number) }));
+    const offlinePresence = new Promise<{ onlinePlayerIds: string[] }>((resolve) => members[1].on("game:presence", (next) => { if (next.onlinePlayerIds.length === 4) resolve(next); }));
+    members[4].disconnect();
+    expect((await offlinePresence).onlinePlayerIds).toHaveLength(4);
   }, 15000);
 
   it("broadcasts only a generic murder event and restores spectator state on reconnect", async () => {
@@ -283,9 +289,10 @@ describe("Socket.IO lobby", () => {
     const updatedPublic = await publicState;
     expect(updatedPublic.publicRooms.find((room) => room.roomNumber === victim.roomNumber)?.state).toBe("MURDERED");
     expect(updatedPublic.players[victimIndex]?.avatarId).toBe(victim.avatarId);
+    expect(updatedPublic.players[victimIndex]?.isAlive).toBe(false);
     expect(projectPublicState(controlled.gameState).phaseDeadlineAt).toBeUndefined();
     expect(JSON.stringify(updatedPublic.publicHistory?.filter((entry) => entry.type === "MURDER_OCCURRED"))).not.toContain(String(victim.roomNumber));
-    expect(updatedPublic.players.every((player) => !Object.hasOwn(player, "roomNumber") && !Object.hasOwn(player, "role") && !Object.hasOwn(player, "team") && !Object.hasOwn(player, "isAlive"))).toBe(true);
+    expect(updatedPublic.players.every((player) => !Object.hasOwn(player, "roomNumber") && !Object.hasOwn(player, "role") && !Object.hasOwn(player, "team"))).toBe(true);
     expect(await deathEvent).toMatchObject({ type: "DEATH_NOTICE", recipientPlayerId: victim.id });
     members[victimIndex].disconnect();
     const replacement = client();

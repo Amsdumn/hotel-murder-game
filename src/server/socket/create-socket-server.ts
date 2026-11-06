@@ -47,6 +47,10 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
 
   function publish(view: LobbyView): void { io.to(room(view.code)).emit("lobby:state", view); }
 
+  function publishPresence(code: string, playerIds: string[]): void {
+    io.to(room(code)).emit("game:presence", { onlinePlayerIds: playerIds.filter((playerId) => activeSockets.has(playerId)) });
+  }
+
   function publishGame(result: EngineResult): void {
     const publicState = projectPublicState(result.state);
     const publicSignature = JSON.stringify({ ...publicState, version: 0 });
@@ -146,6 +150,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
           socket.emit("game:private", snapshot.privateState);
           socket.emit("game:team", snapshot.teamState);
           if (snapshot.result) socket.emit("game:result", snapshot.result);
+          publishPresence(identity.code, identity.view.players.map((player) => player.id));
         } else publish(identity.view);
         return identity;
       });
@@ -204,6 +209,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
         if (!binding) throw new LobbyError("INVALID_SESSION");
         const result = await games.start(binding.code, binding.playerId, input);
         publishGame(result);
+        publishPresence(binding.code, result.state.players.map((player) => player.id));
         return { version: result.state.version };
       });
     });
@@ -244,6 +250,7 @@ export function createSocketServer(httpServer: HttpServer, service = new LobbySe
         if (activeSockets.has(binding.playerId)) return;
         void service.setConnected(binding.playerId, false).then(async (view) => {
           publish(view);
+          publishPresence(binding.code, view.players.map((player) => player.id));
           if (!isOccupied(binding.code)) await service.setRoomEmptySince(binding.code, Date.now());
         }).catch((error: unknown) => console.error("Unable to mark player disconnected", error));
       }, 2000);
