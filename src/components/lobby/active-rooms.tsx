@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Button, Chip } from "@mui/material";
+import { Button, Chip, IconButton } from "@mui/material";
 import { connectLobbySocket, readLobbyToken, requestLobby } from "@/lib/lobby-client";
 import type { PublicLobbySummary } from "@/types/lobby";
 import { useLanguage } from "@/components/language-switcher";
@@ -56,7 +56,9 @@ export function ActiveRooms({ onJoin }: { onJoin: (code: string) => void }) {
   return <section aria-labelledby="active-rooms-title" className="mt-4 rounded-xl border border-[#d9b66f]/25 bg-[#171321]/85 p-4 shadow-[0_16px_45px_rgba(0,0,0,.28)] sm:p-5">
     <div className="flex items-center justify-between gap-3">
       <div><p className="text-xs tracking-[.2em] text-[#d9b66f]">OPEN ROOMS</p><h2 id="active-rooms-title" className="mt-1 font-serif text-xl">{en ? "Available game rooms" : "ห้องเกมที่เปิดอยู่"}</h2></div>
-      <Button size="small" variant="text" onClick={() => refreshRef.current()} aria-label={en ? "Refresh rooms" : "รีเฟรชรายการห้อง"}>{en ? "Refresh" : "รีเฟรช"}</Button>
+      <IconButton size="small" color="primary" onClick={() => refreshRef.current()} aria-label={en ? "Refresh rooms" : "รีเฟรชรายการห้อง"} title={en ? "Refresh rooms" : "รีเฟรชรายการห้อง"}>
+        <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 11a8 8 0 1 0-2.34 5.66" /><path d="M20 4v7h-7" /></svg>
+      </IconButton>
     </div>
     {loading ? <p className="mt-4 text-sm text-[#c6bdb1]">{en ? "Loading rooms…" : "กำลังโหลดรายการห้อง…"}</p> : error ? <p className="mt-4 text-sm text-[#ffc7c7]">{en ? "Could not load rooms. Please refresh." : "โหลดรายการห้องไม่ได้ กรุณาลองรีเฟรช"}</p> : rooms.length === 0 ? <p className="mt-4 text-sm text-[#c6bdb1]">{en ? "No game rooms are open yet." : "ยังไม่มีห้องเกมที่เปิดอยู่"}</p> : <div className="mt-4 space-y-2">{rooms.map((room) => {
       const canResume = savedRooms.has(room.code);
