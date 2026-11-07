@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ROLE_ORDER } from "@/types/game";
+import { AVATARS } from "@/lib/avatars";
+import { avatarEnglish } from "@/lib/avatar-translations";
 import { roleNames, roleNamesEn } from "./role-portrait";
 import { RoleBook } from "./role-book";
 
@@ -18,6 +20,9 @@ describe("role book", () => {
     expect(html).toContain("สีผม");
     expect(html).toContain("ทนายความ");
     expect(html).toContain("ฝ่ายเดียวกัน");
+    expect(html).toContain("แชทสาธารณะได้จนปิดหีบลงคะแนน");
+    expect(html).toContain("แท็บเฉพาะฝ่ายฆาตกร");
+    for (const avatar of AVATARS) expect(html).toContain(avatar.name);
   });
 
   it("explains the same roles and exceptions in English", () => {
@@ -34,5 +39,8 @@ describe("role book", () => {
     expect(html).toContain("hair color");
     expect(html).toContain("Lawyer");
     expect(html).toContain("same team");
+    expect(html).toContain("until the ballot closes");
+    expect(html).toContain("Murderers-only tab");
+    for (const avatar of AVATARS) expect(html).toContain(avatarEnglish[avatar.id].name);
   });
 });

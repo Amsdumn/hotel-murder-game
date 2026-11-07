@@ -1,4 +1,7 @@
+import Image from "next/image";
 import type { Language } from "@/lib/language";
+import { AVATARS } from "@/lib/avatars";
+import { avatarEnglish } from "@/lib/avatar-translations";
 import { roleSkillDescriptions, roleSkillDescriptionsEn } from "@/lib/role-skills";
 import { ROLE_ORDER, type Role } from "@/types/game";
 import { roleNames, roleNamesEn } from "./role-portrait";
@@ -63,7 +66,7 @@ export function RoleBook({ language }: { language: Language }) {
     <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Each role is unique. Five-player games have one Assassin and four different Innocent roles, with no Accomplice. Games with six or more players add one Accomplice. The order below is the skill order." : "แต่ละบทบาทมีได้เพียงคนเดียว เกม 5 คนมีนักฆ่า 1 คนกับผู้บริสุทธิ์ 4 บทบาท ไม่มีผู้สมรู้ร่วมคิด เกมตั้งแต่ 6 คนขึ้นไปจึงมีผู้สมรู้ร่วมคิด 1 คน ลำดับด้านล่างคือลำดับใช้สกิล"}</p>
     <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "When present, the Assassin and Accomplice privately know each other's identity and room. Other players know only their own secret information until their skills reveal more. Public characters give no clue about secret roles." : "เมื่อมีผู้สมรู้ร่วมคิด เขาและนักฆ่าจะรู้ชื่อและห้องของกันและกันเป็นข้อมูลลับ ผู้เล่นคนอื่นรู้ข้อมูลลับของตัวเองเท่านั้นจนกว่าสกิลจะเผยเพิ่ม ตัวละครสาธารณะไม่บอกบทบาทลับ"}</p>
     <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Each interactive skill turn uses the host's discussion time setting, from 30–420 seconds in 30-second steps. Choose a target and confirm. Clue, murdered, and opened rooms cannot be targeted; a floor or column needs at least one eligible room. Dead or blacked-out players skip their skill." : "สกิลที่ต้องกดใช้มีเวลาเท่ากับเวลาพูดคุยที่เจ้าของห้องตั้งไว้ 30–420 วินาที เพิ่มครั้งละ 30 วินาที เลือกเป้าหมายแล้วกดยืนยัน ห้องร่องรอย ห้องฆาตกรรม และห้องที่เปิดแล้วเลือกไม่ได้; ชั้นหรือแนวต้องมีห้องที่เลือกได้อย่างน้อยหนึ่งห้อง ผู้ที่ตายหรืออยู่บนชั้นไฟดับจะข้ามคิว"}</p>
-    <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Living players can use the public chat during discussion. Living Murderers can use their private team chat while a Murderer skill turn is active. Open the floating chat button at the lower left; unread messages appear as a count while it is closed. The chat closes when its time runs out." : "ผู้เล่นที่ยังมีชีวิตแชทสาธารณะได้ในช่วงพูดคุย ฝ่ายฆาตกรที่ยังมีชีวิตแชทลับกันได้ระหว่างเทิร์นใช้สกิลของฝ่ายฆาตกร กดปุ่มแชทลอยมุมซ้ายล่างเพื่อเปิดแผง เมื่อปิดแผงจะเห็นจำนวนข้อความใหม่บนปุ่ม เมื่อหมดเวลาจะแชทไม่ได้และปุ่มจะปิดลง"}</p>
+    <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "Living guests can use public chat during discussion and voting until the ballot closes, including a runoff. When an Accomplice is in the game, living Murderers can also use a private channel on a Murderer skill turn and through discussion and voting. Open the single chat button at the lower left, then switch between Public and the Murderers-only tab. Only Murderers see that private tab; unread messages have a count. Both chats close when voting ends." : "ผู้เข้าพักที่ยังมีชีวิตแชทสาธารณะได้จนปิดหีบลงคะแนน รวมรอบตัดสิน เมื่อมีผู้สมรู้ร่วมคิด ฝ่ายฆาตกรที่ยังมีชีวิตแชทลับได้ในคิวสกิลของฝ่ายตน ต่อเนื่องถึงช่วงพูดคุยและลงคะแนน กดปุ่มแชทเดียวที่มุมซ้ายล่าง แล้วสลับแท็บสาธารณะกับแท็บเฉพาะฝ่ายฆาตกร ซึ่งมีเฉพาะฝ่ายฆาตกรเห็น ข้อความใหม่มีตัวเลขแจ้งเตือน และแชททั้งสองปิดเมื่อจบการโหวต"}</p>
     <div className="mt-5 grid gap-4 sm:grid-cols-2">
       {ROLE_ORDER.map((role, index) => {
         const team = role === "KILLER" || role === "ACCOMPLICE" ? "MURDERER" : "INNOCENT";
@@ -79,5 +82,22 @@ export function RoleBook({ language }: { language: Language }) {
         </article>;
       })}
     </div>
+    <section aria-labelledby="public-characters-title" className="mt-9 border-t border-[#d9b66f]/25 pt-7">
+      <h3 id="public-characters-title" className="font-serif text-2xl text-[#d9b66f]">{en ? "The hotel's 12 public characters" : "ตัวละครสาธารณะทั้ง 12 คน"}</h3>
+      <p className="mt-2 text-sm leading-6 text-[#c6bdb1]">{en ? "At game start, the server assigns up to ten different characters without repeats. You cannot choose one. A character's name, appearance, job, and story are public, but they never determine or reveal the secret role, team, room, or skill. Even Irina the receptionist may receive any secret role." : "เมื่อเริ่มเกม เซิร์ฟเวอร์สุ่มตัวละครให้ผู้เล่นสูงสุด 10 คนโดยไม่ซ้ำกัน ผู้เล่นเลือกเองไม่ได้ ชื่อ รูปลักษณ์ อาชีพ และเรื่องราวของตัวละครเป็นข้อมูลสาธารณะ แต่ไม่กำหนดหรือบอกบทบาทลับ ฝ่าย ห้องพัก หรือสกิล แม้อิรินาจะเป็นพนักงานต้อนรับ เธอก็อาจได้รับบทบาทลับใดก็ได้"}</p>
+      <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+        {AVATARS.map((avatar) => {
+          const profile = avatarEnglish[avatar.id];
+          return <li key={avatar.id} className="flex gap-3 rounded-xl border border-[#d9b66f]/20 bg-[#2c2422] p-3">
+            <div className="relative h-20 w-16 shrink-0 overflow-hidden rounded-md bg-[#1b1720]"><Image src={avatar.portrait} alt="" fill sizes="64px" className="object-cover object-top" /></div>
+            <div className="min-w-0">
+              <h4 className="font-serif text-lg leading-6 text-[#f8f1e4]">{en ? profile.name : avatar.name}</h4>
+              <p className="mt-1 text-xs text-[#e7ce98]">{en ? `${profile.occupation} · Age ${avatar.age} · ${profile.origin}` : `${avatar.occupation} · อายุ ${avatar.age} ปี · ${avatar.origin}`}</p>
+              <p className="mt-2 text-xs leading-5 text-[#d6cfc4]">{en ? profile.introduction : avatar.introduction}</p>
+            </div>
+          </li>;
+        })}
+      </ul>
+    </section>
   </section>;
 }
