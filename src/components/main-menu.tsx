@@ -35,7 +35,6 @@ export function AvatarGallery({ onSelect }: { onSelect: (avatarId: AvatarId) => 
       onClick={() => onSelect(avatar.id)}
       className="group relative overflow-hidden rounded-lg border border-[#e5bd82]/30 bg-[#211727]/85 text-left shadow-[0_12px_35px_rgba(0,0,0,.5)] transition-colors hover:border-[#e5bd82] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e5bd82]"
     >
-      {/* <div className="relative aspect-4/5 w-full overflow-hidden" style={{ backgroundImage: `radial-gradient(circle at 50% 35%, ${avatar.color}99, #211727 75%)` }}><Image src={avatarAnimation(avatar.id)} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="(max-width: 640px) 45vw, 125px" unoptimized className="object-contain transition-transform duration-500 group-hover:scale-105" /></div> */}
       <div className="relative aspect-4/5 w-full overflow-hidden" style={{ backgroundImage: `radial-gradient(circle at 50% 35%, ${avatar.color}99, #211727 75%)` }}>
         <Image src={avatar.portrait} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="(max-width: 640px) 45vw, 125px" quality={65} className="object-cover object-top transition-transform duration-500 group-hover:scale-105" />
       </div>
