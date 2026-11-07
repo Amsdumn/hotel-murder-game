@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { accessCookieName, assertAccessGateConfigured, getAccessCookieValue, isAccessGranted, isAccessGrantedFromCookieHeader, isAllowedSocketOrigin, isValidAccessPassword } from "./access-gate";
+import { accessCookieName, assertAccessGateConfigured, getAccessCookieValue, isAccessGranted, isAccessGrantedFromCookieHeader, isAllowedSocketOrigin, isValidAccessPassword, prepareAccessGateEnvironment } from "./access-gate";
 
 const settings = {
   HOTEL_ACCESS_PASSWORD: "a-private-test-password",
@@ -14,6 +14,20 @@ describe("homepage access gate", () => {
     expect(isValidAccessPassword(settings.HOTEL_ACCESS_PASSWORD, settings)).toBe(true);
     expect(isValidAccessPassword("wrong-password", settings)).toBe(false);
     expect(isValidAccessPassword("a".repeat(1000), settings)).toBe(false);
+  });
+
+  it("generates missing credentials only for development", () => {
+    const development: Record<string, string | undefined> = {};
+    const password = prepareAccessGateEnvironment(development, false);
+    expect(password).toMatch(/^[A-Za-z0-9_-]{24}$/);
+    expect(isValidAccessPassword(password, development)).toBe(true);
+    expect(development.HOTEL_ACCESS_COOKIE_SECRET).toHaveLength(64);
+    expect(prepareAccessGateEnvironment(development, false)).toBeNull();
+
+    const production: Record<string, string | undefined> = {};
+    expect(() => prepareAccessGateEnvironment(production, true)).toThrow();
+    expect(production).toEqual({});
+    expect(prepareAccessGateEnvironment({ ...settings }, true)).toBeNull();
   });
 
   it("rejects cross-origin browser socket handshakes", () => {

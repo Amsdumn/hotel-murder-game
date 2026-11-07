@@ -1,4 +1,4 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 export const accessCookieName = "hotel-home-access";
 
@@ -15,6 +15,21 @@ function accessConfig(source: AccessEnvironment = process.env) {
 
 export function assertAccessGateConfigured(source: AccessEnvironment = process.env): void {
   accessConfig(source);
+}
+
+export function prepareAccessGateEnvironment(source: AccessEnvironment = process.env, production = process.env.NODE_ENV === "production"): string | null {
+  if (production) {
+    assertAccessGateConfigured(source);
+    return null;
+  }
+  let generatedPassword: string | null = null;
+  if (!source.HOTEL_ACCESS_PASSWORD) {
+    generatedPassword = randomBytes(18).toString("base64url");
+    source.HOTEL_ACCESS_PASSWORD = generatedPassword;
+  }
+  if (!source.HOTEL_ACCESS_COOKIE_SECRET) source.HOTEL_ACCESS_COOKIE_SECRET = randomBytes(32).toString("hex");
+  assertAccessGateConfigured(source);
+  return generatedPassword;
 }
 
 function equalDigest(value: string, expected: string): boolean {

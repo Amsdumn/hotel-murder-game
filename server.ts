@@ -5,11 +5,11 @@ import next from "next";
 import { getServerEnv } from "./src/lib/env";
 import { getServerUrls } from "./src/lib/server-urls";
 import { createSocketServer } from "./src/server/socket/create-socket-server";
-import { assertAccessGateConfigured } from "./src/server/access-gate";
+import { prepareAccessGateEnvironment } from "./src/server/access-gate";
 
 nextEnv.loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 const { PORT, BIND_HOST } = getServerEnv();
-assertAccessGateConfigured();
+const generatedAccessPassword = prepareAccessGateEnvironment();
 const app = next({ dev: process.env.NODE_ENV !== "production", hostname: BIND_HOST, port: PORT, webpack: true });
 
 async function main() {
@@ -22,6 +22,7 @@ async function main() {
     if (!address || typeof address === "string") return;
     const urls = getServerUrls(address.address, address.port, networkInterfaces());
     console.log(`Hotel Murder Online listening on ${address.address}:${address.port}`);
+    if (generatedAccessPassword) console.log(`Development access password: ${generatedAccessPassword}`);
     for (const [index, url] of urls.entries()) {
       console.log(`${index === 0 ? "Local" : "Network"}: ${url}`);
     }
