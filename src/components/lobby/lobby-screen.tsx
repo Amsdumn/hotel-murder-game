@@ -195,6 +195,14 @@ export function LobbyScreen({ code }: { code: string }) {
   const settingsDirty = !!isHost && !!view && (playerLimit !== view.playerLimit || discussionSeconds !== view.discussionSeconds || innocentRoleMode !== view.innocentRoleMode || selectedInnocentRoles.join(",") !== view.selectedInnocentRoles.join(","));
   const visibleOnlinePlayerIds = (onlinePlayerIds ?? view?.players.filter((player) => player.connected).map((player) => player.id) ?? []).filter((id) => connected || id !== playerId);
 
+  async function startGame() {
+    if (!view || !socketRef.current) return;
+    setBusy(true);
+    const response = await requestLobby<{ version: number }>(socketRef.current, "game:start", { actionId: createActionId(), expectedVersion: view.version });
+    if (!response.ok) setError(lobbyErrorMessage(response.error, language));
+    setBusy(false);
+  }
+
   if (kicked) return <main className="flex min-h-screen items-center justify-center bg-[#12111c] px-5 text-[#f8f1e4]"><Paper className="max-w-md border! border-[#d9b66f]/30! bg-[#211c1c]! p-8! text-center"><h1 className="font-serif text-2xl">{en ? "You were removed from this room" : "คุณถูกนำออกจากห้องนี้"}</h1><p className="mt-3 text-sm text-[#c6bdb1]">{en ? "The host removed you before the game started." : "เจ้าของห้องนำคุณออกจากห้องพักก่อนเริ่มเกม"}</p><Button className="mt-6!" component={Link} href="/" variant="contained">{en ? "Back to home" : "กลับหน้าแรก"}</Button></Paper></main>;
 
   if (gameState) return <GameScreen state={gameState} privateState={privateState} teamState={privateState?.isAlive ? versionedTeamState?.teamState ?? null : null} result={result} murderSequence={murderSequence} connected={connected} connectionMessage={error} onlinePlayerIds={visibleOnlinePlayerIds} onCommand={(event, payload, version) => {
@@ -227,7 +235,7 @@ export function LobbyScreen({ code }: { code: string }) {
             <Button variant={self?.ready ? "outlined" : "contained"} disabled={!self || !connected || busy} onClick={() => void act("lobby:ready", { ready: !self?.ready })}>
               {self?.ready ? en ? "Not ready" : "ยกเลิกความพร้อม" : en ? "Ready" : "พร้อมแล้ว"}
             </Button>
-            {isHost && view?.canStart && <Button className="ml-auto! shrink-0!" variant="contained" disabled={busy || !connected || settingsDirty} onClick={() => void (async () => { setBusy(true); const response = await requestLobby<{ version: number }>(socketRef.current!, "game:start", { actionId: createActionId(), expectedVersion: view.version }); if (!response.ok) setError(lobbyErrorMessage(response.error, language)); setBusy(false); })()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
+            {isHost && view?.canStart && <Button className="ml-auto! hidden! shrink-0! lg:inline-flex!" variant="contained" disabled={busy || !connected || settingsDirty} onClick={() => void startGame()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
           </div>
         </Alert>
 
@@ -315,6 +323,7 @@ export function LobbyScreen({ code }: { code: string }) {
                   </TextField>
                   <InnocentRoleSettings mode={isHost ? innocentRoleMode : view.innocentRoleMode} language={language} selected={isHost ? selectedInnocentRoles : view.selectedInnocentRoles} requiredCount={requiredInnocentRoleCount(isHost ? playerLimit : view.playerLimit)} onModeChange={isHost && !busy ? setInnocentRoleMode : undefined} onToggle={isHost && !busy ? (role) => setSelectedInnocentRoles((roles) => roles.includes(role) ? roles.filter((item) => item !== role) : roles.length >= requiredInnocentRoleCount(playerLimit) ? roles : [...roles, role]) : undefined} />
                   {isHost && <Button fullWidth variant="outlined" disabled={busy || !connected || playerLimit < view.players.length || (innocentRoleMode === "CUSTOM" && selectedInnocentRoles.length > requiredInnocentRoleCount(playerLimit))} onClick={() => void act("lobby:configure", { playerLimit, discussionSeconds, innocentRoleMode, selectedInnocentRoles })}>{en ? "Save settings" : "บันทึกการตั้งค่า"}</Button>}
+                  {isHost && view.canStart && <Button fullWidth className="lg:hidden!" variant="contained" disabled={busy || !connected || settingsDirty} onClick={() => void startGame()}>{en ? "Start game" : "เริ่มเกม"}</Button>}
                 </Stack>
               </div>}
             </Paper>

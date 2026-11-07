@@ -44,8 +44,8 @@ export function SoundSettings({ muted, onChange }: { muted: boolean; onChange: (
   return <SoundToggleButton muted={muted} onChange={onChange} />;
 }
 
-function GameTimerBanner({ deadline, label }: { deadline: number; label: string }) {
-  return <div className="fixed inset-x-0 top-3 z-30 flex justify-center px-4" role="timer">
+function GameTimerBanner({ deadline, label, mobileInline = false }: { deadline: number; label: string; mobileInline?: boolean }) {
+  return <div className={mobileInline ? "sticky top-2 z-30 mb-4 flex justify-center px-4 lg:fixed lg:inset-x-0 lg:top-3 lg:mb-0" : "fixed inset-x-0 top-3 z-30 flex justify-center px-4"} role="timer">
     <div className="rounded-2xl border border-[#e3c88e]/60 bg-[#211923]/95 px-5 py-3 text-center shadow-[0_12px_40px_rgba(0,0,0,.6)] backdrop-blur-md">
       <PhaseTimer deadline={deadline} label={label} />
     </div>
@@ -439,7 +439,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       pendingSkillScrollRole.current = null;
       if (role) window.requestAnimationFrame(() => scrollToSkillTarget(role, guestsRef.current, boardRef.current, true));
     }} />
-    {timerDeadline !== undefined && timerLabel && <GameTimerBanner deadline={timerDeadline} label={timerLabel} />}
+    {timerDeadline !== undefined && timerLabel && <GameTimerBanner deadline={timerDeadline} label={timerLabel} mobileInline />}
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || (en ? "Reconnecting…" : "กำลังเชื่อมต่อใหม่…")}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."} · {state.code}</p><h1 className="mt-2 font-serif text-3xl">{en ? "Turn" : "รอบ"} {state.turn} · {en ? state.phase === "SKILL_PHASE" ? "Skill phase" : state.phase === "DISCUSSION" ? "Discussion" : state.phase === "VOTING" ? "Voting" : state.phase === "RESOLUTION" ? "Room result" : "Game over" : state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : state.phase === "RESOLUTION" ? "ผลการเปิดห้อง" : "จบเกม"}</h1></div><div className="flex flex-wrap items-center gap-2"><LanguageSwitcher /><SoundSettings muted={muted} onChange={changeMuted} />{result && <Button component={Link} href="/" size="small" variant="contained" className="whitespace-nowrap!">{en ? "Back to home" : "กลับหน้าแรก"}</Button>}</div></header>
     <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="mb-5!">{turnNotice}</Alert>

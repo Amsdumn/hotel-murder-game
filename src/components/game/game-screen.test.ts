@@ -37,7 +37,7 @@ describe("game privacy and turn UI", () => {
         onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
       }));
       expect(html.match(/role="timer"/g), phase).toHaveLength(1);
-      expect(html).toContain("fixed inset-x-0 top-3 z-30 flex justify-center px-4");
+      expect(html).toContain("sticky top-2 z-30 mb-4 flex justify-center px-4 lg:fixed lg:inset-x-0 lg:top-3 lg:mb-0");
       expect(html).toContain(label);
     }
     const prologue = renderToStaticMarkup(createElement(StoryPrologue, {
@@ -237,13 +237,13 @@ describe("game privacy and turn UI", () => {
     expect(render("RESOLUTION")).toContain("เริ่มรอบถัดไปใน");
   });
 
-  it("floats the discussion clock at the top center of the viewport", () => {
+  it("keeps the discussion clock sticky on mobile and floats it on desktop", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, {
       state: { ...publicState, phase: "DISCUSSION", phaseDeadlineAt: Date.now() + 60_000 },
       privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "",
       onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
     }));
-    expect(html).toContain('class="fixed inset-x-0 top-3');
+    expect(html).toContain('class="sticky top-2 z-30 mb-4 flex justify-center px-4 lg:fixed lg:inset-x-0 lg:top-3 lg:mb-0" role="timer"');
     expect(html).toContain("เวลาพูดคุย");
   });
 
