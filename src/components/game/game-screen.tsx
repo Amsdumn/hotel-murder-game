@@ -155,9 +155,14 @@ function SkillTurnDialog({ open, language, onContinue, onExited }: { open: boole
 export function GameResultScreen({ result }: { result: GameResultState }) {
   const language = useLanguage();
   const en = language === "en";
+  const livingMurderers = result.players.filter((player) => player.isAlive && player.team === "MURDERER").length;
+  const livingInnocents = result.players.filter((player) => player.isAlive && player.team === "INNOCENT").length;
+  const reasonKey = result.reason ?? (result.winner === "INNOCENT" ? "ASSASSIN_ELIMINATED" : livingMurderers >= livingInnocents ? "MURDERER_PARITY" : "ASSASSIN_SURVIVED");
+  const reason = reasonKey === "MURDERER_PARITY" ? en ? "The living Murderer team reached at least the number of living Innocents." : "จำนวนฝ่ายฆาตกรที่ยังมีชีวิตเท่ากับหรือมากกว่าฝ่ายผู้บริสุทธิ์" : reasonKey === "ASSASSIN_SURVIVED" ? en ? "The Assassin survived all four turns." : "นักฆ่ารอดชีวิตครบ 4 รอบ" : en ? "The Assassin was eliminated." : "นักฆ่าถูกกำจัด";
   return <section className="rounded-2xl border border-[#c8a46b]/40 bg-[radial-gradient(circle_at_top,#4a1928,#111116_70%)] p-6 shadow-2xl sm:p-10">
     <p className="text-center text-sm tracking-[.3em] text-[#c8a46b]">{en ? "Result" : "ผลเกม"} · {result.turnsPlayed} {en ? "turns" : "รอบ"}</p>
-    <h2 className="mt-4 text-center font-serif text-3xl leading-relaxed sm:text-5xl">{result.winner === "INNOCENT" ? en ? "The Innocent team wins! The Assassin was exposed." : "ผู้บริสุทธิ์ชนะ! นักฆ่าถูกเปิดโปงแล้ว" : en ? "The Murderer team wins! The hotel's secrets remain buried." : "ฆาตกรชนะ! ความลับถูกฝังไว้ในโรงแรมแห่งนี้"}</h2>
+    <h2 className="mt-4 text-center font-serif text-3xl leading-relaxed sm:text-5xl">{result.winner === "INNOCENT" ? en ? "The Innocent team wins!" : "ผู้บริสุทธิ์ชนะ!" : en ? "The Murderer team wins!" : "ฆาตกรชนะ!"}</h2>
+    <p className="mt-4 text-center text-lg text-[#e3c88e]">{en ? "Why: " : "เหตุผล: "}{reason}</p>
     <div className="mt-9 grid gap-3 sm:grid-cols-2">{result.players.map((player) => { const avatar = avatarById(player.avatarId); return <div key={player.playerId} className="relative flex overflow-hidden rounded-lg border border-[#c8a46b]/20 bg-[#1d1d26]/90">{avatar ? <div className="relative w-20 shrink-0"><Image src={avatar.portrait} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="80px" className="object-cover object-top" /></div> : <RolePortrait role={player.role} className="w-20" sizes="80px" />}<div className="min-w-0 p-4 pr-6"><p className="font-semibold"><span className="inline-block max-w-[150px] truncate align-bottom" title={player.displayName}>{player.displayName}</span> · {player.roomNumber}</p><p className="mt-1 text-sm text-[#c8a46b]">{en ? roleNamesEn[player.role] : roleNames[player.role]} · {player.team === "INNOCENT" ? en ? "Innocent" : "ผู้บริสุทธิ์" : en ? "Murderer" : "ฆาตกร"} · {player.isAlive ? en ? "Alive" : "รอดชีวิต" : en ? "Dead" : "เสียชีวิต"}</p></div><span aria-hidden="true" className={`absolute inset-y-0 right-0 w-1.5 ${player.team === "INNOCENT" ? "bg-blue-500" : "bg-red-500"}`} /></div>; })}</div>
     <div className="mt-8 flex h-[300px] flex-col rounded-lg border border-[#c8a46b]/20 bg-[#1d1d26]/90 p-5">
       <h3 id="final-event-history-title" className="shrink-0 font-serif text-xl">{en ? "Key events" : "เหตุการณ์สำคัญ"}</h3>
@@ -316,6 +321,17 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const [muted, setMuted] = useState(true);
   const [soundReady, setSoundReady] = useState(false);
   const previousSoundSnapshot = useRef<GameSoundSnapshot | null>(null);
+  const previousPrivateState = useRef<PrivatePlayerState | null>(privateState);
+  const nextSkillResultId = useRef(0);
+  const [skillResultQueue, setSkillResultQueue] = useState<Array<{ id: number; message: string }>>([]);
+  const skillResult = skillResultQueue[0] ?? null;
+  const [readyResult, setReadyResult] = useState<GameResultState | null>(result);
+  const visibleResult = !skillResult && readyResult === result ? readyResult : null;
+  useEffect(() => {
+    if (!result || skillResult) return;
+    const timeout = window.setTimeout(() => setReadyResult(result), 100);
+    return () => window.clearTimeout(timeout);
+  }, [result, skillResult]);
   useEffect(() => {
     const timeout = window.setTimeout(() => {
       setSoundReady(true);
@@ -328,7 +344,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     const soundSnapshot: GameSoundSnapshot = {
       code: state.code, phase: state.phase, turn: state.turn,
       canUseSkill: !!privateState?.canUseSkill, playerId: privateState?.playerId,
-      phaseDeadlineAt: state.phaseDeadlineAt, resultReady: !!result, openedRoomCount,
+      phaseDeadlineAt: state.phaseDeadlineAt, resultReady: !!visibleResult, openedRoomCount,
     };
     const event = getGameSoundEvent(previousSoundSnapshot.current, soundSnapshot);
     previousSoundSnapshot.current = soundSnapshot;
@@ -339,7 +355,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       sessionStorage.setItem(storageKey, "1");
     } catch { /* Sound still works when storage is unavailable. */ }
     if (!muted) playGameSound(event.cue);
-  }, [soundReady, state.code, state.phase, state.turn, state.phaseDeadlineAt, privateState?.canUseSkill, privateState?.playerId, result, openedRoomCount, muted]);
+  }, [soundReady, state.code, state.phase, state.turn, state.phaseDeadlineAt, privateState?.canUseSkill, privateState?.playerId, visibleResult, openedRoomCount, muted]);
   const [deathDismissed, setDeathDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -348,10 +364,6 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   const guestsRef = useRef<HTMLDivElement | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const pendingSkillScrollRole = useRef<Role | null>(null);
-  const previousPrivateState = useRef<PrivatePlayerState | null>(privateState);
-  const nextSkillResultId = useRef(0);
-  const [skillResultQueue, setSkillResultQueue] = useState<Array<{ id: number; message: string }>>([]);
-  const skillResult = skillResultQueue[0] ?? null;
   const skillTurnKey = state.phase === "SKILL_PHASE" && privateState?.canUseSkill && connected ? `${state.code}:${state.turn}:${privateState.playerId}` : null;
   const activeSkillResultId = skillResult?.id;
   useEffect(() => {
@@ -441,7 +453,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     }} />
     {timerDeadline !== undefined && timerLabel && <GameTimerBanner deadline={timerDeadline} label={timerLabel} mobileInline />}
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || (en ? "Reconnecting…" : "กำลังเชื่อมต่อใหม่…")}</p>}
-    <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."} · {state.code}</p><h1 className="mt-2 font-serif text-3xl">{en ? "Turn" : "รอบ"} {state.turn} · {en ? state.phase === "SKILL_PHASE" ? "Skill phase" : state.phase === "DISCUSSION" ? "Discussion" : state.phase === "VOTING" ? "Voting" : state.phase === "RESOLUTION" ? "Room result" : "Game over" : state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : state.phase === "RESOLUTION" ? "ผลการเปิดห้อง" : "จบเกม"}</h1></div><div className="flex flex-wrap items-center gap-2"><LanguageSwitcher /><SoundSettings muted={muted} onChange={changeMuted} />{result && <Button component={Link} href="/" size="small" variant="contained" className="whitespace-nowrap!">{en ? "Back to home" : "กลับหน้าแรก"}</Button>}</div></header>
+    <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."} · {state.code}</p><h1 className="mt-2 font-serif text-3xl">{en ? "Turn" : "รอบ"} {state.turn} · {en ? state.phase === "SKILL_PHASE" ? "Skill phase" : state.phase === "DISCUSSION" ? "Discussion" : state.phase === "VOTING" ? "Voting" : state.phase === "RESOLUTION" ? "Room result" : "Game over" : state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : state.phase === "RESOLUTION" ? "ผลการเปิดห้อง" : "จบเกม"}</h1></div><div className="flex flex-wrap items-center gap-2"><LanguageSwitcher /><SoundSettings muted={muted} onChange={changeMuted} />{visibleResult && <Button component={Link} href="/" size="small" variant="contained" className="whitespace-nowrap!">{en ? "Back to home" : "กลับหน้าแรก"}</Button>}</div></header>
     <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="mb-5!">{turnNotice}</Alert>
     {ownVotedRoom !== undefined && <div role="status" className="mb-5 rounded-xl border-2 border-[#e3c88e] bg-[#3b2c38] p-4 text-center text-lg font-bold text-[#f2d79c]">{en ? `You voted for room ${ownVotedRoom}. You can change it until time runs out.` : `คุณโหวตห้อง ${ownVotedRoom} แล้ว เปลี่ยนได้จนหมดเวลา`}</div>}
     {privateState?.canUseSkill && <div role="alert" aria-live="polite" className="mb-5 rounded-xl border-2 border-[#e3c88e] bg-[linear-gradient(125deg,#493447,#30202d)] p-5 shadow-[0_0_35px_rgba(227,200,142,.18)]"><p className="text-xs font-semibold tracking-[.2em] text-[#f2d79c]">{en ? "YOUR SKILL IS READY" : "ถึงตาคุณใช้สกิล"}</p><h2 className="mt-2 font-serif text-2xl">{en ? roleNamesEn[privateState.role] : roleNames[privateState.role]}</h2><p className="mt-2 text-sm leading-7 text-[#f4e5cc]">{doubleKillActive ? en ? "Select two distinct rooms on the hotel map. Both rooms can kill an occupant. Confirm after selecting both." : "เลือกสองห้องที่ต่างกันบนแผนผัง ทั้งสองห้องสังหารผู้พักได้ เลือกครบแล้วกดยืนยัน" : en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</p></div>}
@@ -449,7 +461,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {showSecret && privateState && (privateState.role === "RECEPTIONIST" || privateState.role === "PHOTOGRAPHER") && state.turn === 3 && <div role="status" className="mb-5 rounded-xl border border-[#e3c88e]/60 bg-[#30202d] p-4 font-semibold text-[#f2d79c]">{en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</div>}
     {privateState?.privateResults.some((message) => message.startsWith("ทะเบียนห้องพักเทิร์นที่ 3:") || message.startsWith("ภาพถ่ายเทิร์นที่ 3:") || message.startsWith("เบาะแสอดีตตำรวจเทิร์นที่ ")) && !showSecret && <Alert severity="info" className="mb-5!">{en ? "A new private investigation result is available. Open your private information to view it." : "มีผลสืบสวนส่วนตัวใหม่ เปิดข้อมูลลับเพื่อดู"}</Alert>}
     {state.phase !== "SKILL_PHASE" && privateState?.skillBlockReason && <Alert severity="warning" className="mb-5!">{privateState.skillBlockReason === "BLACKOUT" ? en ? "Your floor is dark. You cannot use your skill this turn." : "ไฟดับบนชั้นของคุณ รอบนี้จึงใช้สกิลไม่ได้" : en ? "Your Electrician skill is cooling down this turn." : "สกิลช่างไฟกำลังพักหนึ่งรอบ รอบนี้ใช้สกิลไม่ได้"}</Alert>}
-    {result ? <div className="space-y-5"><GameResultScreen result={result} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-2">
+    {visibleResult ? <div className="space-y-5"><GameResultScreen result={visibleResult} />{privateState && <PrivateInfoPanel privateState={privateState} teamState={teamState} players={state.players} open={showSecret} onToggle={() => setShowSecret((value) => !value)} />}</div> : <div className="grid gap-5 lg:grid-cols-2">
       <div className="min-w-0 space-y-5">
         <div ref={boardRef} className="scroll-mt-4"><HotelBoard state={state} selfId={privateState?.playerId} ownRoomNumber={privateState?.roomNumber} unavailableSkillRooms={privateState?.role === "LOCKSMITH" ? privateState.locksmithUsedRooms : undefined} onVote={state.phase === "VOTING" && privateState?.canVote ? (roomNumber) => void act("game:vote", { roomNumber }) : undefined} onSkillRoomSelect={roomSkillActive ? (roomNumber) => selectBoardTarget("room", roomNumber) : undefined} onSkillFloorSelect={floorSkillActive ? (floor) => selectBoardTarget("floor", floor) : undefined} onSkillColumnSelect={columnSkillActive ? (column) => selectBoardTarget("column", column) : undefined} selectedSkillRoom={selectedSkillRoom} selectedSkillRooms={doubleKillRooms} selectedSkillFloor={selectedSkillFloor} selectedSkillColumn={selectedSkillColumn} voteBusy={busy || !connected || voteExpired || ((roomSkillActive || floorSkillActive || columnSkillActive) && skillSecondsLeft === 0)} /></div>
       </div>

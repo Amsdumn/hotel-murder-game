@@ -87,7 +87,7 @@ describe("server-owned phases", () => {
     expect(result.state).toMatchObject({ phase: "FINISHED", winner: "MURDERER" });
     expect(result.publicEvents).toContainEqual({ type: "ROOM_OPENED", roomNumber: 102, occupancy: "OCCUPIED", gameEnded: true });
     expect(result.publicEvents).toContainEqual({ type: "GAME_FINISHED", winner: "MURDERER" });
-    expect(projectGameResult(result.state)).toMatchObject({ winner: "MURDERER", turnsPlayed: 1 });
+    expect(projectGameResult(result.state)).toMatchObject({ winner: "MURDERER", reason: "MURDERER_PARITY", turnsPlayed: 1 });
   });
 
   it("shows the fourth room result before announcing the murderer victory", () => {
@@ -97,6 +97,7 @@ describe("server-owned phases", () => {
     expect(opened.state.winner).toBeNull();
     const finished = advanceTimedPhase(opened.state, 7000);
     expect(finished.state).toMatchObject({ phase: "FINISHED", winner: "MURDERER" });
+    expect(projectGameResult(finished.state).reason).toBe("ASSASSIN_SURVIVED");
   });
 
   it("records each vote publicly and resolves a runoff tie at the deadline", () => {
@@ -123,6 +124,11 @@ describe("server-owned phases", () => {
     expect(() => castRoomVote(state, "a", 101)).toThrow();
     expect(() => projectGameResult(state)).toThrow();
     expect(projectGameResult(game({ phase: "FINISHED", winner: "INNOCENT", turn: 2 }))).toMatchObject({ winner: "INNOCENT", turnsPlayed: 2, players: expect.arrayContaining([expect.objectContaining({ playerId: "e", role: "KILLER", roomNumber: 202, isAlive: true })]) });
+  });
+
+  it("explains an innocent victory when the assassin is eliminated", () => {
+    const finished = game({ phase: "FINISHED", winner: "INNOCENT", players: players.map((player) => player.role === "KILLER" ? { ...player, isAlive: false } : player) });
+    expect(projectGameResult(finished).reason).toBe("ASSASSIN_ELIMINATED");
   });
 
   it("uses the server's random choice after a runoff remains tied", () => {

@@ -199,6 +199,7 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain('h-[300px]');
     expect(html).toMatch(/id="final-event-history-title"[^>]*>เหตุการณ์สำคัญ<\/h3>/);
     expect(html).toMatch(/aria-labelledby="final-event-history-title"[^>]*overflow-y-auto/);
+    expect(html).toContain("เหตุผล: นักฆ่าถูกกำจัด");
   });
   it("calls the murderer-team assassin นักฆ่า while retaining the team name", () => {
     expect(roleNames.KILLER).toBe("นักฆ่า");

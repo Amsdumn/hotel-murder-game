@@ -82,8 +82,12 @@ export function castRoomVote(state: GameEngineState, playerId: string, roomNumbe
 
 export function projectGameResult(state: GameEngineState): GameResultState {
   if (state.phase !== "FINISHED" || !state.winner) throw new Error("Game result is unavailable");
+  const livingMurderers = state.players.filter((player) => player.isAlive && player.team === "MURDERER").length;
+  const livingInnocents = state.players.filter((player) => player.isAlive && player.team === "INNOCENT").length;
+  const reason = state.winner === "INNOCENT" ? "ASSASSIN_ELIMINATED" : livingMurderers >= livingInnocents ? "MURDERER_PARITY" : "ASSASSIN_SURVIVED";
   return {
     winner: state.winner,
+    reason,
     turnsPlayed: state.turn,
     players: state.players.map(({ id, displayName, avatarId, role, team, roomNumber, isAlive }) => ({ playerId: id, displayName, avatarId: avatarId ?? null, role, team, roomNumber, isAlive })),
     events: (state.publicHistory ?? []).map((event) => ({ type: event.type, message: publicEventMessage(event) })),

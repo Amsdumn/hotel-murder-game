@@ -92,6 +92,7 @@ export interface VersionedTeamState {
 
 export interface GameResultState {
   winner: Team;
+  reason?: "ASSASSIN_ELIMINATED" | "MURDERER_PARITY" | "ASSASSIN_SURVIVED";
   turnsPlayed: number;
   players: Array<{ playerId: string; displayName: string; avatarId?: import("../lib/avatars").AvatarId | null; role: Role; team: Team; roomNumber: number; isAlive: boolean }>;
   events: Array<{ type: string; message: string }>;
