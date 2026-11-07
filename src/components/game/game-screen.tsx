@@ -145,7 +145,7 @@ export function SkillResultOverlay({ message, language, players = [] }: { messag
 
 function VoteResultDialog({ message, language }: { message: string; language: Language }) {
   const [open, setOpen] = useState(true);
-  useEffect(() => { const timeout = window.setTimeout(() => setOpen(false), 3000); return () => window.clearTimeout(timeout); }, []);
+  useEffect(() => { const timeout = window.setTimeout(() => setOpen(false), 2000); return () => window.clearTimeout(timeout); }, []);
   return <Dialog open={open} disablePortal fullWidth maxWidth="sm" aria-labelledby="vote-result-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" } }}>
     <DialogTitle id="vote-result-title" className="pt-7! text-center! font-serif! text-3xl! text-[#f2d79c]!">{language === "en" ? "Ballot result · The chosen door" : "ผลโหวต · ประตูห้องที่ถูกเลือก"}</DialogTitle>
     <DialogContent className="px-7! pb-10! text-center! font-serif! text-2xl! leading-relaxed!">{gameMessage(message, language)}</DialogContent>
@@ -154,6 +154,13 @@ function VoteResultDialog({ message, language }: { message: string; language: La
 
 function SkillTurnDialog({ open, language, onContinue, onExited }: { open: boolean; language: Language; onContinue: () => void; onExited: () => void }) {
   const en = language === "en";
+  const continueRef = useRef(onContinue);
+  useEffect(() => { continueRef.current = onContinue; }, [onContinue]);
+  useEffect(() => {
+    if (!open) return;
+    const timeout = window.setTimeout(() => continueRef.current(), 2000);
+    return () => window.clearTimeout(timeout);
+  }, [open]);
   return <Dialog open={open} onClose={onContinue} disablePortal fullWidth maxWidth="xs" aria-labelledby="skill-turn-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" }, transition: { onExited } }}>
     <DialogTitle id="skill-turn-title" className="pt-8! text-center! font-serif! text-3xl! text-[#f2d79c]!">{en ? "It's your turn to use a skill" : "ถึงตาคุณใช้สกิล"}</DialogTitle>
     <DialogContent className="text-center! leading-7!">{en ? "Choose your target and confirm before your time runs out." : "เลือกเป้าหมายและยืนยันการใช้สกิลก่อนหมดเวลา"}</DialogContent>
@@ -384,7 +391,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   }, [privateState]);
   useEffect(() => {
     if (activeSkillResultId === undefined) return;
-    const timeout = window.setTimeout(() => setSkillResultQueue((queue) => queue.slice(1)), 3000);
+    const timeout = window.setTimeout(() => setSkillResultQueue((queue) => queue.slice(1)), 2000);
     return () => window.clearTimeout(timeout);
   }, [activeSkillResultId]);
   const [skillBoardSelection, setSkillBoardSelection] = useState<{ turn: number; playerId: string; kind: "room" | "floor" | "column"; target: number } | null>(null);
