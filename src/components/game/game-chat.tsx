@@ -38,27 +38,53 @@ export function getUnreadChatCount(messages: GameChatMessage[], readCount: numbe
   return messages.slice(readCount).filter((message) => message.playerId !== selfId).length;
 }
 
-export function FloatingGameChat({ channel, messages, canSend, language, deadline, selfId, onSend }: { channel: "PUBLIC" | "MURDERER"; messages: GameChatMessage[]; canSend: boolean; language: Language; deadline: number; selfId?: string; onSend: (text: string) => Promise<boolean> }) {
+type ChatChannel = "PUBLIC" | "MURDERER";
+type ChatRoom = { messages: GameChatMessage[]; canSend: boolean; deadline: number };
+
+export function GameChatPanel({ publicChat, teamChat, activeChannel, language, now, selfId, readCounts, onSelect, onSend }: { publicChat?: ChatRoom; teamChat?: ChatRoom; activeChannel: ChatChannel; language: Language; now: number; selfId?: string; readCounts: Record<ChatChannel, number>; onSelect: (channel: ChatChannel) => void; onSend: (channel: ChatChannel, text: string) => Promise<boolean> }) {
+  const en = language === "en";
+  const tabs = ([publicChat && "PUBLIC", teamChat && "MURDERER"] as const).filter((channel): channel is ChatChannel => !!channel);
+  return <div className="rounded-xl border border-[#c8a46b]/40 bg-[#1d1d26] p-2 shadow-2xl">
+    <div role="tablist" aria-label={en ? "Chat channels" : "ช่องแชท"} className="flex gap-2 border-b border-[#c8a46b]/25 p-2">
+      {tabs.map((channel) => {
+        const room = channel === "PUBLIC" ? publicChat! : teamChat!;
+        const unread = channel === activeChannel ? 0 : getUnreadChatCount(room.messages, readCounts[channel], selfId);
+        return <button key={channel} type="button" role="tab" id={`chat-tab-${channel.toLowerCase()}`} aria-controls={`chat-panel-${channel.toLowerCase()}`} aria-selected={channel === activeChannel} onClick={() => onSelect(channel)} className={`rounded-lg px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-[#e3c88e] ${channel === activeChannel ? "bg-[#5b4251] text-[#f2d79c]" : "text-[#c6bdb1] hover:bg-[#342c38]"}`}>
+          {channel === "PUBLIC" ? en ? "Public" : "สาธารณะ" : en ? "Murderers only" : "เฉพาะฝ่ายฆาตกร"}{unread > 0 && <span className="ml-2 rounded-full bg-red-500 px-1.5 text-xs text-white">{unread}</span>}
+        </button>;
+      })}
+    </div>
+    {tabs.map((channel) => {
+      const room = channel === "PUBLIC" ? publicChat! : teamChat!;
+      return <div key={channel} role="tabpanel" id={`chat-panel-${channel.toLowerCase()}`} aria-labelledby={`chat-tab-${channel.toLowerCase()}`} hidden={channel !== activeChannel} className="max-h-[65vh] overflow-y-auto">
+        <GameChat channel={channel} messages={room.messages} canSend={room.canSend && now < room.deadline} language={language} onSend={(text) => onSend(channel, text)} />
+      </div>;
+    })}
+  </div>;
+}
+
+export function FloatingGameChat({ publicChat, teamChat, language, selfId, onSend }: { publicChat?: ChatRoom; teamChat?: ChatRoom; language: Language; selfId?: string; onSend: (channel: ChatChannel, text: string) => Promise<boolean> }) {
   const [open, setOpen] = useState(false);
-  const [readCount, setReadCount] = useState(messages.length);
+  const [activeChannel, setActiveChannel] = useState<ChatChannel>(publicChat ? "PUBLIC" : "MURDERER");
+  const [readCounts, setReadCounts] = useState<Record<ChatChannel, number>>({ PUBLIC: publicChat?.messages.length ?? 0, MURDERER: teamChat?.messages.length ?? 0 });
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(timer);
   }, []);
-  if (now >= deadline) return null;
+  const publicActive = publicChat && now < publicChat.deadline ? publicChat : undefined;
+  const teamActive = teamChat && now < teamChat.deadline ? teamChat : undefined;
+  if (!publicActive && !teamActive) return null;
+  const selected = activeChannel === "MURDERER" && teamActive ? "MURDERER" : publicActive ? "PUBLIC" : "MURDERER";
   const en = language === "en";
-  const team = channel === "MURDERER";
-  const label = team ? en ? "Murderer chat" : "แชทฝ่ายฆาตกร" : en ? "Discussion chat" : "แชทพูดคุย";
-  const bottom = team ? "bottom-24" : "bottom-4";
-  const panelBottom = team ? "bottom-40" : "bottom-20";
-  const unread = open ? 0 : getUnreadChatCount(messages, readCount, selfId);
+  const unread = (publicActive && (!open || selected !== "PUBLIC") ? getUnreadChatCount(publicActive.messages, readCounts.PUBLIC, selfId) : 0) + (teamActive && (!open || selected !== "MURDERER") ? getUnreadChatCount(teamActive.messages, readCounts.MURDERER, selfId) : 0);
+  const markRead = (channel: ChatChannel) => setReadCounts((current) => ({ ...current, [channel]: (channel === "PUBLIC" ? publicActive : teamActive)?.messages.length ?? current[channel] }));
   const toggle = () => {
-    setReadCount(messages.length);
+    markRead(selected);
     setOpen((value) => !value);
   };
   return <>
-    {open && <div id="floating-game-chat" className={`fixed left-4 z-40 w-[min(24rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-xl shadow-2xl ${panelBottom}`}><GameChat channel={channel} messages={messages} canSend={canSend && now < deadline} language={language} onSend={onSend} /></div>}
-    <button type="button" aria-label={open ? en ? "Close chat" : "ปิดแชท" : `${en ? `Open ${label}` : `เปิด${label}`}${unread ? en ? `, ${unread} unread messages` : ` มีข้อความใหม่ ${unread} ข้อความ` : ""}`} aria-expanded={open} aria-controls="floating-game-chat" onClick={toggle} className={`fixed left-2 z-40 max-w-[calc(100vw-1rem)] rounded-full border border-[#e3c88e] bg-[#3b2c38] px-4 py-3 text-sm font-semibold text-[#f2d79c] shadow-[0_8px_30px_rgba(0,0,0,.55)] hover:bg-[#4a3942] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e3c88e] sm:left-4 sm:px-5 ${bottom}`}>{open ? en ? "Close chat" : "ปิดแชท" : label}{unread > 0 && <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white" aria-live="polite">{unread}</span>}</button>
+    {open && <div id="floating-game-chat" className="fixed bottom-20 left-4 z-40 w-[min(24rem,calc(100vw-2rem))]"><GameChatPanel publicChat={publicActive} teamChat={teamActive} activeChannel={selected} language={language} now={now} selfId={selfId} readCounts={readCounts} onSelect={(channel) => { markRead(channel); setActiveChannel(channel); }} onSend={onSend} /></div>}
+    <button type="button" aria-label={open ? en ? "Close chat" : "ปิดแชท" : en ? "Open chat" : "เปิดแชท"} aria-expanded={open} aria-controls="floating-game-chat" onClick={toggle} className="fixed bottom-4 left-2 z-40 max-w-[calc(100vw-1rem)] rounded-full border border-[#e3c88e] bg-[#3b2c38] px-4 py-3 text-sm font-semibold text-[#f2d79c] shadow-[0_8px_30px_rgba(0,0,0,.55)] hover:bg-[#4a3942] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e3c88e] sm:left-4 sm:px-5">{open ? en ? "Close chat" : "ปิดแชท" : en ? "Chat" : "แชท"}{unread > 0 && <span className="ml-2 inline-flex min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 py-0.5 text-xs font-bold text-white" aria-live="polite">{unread}</span>}</button>
   </>;
 }

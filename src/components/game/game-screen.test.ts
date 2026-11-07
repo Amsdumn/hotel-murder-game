@@ -67,17 +67,15 @@ describe("game privacy and turn UI", () => {
       result: null, murderSequence: 0, connected: true, connectionMessage: "",
       onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
     }));
-    expect(html).toContain('aria-label="เปิดแชทฝ่ายฆาตกร"');
+    expect(html).toContain('aria-label="เปิดแชท"');
     expect(html).not.toContain('aria-label="แชทฝ่ายฆาตกร"');
   });
-  it("keeps public and murderer chat buttons visible during voting and hides them after the ballot", () => {
+  it("keeps one chat button during voting and hides it after the ballot", () => {
     const props = { privateState, teamState: { teammates: [], privateResults: [], chatMessages: [], canChat: true, chatDeadlineAt: Date.now() + 60_000 }, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }) };
     const voting = renderToStaticMarkup(createElement(GameScreen, { ...props, state: { ...publicState, phase: "VOTING", phaseDeadlineAt: Date.now() + 60_000 } }));
-    expect(voting).toContain('aria-label="เปิดแชทพูดคุย"');
-    expect(voting).toContain('aria-label="เปิดแชทฝ่ายฆาตกร"');
+    expect(voting.match(/aria-label="เปิดแชท"/g)).toHaveLength(1);
     const resolved = renderToStaticMarkup(createElement(GameScreen, { ...props, teamState: { ...props.teamState, canChat: false }, state: { ...publicState, phase: "RESOLUTION", phaseDeadlineAt: Date.now() + 60_000 } }));
-    expect(resolved).not.toContain('aria-label="เปิดแชทพูดคุย"');
-    expect(resolved).not.toContain('aria-label="เปิดแชทฝ่ายฆาตกร"');
+    expect(resolved).not.toContain('aria-label="เปิดแชท"');
   });
   it("shows the opened room in a centered dialog during resolution", () => {
     const html = renderToStaticMarkup(createElement(GameScreen, {

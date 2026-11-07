@@ -445,6 +445,10 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     const response = await onCommand("game:chat", { channel, text }, state.version);
     return response.ok;
   };
+  const publicChat = (state.phase === "DISCUSSION" || state.phase === "VOTING") && state.phaseDeadlineAt !== undefined
+    ? { messages: state.chatMessages ?? [], canSend: !!privateState?.isAlive && connected, deadline: state.phaseDeadlineAt } : undefined;
+  const teamChat = teamState?.canChat && teamState.chatDeadlineAt !== undefined
+    ? { messages: teamState.chatMessages ?? [], canSend: connected, deadline: teamState.chatDeadlineAt } : undefined;
   if (state.phase === "ROLE_REVEAL") return <StoryPrologue deadline={state.phaseDeadlineAt} connected={connected} connectionMessage={connectionMessage} privateState={privateState} avatarId={state.players.find((player) => player.id === privateState?.playerId)?.avatarId} muted={muted} onMuteChange={changeMuted} />;
   const timerDeadline = state.phase === "SKILL_PHASE" ? skillDeadlineAt ?? teamState?.chatDeadlineAt : state.phaseDeadlineAt;
   let timerLabel = "";
@@ -493,5 +497,5 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
         </ol>
       </Paper>
     </div></div>}
-  </div>{(state.phase === "DISCUSSION" || state.phase === "VOTING") && state.phaseDeadlineAt !== undefined && <FloatingGameChat key={`public:${state.turn}`} channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} deadline={state.phaseDeadlineAt} selfId={privateState?.playerId} onSend={(text) => sendChat("PUBLIC", text)} />}{teamState?.canChat && teamState.chatDeadlineAt !== undefined && <FloatingGameChat key={`team:${state.turn}`} channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={connected} language={language} deadline={teamState.chatDeadlineAt} onSend={(text) => sendChat("MURDERER", text)} />}{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={!soundReady || muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
+  </div>{(publicChat || teamChat) && <FloatingGameChat key={`chat:${state.turn}`} publicChat={publicChat} teamChat={teamChat} language={language} selfId={privateState?.playerId} onSend={sendChat} />}{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={!soundReady || muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
 }
