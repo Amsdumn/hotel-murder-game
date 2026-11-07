@@ -3,6 +3,7 @@ import { Noto_Sans_Thai } from "next/font/google";
 import { AppRouterCacheProvider } from "@mui/material-nextjs/v16-appRouter";
 import { AppThemeProvider } from "@/components/app-theme-provider";
 import { AppVersion } from "@/components/app-version";
+import { BrowserContentGuard } from "@/components/browser-content-guard";
 import "./globals.css";
 
 const notoSansThai = Noto_Sans_Thai({
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
           <AppThemeProvider>
+            <BrowserContentGuard />
             {children}
             <AppVersion />
           </AppThemeProvider>
