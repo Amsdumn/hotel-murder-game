@@ -9,6 +9,7 @@ import { projectMurdererTeamState, projectPrivatePlayerState, projectPublicState
 import type { EngineResult } from "../game-engine/state";
 import type { LobbyIdentity, LobbyView, LobbyAck } from "../../types/lobby";
 import { LobbyJoinRateLimiter } from "./lobby-rate-limit";
+import { isAccessGrantedFromCookieHeader, isAllowedSocketOrigin } from "../access-gate";
 
 function room(code: string): string { return `lobby:${code}`; }
 
@@ -25,7 +26,9 @@ async function respond<T>(ack: unknown, work: () => Promise<T>): Promise<void> {
 }
 
 export function createSocketServer(httpServer: HttpServer, service = new LobbyService(new MongoLobbyStore()), games = new GameService(new MongoLobbyStore())): SocketServer {
-  const io = new SocketServer(httpServer, { path: "/socket.io" });
+  const io = new SocketServer(httpServer, { path: "/socket.io", maxHttpBufferSize: 16_384, allowRequest: (request, callback) => {
+    callback(null, isAllowedSocketOrigin(request.headers.origin, request.headers.host) && isAccessGrantedFromCookieHeader(request.headers.cookie));
+  } });
   const bindings = new Map<string, { code: string; playerId: string }>();
   const activeSockets = new Map<string, string>();
   const pendingDisconnects = new Map<string, ReturnType<typeof setTimeout>>();

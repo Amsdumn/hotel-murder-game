@@ -5,9 +5,11 @@ import next from "next";
 import { getServerEnv } from "./src/lib/env";
 import { getServerUrls } from "./src/lib/server-urls";
 import { createSocketServer } from "./src/server/socket/create-socket-server";
+import { assertAccessGateConfigured } from "./src/server/access-gate";
 
 nextEnv.loadEnvConfig(process.cwd(), process.env.NODE_ENV !== "production");
 const { PORT, BIND_HOST } = getServerEnv();
+assertAccessGateConfigured();
 const app = next({ dev: process.env.NODE_ENV !== "production", hostname: BIND_HOST, port: PORT, webpack: true });
 
 async function main() {

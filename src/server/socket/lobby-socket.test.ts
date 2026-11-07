@@ -10,6 +10,10 @@ import { createSocketServer } from "./create-socket-server";
 import { GameService } from "../game-engine/game-service";
 import { createInitialGame, performSkill } from "../game-engine/gameplay";
 import { projectPublicState } from "../game-engine/projections";
+import { accessCookieName, getAccessCookieValue } from "../access-gate";
+
+process.env.HOTEL_ACCESS_PASSWORD = "a-private-test-password";
+process.env.HOTEL_ACCESS_COOKIE_SECRET = "a-private-test-cookie-secret-long-enough";
 
 const sockets: ClientSocket[] = [];
 let httpServer: ReturnType<typeof createServer> | null = null;
@@ -29,15 +33,33 @@ async function setup() {
   socketServer = createSocketServer(httpServer, new LobbyService(store), new GameService(store));
   await new Promise<void>((resolve) => httpServer?.listen(0, "127.0.0.1", resolve));
   const port = (httpServer.address() as AddressInfo).port;
-  const client = () => {
-    const socket = connect(`http://127.0.0.1:${port}`, { reconnection: false, transports: ["websocket"] });
+  const url = `http://127.0.0.1:${port}`;
+  const client = (authenticated = true) => {
+    const socket = connect(url, { reconnection: false, transports: ["websocket"], extraHeaders: authenticated ? { Cookie: `${accessCookieName}=${getAccessCookieValue()}`, Origin: url } : { Origin: url } });
     sockets.push(socket);
     return socket;
   };
-  return { client, store };
+  return { client, store, url };
 }
 
 describe("Socket.IO lobby", () => {
+  it("rejects a WebSocket without the access cookie", async () => {
+    const { client } = await setup();
+    const visitor = client(false);
+    await new Promise<void>((resolve) => visitor.once("connect_error", () => resolve()));
+    expect(visitor.connected).toBe(false);
+    const allowed = client();
+    await new Promise<void>((resolve) => allowed.once("connect", () => resolve()));
+    expect(allowed.connected).toBe(true);
+  });
+  it("rejects a WebSocket from another browser origin", async () => {
+    const { url } = await setup();
+    const cookie = `${accessCookieName}=${getAccessCookieValue()}`;
+    const attacker = connect(url, { reconnection: false, transports: ["websocket"], extraHeaders: { Cookie: cookie, Origin: "https://evil.example.com" } });
+    sockets.push(attacker);
+    await new Promise<void>((resolve) => attacker.once("connect_error", () => resolve()));
+    expect(attacker.connected).toBe(false);
+  });
   it("broadcasts public chat and sends murderer chat only through private team state", async () => {
     const { client, store } = await setup();
     const service = new LobbyService(store);

@@ -7,6 +7,10 @@ import { MemoryLobbyStore } from "@/server/lobby/test-memory-store";
 import { GameService } from "@/server/game-engine/game-service";
 import { createSocketServer } from "@/server/socket/create-socket-server";
 import { addLocalTestBots, disconnectLocalTestBots } from "./local-test-bots";
+import { accessCookieName, getAccessCookieValue } from "@/server/access-gate";
+
+process.env.HOTEL_ACCESS_PASSWORD = "a-private-test-password";
+process.env.HOTEL_ACCESS_COOKIE_SECRET = "a-private-test-cookie-secret-long-enough";
 
 describe("local test bot connections", () => {
   const httpServer = createServer();
@@ -28,7 +32,7 @@ describe("local test bot connections", () => {
     const progress: number[] = [];
     await addLocalTestBots(code, 4, (count) => progress.push(count), {
       hostname: "localhost", environment: "development",
-      connect: () => io(`http://127.0.0.1:${port}`, { transports: ["websocket"], reconnection: false }),
+      connect: () => io(`http://127.0.0.1:${port}`, { transports: ["websocket"], reconnection: false, extraHeaders: { Cookie: `${accessCookieName}=${getAccessCookieValue()}`, Origin: `http://127.0.0.1:${port}` } }),
     });
     const lobby = await store.findLobby(code);
     expect(progress).toEqual([1, 2, 3, 4]);

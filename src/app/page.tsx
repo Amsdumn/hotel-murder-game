@@ -2,7 +2,7 @@ import { MainMenu } from "@/components/main-menu";
 import { AccessScreen } from "@/components/access-screen";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { accessCookieName, accessCookieValue, isAccessGranted, isValidAccessPassword } from "@/server/access-gate";
+import { accessCookieName, getAccessCookieValue, isAccessGranted, isValidAccessPassword } from "@/server/access-gate";
 
 async function unlock(formData: FormData) {
   "use server";
@@ -10,7 +10,7 @@ async function unlock(formData: FormData) {
   if (!isValidAccessPassword(formData.get("password"))) redirect("/?error=1");
 
   const cookieStore = await cookies();
-  cookieStore.set(accessCookieName, accessCookieValue, {
+  cookieStore.set(accessCookieName, getAccessCookieValue(), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",

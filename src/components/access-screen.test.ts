@@ -9,7 +9,7 @@ describe("access screen", () => {
     expect(html).toContain('type="password"');
     expect(html).toContain("รหัสผ่าน");
     expect(html).toContain("เข้าสู่เกม");
-    expect(html).not.toContain("PostUlone");
+    expect(html).not.toContain("a-private-test-password");
   });
 
   it("shows an error after a wrong password", () => {

@@ -1,12 +1,21 @@
-import { createHash, timingSafeEqual } from "node:crypto";
-
-const accessPassword = "PostUlone";
-const cookieSalt = "hotel-murder-home-access-v1";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
 export const accessCookieName = "hotel-home-access";
-export const accessCookieValue = createHash("sha256")
-  .update(`${cookieSalt}:${accessPassword}`)
-  .digest("hex");
+
+type AccessEnvironment = Record<string, string | undefined>;
+
+function accessConfig(source: AccessEnvironment = process.env) {
+  const password = source.HOTEL_ACCESS_PASSWORD;
+  const secret = source.HOTEL_ACCESS_COOKIE_SECRET;
+  if (!password || password.length < 12 || !secret || secret.length < 32) {
+    throw new Error("Set HOTEL_ACCESS_PASSWORD (12+ characters) and HOTEL_ACCESS_COOKIE_SECRET (32+ characters)");
+  }
+  return { password, secret };
+}
+
+export function assertAccessGateConfigured(source: AccessEnvironment = process.env): void {
+  accessConfig(source);
+}
 
 function equalDigest(value: string, expected: string): boolean {
   const actual = createHash("sha256").update(value).digest();
@@ -14,10 +23,33 @@ function equalDigest(value: string, expected: string): boolean {
   return timingSafeEqual(actual, target);
 }
 
-export function isValidAccessPassword(value: unknown): boolean {
-  return typeof value === "string" && equalDigest(value, accessPassword);
+export function isValidAccessPassword(value: unknown, source: AccessEnvironment = process.env): boolean {
+  const { password } = accessConfig(source);
+  return typeof value === "string" && value.length <= 256 && equalDigest(value, password);
 }
 
-export function isAccessGranted(cookieValue: string | undefined): boolean {
-  return typeof cookieValue === "string" && equalDigest(cookieValue, accessCookieValue);
+export function getAccessCookieValue(source: AccessEnvironment = process.env): string {
+  const { password, secret } = accessConfig(source);
+  return createHmac("sha256", secret).update(`hotel-home-access-v2:${password}`).digest("hex");
+}
+
+export function isAccessGranted(cookieValue: string | undefined, source: AccessEnvironment = process.env): boolean {
+  const expected = getAccessCookieValue(source);
+  return typeof cookieValue === "string" && /^[a-f0-9]{64}$/.test(cookieValue) && timingSafeEqual(Buffer.from(cookieValue, "hex"), Buffer.from(expected, "hex"));
+}
+
+export function isAccessGrantedFromCookieHeader(header: string | undefined, source: AccessEnvironment = process.env): boolean {
+  const cookie = header?.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${accessCookieName}=`));
+  return isAccessGranted(cookie?.slice(accessCookieName.length + 1), source);
+}
+
+export function isAllowedSocketOrigin(origin: string | undefined, host: string | undefined): boolean {
+  if (!origin) return true;
+  if (!host) return false;
+  try {
+    const url = new URL(origin);
+    return (url.protocol === "http:" || url.protocol === "https:") && url.host.toLowerCase() === host.toLowerCase();
+  } catch {
+    return false;
+  }
 }
