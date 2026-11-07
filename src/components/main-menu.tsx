@@ -23,6 +23,7 @@ function subscribeToProfile(onChange: () => void) {
 }
 
 function profileNameSnapshot() { return readGuestProfile()?.displayName ?? ""; }
+function avatarAnimation(id: AvatarId) { return `/art/avatars/${id}.gif`; }
 
 export function AvatarGallery({ onSelect }: { onSelect: (avatarId: AvatarId) => void }) {
   const en = useLanguage() === "en";
@@ -34,7 +35,7 @@ export function AvatarGallery({ onSelect }: { onSelect: (avatarId: AvatarId) => 
       onClick={() => onSelect(avatar.id)}
       className="group relative overflow-hidden rounded-lg border border-[#e5bd82]/30 bg-[#211727]/85 text-left shadow-[0_12px_35px_rgba(0,0,0,.5)] transition-colors hover:border-[#e5bd82] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e5bd82]"
     >
-      <div className="relative aspect-4/5 w-full overflow-hidden" style={{ backgroundImage: `radial-gradient(circle at 50% 35%, ${avatar.color}99, #211727 75%)` }}><Image src={avatar.portrait} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="(max-width: 640px) 45vw, 125px" quality={65} className="object-cover object-top transition-transform duration-500 group-hover:scale-105" /></div>
+      <div className="relative aspect-4/5 w-full overflow-hidden" style={{ backgroundImage: `radial-gradient(circle at 50% 35%, ${avatar.color}99, #211727 75%)` }}><Image src={avatarAnimation(avatar.id)} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="(max-width: 640px) 45vw, 125px" unoptimized className="object-contain transition-transform duration-500 group-hover:scale-105" /></div>
       <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-[#100d1a] via-[#100d1a]/75 to-transparent px-1 pb-1.5 pt-6 text-center text-[10px] font-semibold leading-tight text-[#f5e4cf] sm:px-2 sm:pb-2 sm:text-xs">{en ? avatarEnglish[avatar.id].name : avatar.name}</span>
     </button>)}
   </div>;
@@ -46,7 +47,7 @@ export function AvatarDetail({ avatarId }: { avatarId: AvatarId }) {
   const english = avatarEnglish[avatarId];
   return <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
     <div className="relative h-80 shrink-0 overflow-hidden rounded-xl border border-[#d9b66f]/25 bg-[radial-gradient(circle_at_50%_30%,#493447,#17131e_70%)] sm:h-[29rem] sm:w-[45%]">
-      <Image src={avatar.image} alt={en ? `Full-body portrait of ${english.name}` : `ภาพเต็มตัว${avatar.name}`} fill sizes="(max-width: 640px) 100vw, 360px" className="object-contain object-bottom p-3" />
+      <Image src={avatarAnimation(avatar.id)} alt={en ? `Animated full-body portrait of ${english.name}` : `ภาพเคลื่อนไหวเต็มตัว${avatar.name}`} fill sizes="(max-width: 640px) 100vw, 360px" unoptimized className="object-contain" />
     </div>
     <div className="min-w-0 self-center pb-2 sm:py-5">
       <p className="text-xs tracking-[.22em] text-[#d9b66f]">{en ? `${english.occupation} · Age ${avatar.age} · ${english.origin}` : `${avatar.occupation} · อายุ ${avatar.age} ปี · ${avatar.origin}`}</p>
