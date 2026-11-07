@@ -170,6 +170,7 @@ describe("game privacy and turn UI", () => {
     expect(html.indexOf(">แผนผัง</p>")).toBeLessThan(html.indexOf(">ผู้เข้าพัก</h2>"));
     expect(html.indexOf(">ผู้เข้าพัก</h2>")).toBeLessThan(html.indexOf("ข้อมูลลับ · เฉพาะคุณ"));
     expect(html).toContain("กำลังดำเนินการสืบสวน...");
+    expect(html.indexOf("กำลังดำเนินการสืบสวน...")).toBeLessThan(html.indexOf("lg:grid-cols-2"));
     expect(html.indexOf("กำลังดำเนินการสืบสวน...")).toBeLessThan(html.indexOf(">ผู้เข้าพัก</h2>"));
     expect(html.indexOf("กำลังดำเนินการสืบสวน...")).toBeLessThan(html.indexOf("ข้อมูลลับ · เฉพาะคุณ"));
   });
