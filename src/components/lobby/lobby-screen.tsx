@@ -288,8 +288,12 @@ export function LobbyScreen({ code }: { code: string }) {
                       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         {!player.connected && <span className="text-xs text-[#9f9486]">{en ? "Offline" : "ออฟไลน์"}</span>}
                         <Chip size="small" label={player.ready ? en ? "Ready" : "พร้อม" : en ? "Waiting" : "รอ"} color={player.ready ? "success" : "default"} />
-                        {player.id === playerId && !editingName && <Button size="small" variant="text" disabled={busy} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>{en ? "Rename" : "แก้ชื่อ"}</Button>}
-                        {isHost && player.id !== playerId && <Button size="small" color="error" variant="text" disabled={busy || !connected} onClick={() => void act("lobby:kick", { playerId: player.id })}>{en ? "Remove" : "ไล่ออก"}</Button>}
+                        {player.id === playerId && !editingName && <IconButton size="small" color="primary" disabled={busy} aria-label={en ? "Rename" : "แก้ชื่อ"} title={en ? "Rename" : "แก้ชื่อ"} onClick={() => { setDraftName(player.displayName); setEditingName(true); }}>
+                          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L9 17l-4 1 1-4Z" /></svg>
+                        </IconButton>}
+                        {isHost && player.id !== playerId && <IconButton size="small" color="error" disabled={busy || !connected} aria-label={en ? `Remove ${player.displayName}` : `ไล่ ${player.displayName} ออก`} title={en ? "Remove player" : "ไล่ผู้เล่นออก"} onClick={() => void act("lobby:kick", { playerId: player.id })}>
+                          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M17 8l5 5m0-5-5 5" /></svg>
+                        </IconButton>}
                       </div>
                     </div>
                   ))}
