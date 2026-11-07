@@ -1,16 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 
 export function AccessScreen({ invalid, unlock }: { invalid: boolean; unlock: (formData: FormData) => Promise<void> }) {
   const en = useLanguage() === "en";
 
-  return <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#10101b] px-5 py-12 text-[#f8f1e4]">
-    <div className="pointer-events-none absolute inset-0">
-      <Image src="/art/hotel-night.webp" alt="" fill priority sizes="100vw" className="object-cover object-[62%_center]" />
-      <div className="absolute inset-0 bg-[#100d1a]/75" />
-    </div>
+  return <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_62%_30%,#473048,#10101b_70%)] px-5 py-12 text-[#f8f1e4]">
     <div className="absolute right-5 top-5 sm:right-10 sm:top-8"><LanguageSwitcher /></div>
     <div className="relative w-full max-w-md rounded-2xl border border-[#d9b66f]/35 bg-[#171321]/90 p-7 shadow-[0_24px_80px_rgba(0,0,0,.65)] backdrop-blur-sm sm:p-10">
       <p className="text-center text-sm font-bold tracking-[0.16em] text-[#e7ce98]">✧ {en ? "WHO KILLED TONIGHT?" : "คืนนี้ใครฆ่า..."}</p>

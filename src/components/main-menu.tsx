@@ -13,6 +13,7 @@ import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { primeGameAudio } from "@/lib/game-sound";
 import { HOME_AMBIENCE_SRC, startHomeAmbience } from "@/lib/home-ambience";
 import { SoundToggleButton } from "@/components/sound-toggle-button";
+import { mediaUrl } from "@/lib/media-url";
 
 const LobbyEntryDialog = dynamic(() => import("@/components/lobby/lobby-entry-dialog").then((module) => module.LobbyEntryDialog));
 const RoleBook = dynamic(() => import("@/components/role-book").then((module) => module.RoleBook));
@@ -23,7 +24,7 @@ function subscribeToProfile(onChange: () => void) {
 }
 
 function profileNameSnapshot() { return readGuestProfile()?.displayName ?? ""; }
-function avatarAnimation(id: AvatarId) { return `/art/avatars/${id}.gif`; }
+function avatarAnimation(id: AvatarId) { return mediaUrl(`/art/avatars/${id}.gif`); }
 
 export function AvatarGallery({ onSelect }: { onSelect: (avatarId: AvatarId) => void }) {
   const en = useLanguage() === "en";
@@ -103,7 +104,7 @@ export function MainMenu() {
       <audio ref={homeAudioRef} src={HOME_AMBIENCE_SRC} loop preload="auto" className="hidden" />
       {/* // Sound Effect by <a href="https://pixabay.com/users/simplesound-53070346/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=443327">SimpleSound</a> from <a href="https://pixabay.com//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=443327">Pixabay</a> */}
       <div className="pointer-events-none absolute inset-0">
-        <Image src="/art/hotel-night.webp" alt="" fill priority sizes="100vw" className="object-cover object-[62%_center]" />
+        <Image src={mediaUrl("/art/hotel-night.webp")} alt="" fill priority sizes="100vw" className="object-cover object-[62%_center]" />
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(13,11,23,.97)_0%,rgba(13,11,23,.86)_35%,rgba(13,11,23,.26)_75%),linear-gradient(0deg,rgba(13,11,23,.9),transparent_48%)]" />
       </div>
       <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-5 py-3 sm:px-10 lg:px-14">

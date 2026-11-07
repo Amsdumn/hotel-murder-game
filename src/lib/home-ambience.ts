@@ -1,4 +1,6 @@
-export const HOME_AMBIENCE_SRC = "/sound-effect/sound-bg-horror-trailer.mp3";
+import { mediaUrl } from "./media-url";
+
+export const HOME_AMBIENCE_SRC = mediaUrl("/sound-effect/sound-bg-horror-trailer.mp3");
 
 export function startHomeAmbience(audio: HTMLAudioElement): () => void {
   audio.loop = true;

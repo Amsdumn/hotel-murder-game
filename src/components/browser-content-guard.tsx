@@ -5,8 +5,10 @@ import { useEffect } from "react";
 export function BrowserContentGuard() {
   useEffect(() => {
     const preventContextMenu = (event: MouseEvent) => event.preventDefault();
-    const preventImageDrag = (event: DragEvent) => {
-      if (event.target instanceof HTMLImageElement) event.preventDefault();
+    const preventDrag = (event: DragEvent) => event.preventDefault();
+    const preventTextSelection = (event: Event) => {
+      if (event.target instanceof Element && event.target.closest('input, textarea, [contenteditable="true"]')) return;
+      event.preventDefault();
     };
     const preventShortcuts = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -17,11 +19,13 @@ export function BrowserContentGuard() {
     };
 
     document.addEventListener("contextmenu", preventContextMenu);
-    document.addEventListener("dragstart", preventImageDrag);
+    document.addEventListener("dragstart", preventDrag);
+    document.addEventListener("selectstart", preventTextSelection);
     document.addEventListener("keydown", preventShortcuts, true);
     return () => {
       document.removeEventListener("contextmenu", preventContextMenu);
-      document.removeEventListener("dragstart", preventImageDrag);
+      document.removeEventListener("dragstart", preventDrag);
+      document.removeEventListener("selectstart", preventTextSelection);
       document.removeEventListener("keydown", preventShortcuts, true);
     };
   }, []);

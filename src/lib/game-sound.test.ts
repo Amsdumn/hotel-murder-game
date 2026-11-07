@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getGameSoundEvent, playGameSound, type GameSoundSnapshot } from "./game-sound";
+import { mediaUrl } from "./media-url";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -10,7 +11,7 @@ describe("game sound events", () => {
   it("plays the murder recording at maximum app volume", () => {
     const audio = { volume: 0, currentTime: 5, play: vi.fn().mockResolvedValue(undefined) };
     const Audio = vi.fn(function (source: string) {
-      expect(source).toBe("/sound-effect/sounded-kill.mp3");
+      expect(source).toBe(mediaUrl("/sound-effect/sounded-kill.mp3"));
       return audio;
     });
     vi.stubGlobal("Audio", Audio);

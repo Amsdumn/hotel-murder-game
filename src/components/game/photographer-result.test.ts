@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { PhotographerResult } from "./photographer-result";
+import { mediaUrl } from "@/lib/media-url";
 
 const players = [
   { id: "photo", displayName: "Photographer", seatIndex: 0, avatarId: "irina-volkova" as const },
@@ -15,8 +16,8 @@ describe("Photographer result", () => {
       const html = renderToStaticMarkup(createElement(PhotographerResult, { message, players, language }));
       expect(html).toContain("Guest B");
       expect(html).toContain(label);
-      expect(html).toContain("adrian-blackwood-portrait.webp");
-      expect(html).not.toContain("irina-volkova-portrait.webp");
+      expect(html).toContain(mediaUrl("/art/avatars/adrian-blackwood-portrait.webp").split("/").at(-1)!);
+      expect(html).not.toContain(mediaUrl("/art/avatars/irina-volkova-portrait.webp").split("/").at(-1)!);
     }
   });
 });

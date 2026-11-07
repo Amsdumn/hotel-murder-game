@@ -13,6 +13,7 @@ import { createActionId } from "@/lib/action-id";
 import { requiredInnocentRoleCount } from "@/lib/game-balance";
 import { acceptNewerGameState } from "@/lib/game-state-version";
 import { primeGameAudio } from "@/lib/game-sound";
+import { mediaUrl } from "@/lib/media-url";
 import { addLocalTestBots, canUseLocalBots, localBotCount } from "@/lib/local-test-bots";
 import { LanguageSwitcher, useLanguage } from "@/components/language-switcher";
 import { roleNames, roleNamesEn } from "@/components/role-portrait";
@@ -213,7 +214,7 @@ export function LobbyScreen({ code }: { code: string }) {
 
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#12111c] px-5 py-8 text-[#f8f1e4] sm:px-10">
-      <div className="pointer-events-none absolute inset-0"><Image src="/art/hotel-night.webp" alt="" fill sizes="100vw" className="object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(18,17,28,.8),rgba(18,17,28,.94)_70%)]" /></div>
+      <div className="pointer-events-none absolute inset-0"><Image src={mediaUrl("/art/hotel-night.webp")} alt="" fill sizes="100vw" className="object-cover object-center opacity-35" /><div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(18,17,28,.8),rgba(18,17,28,.94)_70%)]" /></div>
       <div className="relative mx-auto max-w-5xl">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-4 border-b border-[#d9b66f]/25 pb-2">
           <div>

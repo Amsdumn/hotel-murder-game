@@ -1,4 +1,5 @@
 import type { GamePhase } from "@/types/game";
+import { mediaUrl } from "./media-url";
 
 export type GameSoundCue = "start" | "skill" | "vote" | "room" | "result" | "murder";
 
@@ -47,7 +48,7 @@ const motifs: Record<Exclude<GameSoundCue, "murder">, Array<[frequency: number, 
 export function playGameSound(cue: GameSoundCue): void {
   if (cue === "murder") {
     if (typeof Audio === "undefined") return;
-    const audio = new Audio("/sound-effect/sounded-kill.mp3");
+    const audio = new Audio(mediaUrl("/sound-effect/sounded-kill.mp3"));
     audio.volume = 1;
     audio.currentTime = 0;
     void audio.play().catch(() => {});

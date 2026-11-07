@@ -5,6 +5,7 @@ import { ImageConfigContext } from "next/dist/shared/lib/image-config-context.sh
 import { imageConfigDefault } from "next/dist/shared/lib/image-config";
 import nextConfig from "../../next.config";
 import { AVATARS } from "@/lib/avatars";
+import { mediaUrl } from "@/lib/media-url";
 import { AvatarDetail, AvatarGallery, MainMenu } from "./main-menu";
 
 describe("homepage avatars", () => {
@@ -26,19 +27,22 @@ describe("homepage avatars", () => {
     expect(html).not.toContain("locksmith.webp");
   });
 
-  it("requests compact gallery portraits from the image optimizer", () => {
+  it("requests protected portrait paths directly", () => {
     const html = renderToStaticMarkup(createElement(ImageConfigContext.Provider, {
       value: { ...imageConfigDefault, ...nextConfig.images },
     }, createElement(AvatarGallery, { onSelect: () => {} })));
     const images = html.match(/<img\b[^>]*>/g) ?? [];
     expect(images).toHaveLength(12);
-    for (const image of images) expect(image).toContain("q=65");
+    for (const image of images) {
+      expect(image).toContain("/media/");
+      expect(image).not.toContain("/_next/image");
+    }
   });
 
   it("opens each character's animated art and story without assigning a skill", () => {
     for (const avatar of AVATARS) {
       const html = renderToStaticMarkup(createElement(AvatarDetail, { avatarId: avatar.id }));
-      expect(html).toContain(`/art/avatars/${avatar.id}.gif`);
+      expect(html).toContain(mediaUrl(`/art/avatars/${avatar.id}.gif`));
       expect(html).toContain(avatar.introduction);
       expect(html).toContain("สุ่มเมื่อเริ่มเกม");
     }

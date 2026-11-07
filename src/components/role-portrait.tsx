@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { mediaUrl } from "@/lib/media-url";
 import type { Role } from "@/types/game";
 import { useLanguage } from "@/components/language-switcher";
 
@@ -26,18 +27,18 @@ export const roleNamesEn: Record<Role, string> = {
 };
 
 const portraits: Record<Role, string> = {
-  ELECTRICIAN: "/art/avatars/marcus-johnson-portrait.webp",
-  LOCKSMITH: "/art/locksmith.webp",
-  HOUSEKEEPER: "/art/housekeeper.webp",
-  WINDOW_CLEANER: "/art/window-cleaner.webp",
-  WITNESS: "/art/witness.webp",
-  DETECTIVE: "/art/detective.webp",
-  LAWYER: "/art/lawyer.webp",
-  FORMER_POLICE: "/art/former-police.webp",
-  RECEPTIONIST: "/art/avatars/irina-volkova-portrait.webp",
-  PHOTOGRAPHER: "/art/photographer-portrait.webp",
-  ACCOMPLICE: "/art/accomplice.webp",
-  KILLER: "/art/killer.webp",
+  ELECTRICIAN: mediaUrl("/art/avatars/marcus-johnson-portrait.webp"),
+  LOCKSMITH: mediaUrl("/art/locksmith.webp"),
+  HOUSEKEEPER: mediaUrl("/art/housekeeper.webp"),
+  WINDOW_CLEANER: mediaUrl("/art/window-cleaner.webp"),
+  WITNESS: mediaUrl("/art/witness.webp"),
+  DETECTIVE: mediaUrl("/art/detective.webp"),
+  LAWYER: mediaUrl("/art/lawyer.webp"),
+  FORMER_POLICE: mediaUrl("/art/former-police.webp"),
+  RECEPTIONIST: mediaUrl("/art/avatars/irina-volkova-portrait.webp"),
+  PHOTOGRAPHER: mediaUrl("/art/photographer-portrait.webp"),
+  ACCOMPLICE: mediaUrl("/art/accomplice.webp"),
+  KILLER: mediaUrl("/art/killer.webp"),
 };
 
 export function RolePortrait({ role, className = "", sizes = "96px" }: { role: Role; className?: string; sizes?: string }) {

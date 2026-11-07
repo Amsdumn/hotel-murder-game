@@ -10,13 +10,14 @@ import { avatarById, type AvatarId } from "@/lib/avatars";
 import styles from "./private-room-scene.module.css";
 import { useLanguage } from "@/components/language-switcher";
 import { avatarEnglish } from "@/lib/avatar-translations";
+import { mediaUrl } from "@/lib/media-url";
 
 export function PrivateRoomScene({ role, roomNumber, team, isAlive, isActive = false, avatarId }: { role: Role; roomNumber: number; team: Team; isAlive: boolean; isActive?: boolean; avatarId?: AvatarId | null }) {
   const en = useLanguage() === "en";
   const avatar = avatarById(avatarId);
   return <section className={styles.frame} data-skill-active={isActive ? "true" : undefined} aria-label={en ? `Your room scene, room ${roomNumber}, ${roleNamesEn[role]}` : `ฉากห้องพักของคุณ ห้อง ${roomNumber} ตัวละคร${roleNames[role]}`}>
     <div className={styles.stage}>
-      <Image src="/art/hotel-room-3d.webp" alt={en ? "Hotel room" : "ห้องพักในโรงแรม"} fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.room} />
+      <Image src={mediaUrl("/art/hotel-room-3d.webp")} alt={en ? "Hotel room" : "ห้องพักในโรงแรม"} fill sizes="(max-width: 1024px) 100vw, 460px" className={styles.room} />
       {isAlive && isActive && <div className={styles.skillGlow} aria-hidden="true" />}
       <div className={styles.caption}><span className={styles.liveDot} /> {en ? "Room" : "ห้อง"} {roomNumber} <span className={styles.captionDivider}>/</span> {en ? roleNamesEn[role] : roleNames[role]}</div>
       {isAlive && <div className={styles.walkPath} data-character-role={role}>

@@ -6,6 +6,9 @@ import { GameResultScreen, GameScreen, HotelBoard, PrivateInfoPanel, PublicGuest
 import { PrivateRoomScene } from "./private-room-scene";
 import { roleSkillDescriptions } from "@/lib/role-skills";
 import { roleNames } from "../role-portrait";
+import { mediaUrl } from "@/lib/media-url";
+
+function mediaId(path: string): string { return mediaUrl(path).split("/").at(-1)!; }
 
 const privateState: PrivatePlayerState = {
   playerId: "a", role: "KILLER", team: "MURDERER", roomNumber: 202,
@@ -311,11 +314,11 @@ describe("game privacy and turn UI", () => {
     ];
     const viewer = { ...privateState, role: "PHOTOGRAPHER" as const, team: "INNOCENT" as const, privateResults: ["ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 2 Guest B"] };
     const render = (open: boolean) => renderToStaticMarkup(createElement(PrivateInfoPanel, { privateState: viewer, teamState: null, players, open, onToggle: () => {} }));
-    expect(render(false)).not.toContain("adrian-blackwood-portrait.webp");
-    expect(render(true)).toContain("adrian-blackwood-portrait.webp");
+    expect(render(false)).not.toContain(mediaId("/art/avatars/adrian-blackwood-portrait.webp"));
+    expect(render(true)).toContain(mediaId("/art/avatars/adrian-blackwood-portrait.webp"));
     expect(render(true)).toContain("Guest B");
     const overlay = renderToStaticMarkup(createElement(SkillResultOverlay, { message: viewer.privateResults[0], language: "th", players }));
-    expect(overlay).toContain("adrian-blackwood-portrait.webp");
+    expect(overlay).toContain(mediaId("/art/avatars/adrian-blackwood-portrait.webp"));
     expect(overlay).toContain("Guest B");
   });
   it("offers voting on the hotel board only to an eligible player", () => {
@@ -575,8 +578,8 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("ลอบสังหารห้อง 102: สำเร็จ");
     expect(html).toContain("ฉากห้องพักของคุณ");
     expect(html).toContain("data-character-role=\"KILLER\"");
-    expect(html).toContain("killer-3d.webp");
-    expect(html).toContain("hotel-room-3d.webp");
+    expect(html).toContain(mediaId("/art/characters/killer-3d.webp"));
+    expect(html).toContain(mediaId("/art/hotel-room-3d.webp"));
     expect(html.match(/ฝ่ายฆาตกร/g)).toHaveLength(1);
     expect(html).toContain("ยังมีชีวิต");
   });
@@ -585,7 +588,7 @@ describe("game privacy and turn UI", () => {
     const render = (viewer: PrivatePlayerState) => renderToStaticMarkup(createElement(PrivateInfoPanel, {
       privateState: viewer, teamState: null, players: publicState.players, open: true, onToggle: () => {},
     }));
-    expect(render({ ...privateState, canUseSkill: true })).not.toContain("hotel-room-morning.webp");
+    expect(render({ ...privateState, canUseSkill: true })).not.toContain(mediaId("/art/hotel-room-morning.webp"));
     expect(render({ ...privateState, canUseSkill: true })).toContain('data-skill-active="true"');
   });
 
@@ -597,9 +600,9 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain("ภาพตัวละครพยาน");
     expect(html).toContain("ฝ่ายผู้บริสุทธิ์");
     expect(html).toContain("เสียชีวิต");
-    expect(html).toContain("hotel-room-3d.webp");
+    expect(html).toContain(mediaId("/art/hotel-room-3d.webp"));
     expect(html).not.toContain("data-character-role=\"WITNESS\"");
-    expect(html).not.toContain("witness-3d.webp");
+    expect(html).not.toContain(mediaId("/art/characters/witness-3d.webp"));
   });
 
   it("uses the player's own room and character in the animated scene", () => {
@@ -608,25 +611,25 @@ describe("game privacy and turn UI", () => {
       teamState: null, players: publicState.players, open: true, onToggle: () => {},
     }));
     expect(html).toContain("data-character-role=\"DETECTIVE\"");
-    expect(html).toContain("detective-3d.webp");
+    expect(html).toContain(mediaId("/art/characters/detective-3d.webp"));
     expect(html).toContain("ห้อง 703");
     expect(html).not.toContain("data-character-role=\"KILLER\"");
-    expect(html).not.toContain("killer-3d.webp");
+    expect(html).not.toContain(mediaId("/art/characters/killer-3d.webp"));
   });
 
   it("uses the 3D anime cutouts for the electrician and receptionist", () => {
-    for (const [role, asset] of [["ELECTRICIAN", "marcus-johnson.webp"], ["RECEPTIONIST", "irina-volkova.webp"]] as const) {
+    for (const [role, asset] of [["ELECTRICIAN", "/art/avatars/marcus-johnson.webp"], ["RECEPTIONIST", "/art/avatars/irina-volkova.webp"]] as const) {
       const html = renderToStaticMarkup(createElement(PrivateRoomScene, { role, roomNumber: 301, team: "INNOCENT", isAlive: true }));
-      expect(html).toContain(asset);
+      expect(html).toContain(mediaId(asset));
     }
   });
 
   it("shows the assigned public avatar in the private room regardless of secret role", () => {
     const html = renderToStaticMarkup(createElement(PrivateRoomScene, { role: "KILLER", roomNumber: 301, team: "MURDERER", isAlive: true, avatarId: "irina-volkova" }));
-    expect(html).toContain("irina-volkova.webp");
-    expect(html).toContain("irina-volkova-portrait.webp");
+    expect(html).toContain(mediaId("/art/avatars/irina-volkova.webp"));
+    expect(html).toContain(mediaId("/art/avatars/irina-volkova-portrait.webp"));
     expect(html).toContain("ความสามารถ · นักฆ่า");
-    expect(html).not.toContain("killer-3d.webp");
+    expect(html).not.toContain(mediaId("/art/characters/killer-3d.webp"));
   });
 
   it("shows a quiet hotel board with public room states", () => {
