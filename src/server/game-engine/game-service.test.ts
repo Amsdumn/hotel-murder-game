@@ -45,6 +45,24 @@ describe("persisted server deadlines", () => {
     await expect(service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "PUBLIC", text: " " }, 500)).rejects.toMatchObject({ code: "INVALID_INPUT" });
   });
 
+  it("keeps both chats available throughout voting and closes them when voting resolves", async () => {
+    const store = new MemoryLobbyStore();
+    const lobby = record("VOTING");
+    await store.createLobby(lobby);
+    const service = new GameService(store);
+    const publicMessage = await service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, channel: "PUBLIC", text: "Check room 202" });
+    expect(projectPublicState(publicMessage.state).chatMessages?.at(-1)?.text).toBe("Check room 202");
+    const teamMessage = await service.chat("ABC234", "d", { actionId: crypto.randomUUID(), expectedVersion: publicMessage.state.version, channel: "MURDERER", text: "Protect room 202" });
+    expect(projectMurdererTeamState(teamMessage.state, "e")).toMatchObject({ canChat: true });
+    expect(projectMurdererTeamState(teamMessage.state, "e").chatDeadlineAt).toBe(lobby.gameState!.phaseDeadlineAt);
+    expect(JSON.stringify(projectPublicState(teamMessage.state))).not.toContain("Protect room 202");
+    const current = (await store.findLobby("ABC234"))!;
+    const resolved = { ...current.gameState!, phase: "RESOLUTION" as const, version: current.version + 1 };
+    await store.replaceLobby("ABC234", current.version, { ...current, version: resolved.version, gameState: resolved });
+    await expect(service.chat("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: resolved.version, channel: "PUBLIC", text: "too late" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+    expect(projectMurdererTeamState(resolved, "d").canChat).toBe(false);
+  });
+
   it("keeps murderer chat private and limits it to murderer skill turns", async () => {
     const store = new MemoryLobbyStore();
     const lobby = record("SKILL_PHASE");

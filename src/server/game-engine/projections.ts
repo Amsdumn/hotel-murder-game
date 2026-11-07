@@ -55,7 +55,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
 export function projectMurdererTeamState(state: GameEngineState, requesterId: string): PrivateTeamState {
   const player = state.players.find((item) => item.id === requesterId);
   if (!player || !player.isAlive || player.team !== "MURDERER") throw new Error("Team state access denied");
-  const canChat = state.phase === "SKILL_PHASE" && state.players.filter((item) => item.team === "MURDERER").length > 1 && state.players.some((item) => item.id === state.activePlayerId && item.team === "MURDERER") && state.phaseDeadlineAt !== undefined;
+  const canChat = state.players.filter((item) => item.team === "MURDERER").length > 1 && state.phaseDeadlineAt !== undefined && (state.phase === "DISCUSSION" || state.phase === "VOTING" || state.phase === "SKILL_PHASE" && state.players.some((item) => item.id === state.activePlayerId && item.team === "MURDERER"));
   return {
     teammates: state.players.filter((item) => item.role === "KILLER" || item.role === "ACCOMPLICE")
       .map((item) => ({ playerId: item.id, role: item.role as "KILLER" | "ACCOMPLICE", roomNumber: item.roomNumber })),

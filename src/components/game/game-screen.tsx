@@ -85,10 +85,10 @@ export function getTurnNotice(state: PublicGameState, privateState: PrivatePlaye
     if (state.phase === "SKILL_PHASE" && privateState?.skillBlockReason === "COOLDOWN") return "Your Electrician skill is cooling down this turn.";
     if (state.phase === "SKILL_PHASE" && privateState?.role === "FORMER_POLICE") return "Your clue arrives automatically on your skill slot. Check your private information.";
     if (state.phase === "SKILL_PHASE") return privateState?.canUseSkill ? "Your skill is ready. Choose a target and confirm before time runs out." : "Skill phase: waiting for the active player.";
-    if (state.phase === "DISCUSSION") return "Discussion has started. Share clues before voting.";
+    if (state.phase === "DISCUSSION") return "The hotel lobby is open. Trade clues before the ballot begins.";
     if (state.phase === "VOTING" && !privateState) return "Voting: checking your eligibility.";
-    if (state.phase === "VOTING") return privateState?.canVote ? state.runoffRooms?.length ? "Runoff vote: choose a room other than your own. You can change your vote until time runs out." : "Choose a room other than your own. You can change your vote until time runs out." : "Voting is unavailable.";
-    if (state.phase === "RESOLUTION") return "Revealing the opened room before the next turn.";
+    if (state.phase === "VOTING") return privateState?.canVote ? state.runoffRooms?.length ? "The ballot is tied. Choose another guest's room; you may change your vote until the clock runs out. The lobby chat stays open." : "Cast your suspicion on another guest's room. You may change your vote until the clock runs out; the lobby chat stays open." : "The ballot is open. Follow the guests' votes and clues.";
+    if (state.phase === "RESOLUTION") return "The chosen door is opening. See what the hotel has been hiding.";
     return "Preparing the next phase.";
   }
   if (state.phase === "FINISHED") return "เกมจบแล้ว ดูผลการแข่งขันและประวัติเหตุการณ์ได้";
@@ -99,12 +99,12 @@ export function getTurnNotice(state: PublicGameState, privateState: PrivatePlaye
   if (state.phase === "SKILL_PHASE") return privateState?.canUseSkill
     ? "ถึงตาคุณใช้สกิล เลือกเป้าหมายและยืนยันก่อนหมดเวลา"
     : "ช่วงใช้สกิล กำลังรอผู้เล่นที่ถึงคิวดำเนินการ";
-  if (state.phase === "DISCUSSION") return "เริ่มช่วงพูดคุย แลกเปลี่ยนเบาะแสก่อนลงคะแนน";
+  if (state.phase === "DISCUSSION") return "ล็อบบี้เปิดวงสนทนาแล้ว แลกเบาะแสก่อนเปิดหีบลงคะแนน";
   if (state.phase === "VOTING" && !privateState) return "ช่วงลงคะแนน กำลังตรวจสิทธิ์ของคุณ";
   if (state.phase === "VOTING") return privateState?.canVote
-    ? state.runoffRooms?.length ? "ถึงตาคุณลงคะแนนรอบตัดสิน เลือกห้องที่ไม่ใช่ห้องตัวเอง เปลี่ยนคะแนนได้จนหมดเวลา" : "ถึงตาคุณลงคะแนน เลือกห้องที่ไม่ใช่ห้องตัวเอง เปลี่ยนคะแนนได้จนหมดเวลา"
-    : "ไม่สามารถลงคะแนนได้";
-  if (state.phase === "RESOLUTION") return "กำลังเฉลยผลการเปิดห้อง ก่อนเริ่มรอบถัดไป";
+    ? state.runoffRooms?.length ? "คะแนนยังเสมอ เลือกห้องผู้เข้าพักคนอื่นในรอบตัดสิน เปลี่ยนใจได้จนหมดเวลา และยังคุยในล็อบบี้ได้" : "ลงคะแนนเลือกห้องผู้เข้าพักคนอื่น เปลี่ยนใจได้จนหมดเวลา และยังคุยในล็อบบี้ได้"
+    : "หีบลงคะแนนเปิดอยู่ ติดตามคะแนนและเบาะแสจากผู้เข้าพัก";
+  if (state.phase === "RESOLUTION") return "ประตูห้องที่ถูกเลือกกำลังเปิด เผยความลับที่โรงแรมซ่อนไว้";
   return "กำลังเตรียมขั้นตอนถัดไป";
 }
 
@@ -143,6 +143,15 @@ export function SkillResultOverlay({ message, language, players = [] }: { messag
   </Dialog>;
 }
 
+function VoteResultDialog({ message, language }: { message: string; language: Language }) {
+  const [open, setOpen] = useState(true);
+  useEffect(() => { const timeout = window.setTimeout(() => setOpen(false), 3000); return () => window.clearTimeout(timeout); }, []);
+  return <Dialog open={open} disablePortal fullWidth maxWidth="sm" aria-labelledby="vote-result-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" } }}>
+    <DialogTitle id="vote-result-title" className="pt-7! text-center! font-serif! text-3xl! text-[#f2d79c]!">{language === "en" ? "Ballot result · The chosen door" : "ผลโหวต · ประตูห้องที่ถูกเลือก"}</DialogTitle>
+    <DialogContent className="px-7! pb-10! text-center! font-serif! text-2xl! leading-relaxed!">{gameMessage(message, language)}</DialogContent>
+  </Dialog>;
+}
+
 function SkillTurnDialog({ open, language, onContinue, onExited }: { open: boolean; language: Language; onContinue: () => void; onExited: () => void }) {
   const en = language === "en";
   return <Dialog open={open} onClose={onContinue} disablePortal fullWidth maxWidth="xs" aria-labelledby="skill-turn-title" slotProps={{ paper: { className: "border! border-[#e3c88e]/70! bg-[radial-gradient(circle_at_top,#4a3046,#1d1824_75%)]! text-[#f4efe8]!" }, transition: { onExited } }}>
@@ -161,7 +170,7 @@ export function GameResultScreen({ result }: { result: GameResultState }) {
   const reason = reasonKey === "MURDERER_PARITY" ? en ? "The living Murderer team reached at least the number of living Innocents." : "จำนวนฝ่ายฆาตกรที่ยังมีชีวิตเท่ากับหรือมากกว่าฝ่ายผู้บริสุทธิ์" : reasonKey === "ASSASSIN_SURVIVED" ? en ? "The Assassin survived all four turns." : "นักฆ่ารอดชีวิตครบ 4 รอบ" : en ? "The Assassin was eliminated." : "นักฆ่าถูกกำจัด";
   return <section className="rounded-2xl border border-[#c8a46b]/40 bg-[radial-gradient(circle_at_top,#4a1928,#111116_70%)] p-6 shadow-2xl sm:p-10">
     <p className="text-center text-sm tracking-[.3em] text-[#c8a46b]">{en ? "Result" : "ผลเกม"} · {result.turnsPlayed} {en ? "turns" : "รอบ"}</p>
-    <h2 className="mt-4 text-center font-serif text-3xl leading-relaxed sm:text-5xl">{result.winner === "INNOCENT" ? en ? "The Innocent team wins!" : "ผู้บริสุทธิ์ชนะ!" : en ? "The Murderer team wins!" : "ฆาตกรชนะ!"}</h2>
+    <h2 className="mt-4 text-center font-serif text-3xl leading-relaxed sm:text-5xl">{result.winner === "INNOCENT" ? en ? "The Innocent team wins! The Assassin was exposed." : "ผู้บริสุทธิ์ชนะ! นักฆ่าถูกเปิดโปงแล้ว" : en ? "The Murderer team wins! The hotel's secrets remain buried." : "ฆาตกรชนะ! ความลับถูกฝังไว้ในโรงแรมแห่งนี้"}</h2>
     <p className="mt-4 text-center text-lg text-[#e3c88e]">{en ? "Why: " : "เหตุผล: "}{reason}</p>
     <div className="mt-9 grid gap-3 sm:grid-cols-2">{result.players.map((player) => { const avatar = avatarById(player.avatarId); return <div key={player.playerId} className="relative flex overflow-hidden rounded-lg border border-[#c8a46b]/20 bg-[#1d1d26]/90">{avatar ? <div className="relative w-20 shrink-0"><Image src={avatar.portrait} alt={en ? avatarEnglish[avatar.id].name : avatar.name} fill sizes="80px" className="object-cover object-top" /></div> : <RolePortrait role={player.role} className="w-20" sizes="80px" />}<div className="min-w-0 p-4 pr-6"><p className="font-semibold"><span className="inline-block max-w-[150px] truncate align-bottom" title={player.displayName}>{player.displayName}</span> · {player.roomNumber}</p><p className="mt-1 text-sm text-[#c8a46b]">{en ? roleNamesEn[player.role] : roleNames[player.role]} · {player.team === "INNOCENT" ? en ? "Innocent" : "ผู้บริสุทธิ์" : en ? "Murderer" : "ฆาตกร"} · {player.isAlive ? en ? "Alive" : "รอดชีวิต" : en ? "Dead" : "เสียชีวิต"}</p></div><span aria-hidden="true" className={`absolute inset-y-0 right-0 w-1.5 ${player.team === "INNOCENT" ? "bg-blue-500" : "bg-red-500"}`} /></div>; })}</div>
     <div className="mt-8 flex h-[300px] flex-col rounded-lg border border-[#c8a46b]/20 bg-[#1d1d26]/90 p-5">
@@ -339,6 +348,8 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     return () => window.clearTimeout(timeout);
   }, []);
   const openedRoomCount = state.publicHistory?.filter((event) => event.type === "ROOM_OPENED").length ?? 0;
+  const latestOpenedRoom = [...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message;
+  const endedWithOpenedRoom = state.phase === "FINISHED" && state.publicHistory?.at(-2)?.type === "ROOM_OPENED" && state.publicHistory.at(-1)?.type === "GAME_FINISHED";
   useEffect(() => {
     if (!soundReady) return;
     const soundSnapshot: GameSoundSnapshot = {
@@ -443,6 +454,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
   else if (state.phase === "RESOLUTION") timerLabel = state.turn >= 4 ? en ? "Final result in" : "สรุปผลเกมใน" : en ? "Next turn in" : "เริ่มรอบถัดไปใน";
   return <main className={`min-h-screen bg-[radial-gradient(circle_at_85%_0%,#3a2135,#111116_54%)] px-4 py-6 text-[#f4efe8] sm:px-8 ${privateState?.canUseSkill ? "pb-32" : ""}`}><div className="mx-auto max-w-6xl">
     {skillResult && <SkillResultOverlay message={skillResult.message} language={language} players={state.players} />}
+    {(state.phase === "RESOLUTION" || endedWithOpenedRoom) && latestOpenedRoom && <VoteResultDialog key={`${state.turn}:${openedRoomCount}`} message={latestOpenedRoom} language={language} />}
     <SkillTurnDialog open={!!skillTurnKey && skillTurnKey !== dismissedSkillTurnKey && !skillResult} language={language} onContinue={() => {
       pendingSkillScrollRole.current = privateState && window.matchMedia("(max-width: 767px)").matches ? privateState.role : null;
       setDismissedSkillTurnKey(skillTurnKey);
@@ -455,7 +467,7 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
     {!connected && <p role="status" className="mb-5 rounded-lg border border-[#c8a46b]/40 bg-[#32272a] p-3 text-sm text-[#f4efe8]">{connectionMessage || (en ? "Reconnecting…" : "กำลังเชื่อมต่อใหม่…")}</p>}
     <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[#c8a46b]/25 pb-5"><div><p className="text-xs tracking-[.24em] text-[#c8a46b]">{en ? "Who Killed Tonight?" : "คืนนี้ใครฆ่า..."} · {state.code}</p><h1 className="mt-2 font-serif text-3xl">{en ? "Turn" : "รอบ"} {state.turn} · {en ? state.phase === "SKILL_PHASE" ? "Skill phase" : state.phase === "DISCUSSION" ? "Discussion" : state.phase === "VOTING" ? "Voting" : state.phase === "RESOLUTION" ? "Room result" : "Game over" : state.phase === "SKILL_PHASE" ? "ช่วงใช้สกิล" : state.phase === "DISCUSSION" ? "ช่วงพูดคุย" : state.phase === "VOTING" ? "ช่วงลงคะแนน" : state.phase === "RESOLUTION" ? "ผลการเปิดห้อง" : "จบเกม"}</h1></div><div className="flex flex-wrap items-center gap-2"><LanguageSwitcher /><SoundSettings muted={muted} onChange={changeMuted} />{visibleResult && <Button component={Link} href="/" size="small" variant="contained" className="whitespace-nowrap!">{en ? "Back to home" : "กลับหน้าแรก"}</Button>}</div></header>
     <Alert severity={privateState?.canUseSkill || privateState?.canVote ? "warning" : "info"} role="status" className="mb-5!">{turnNotice}</Alert>
-    {ownVotedRoom !== undefined && <div role="status" className="mb-5 rounded-xl border-2 border-[#e3c88e] bg-[#3b2c38] p-4 text-center text-lg font-bold text-[#f2d79c]">{en ? `You voted for room ${ownVotedRoom}. You can change it until time runs out.` : `คุณโหวตห้อง ${ownVotedRoom} แล้ว เปลี่ยนได้จนหมดเวลา`}</div>}
+    {ownVotedRoom !== undefined && <div role="status" className="mb-5 rounded-xl border-2 border-[#e3c88e] bg-[#3b2c38] p-4 text-center text-lg font-bold text-[#f2d79c]">{en ? `Your suspicion falls on room ${ownVotedRoom}. Change your vote before the ballot closes.` : `คุณสงสัยห้อง ${ownVotedRoom} เปลี่ยนคะแนนได้ก่อนปิดหีบลงคะแนน`}</div>}
     {privateState?.canUseSkill && <div role="alert" aria-live="polite" className="mb-5 rounded-xl border-2 border-[#e3c88e] bg-[linear-gradient(125deg,#493447,#30202d)] p-5 shadow-[0_0_35px_rgba(227,200,142,.18)]"><p className="text-xs font-semibold tracking-[.2em] text-[#f2d79c]">{en ? "YOUR SKILL IS READY" : "ถึงตาคุณใช้สกิล"}</p><h2 className="mt-2 font-serif text-2xl">{en ? roleNamesEn[privateState.role] : roleNames[privateState.role]}</h2><p className="mt-2 text-sm leading-7 text-[#f4e5cc]">{doubleKillActive ? en ? "Select two distinct rooms on the hotel map. Both rooms can kill an occupant. Confirm after selecting both." : "เลือกสองห้องที่ต่างกันบนแผนผัง ทั้งสองห้องสังหารผู้พักได้ เลือกครบแล้วกดยืนยัน" : en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</p></div>}
     {error && <p role="alert" className="mb-5 rounded-lg border border-red-400/40 bg-red-950/50 p-3 text-sm text-red-200">{error}</p>}
     {showSecret && privateState && (privateState.role === "RECEPTIONIST" || privateState.role === "PHOTOGRAPHER") && state.turn === 3 && <div role="status" className="mb-5 rounded-xl border border-[#e3c88e]/60 bg-[#30202d] p-4 font-semibold text-[#f2d79c]">{en ? skillActionInstructionsEn[privateState.role] : skillActionInstructions[privateState.role]}</div>}
@@ -474,7 +486,6 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
       {/* {state.phase === "VOTING" && state.phaseDeadlineAt && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!">
       <p className="text-sm text-[#c6bdb1]">{en ? "When time runs out, votes are counted and one room opens." : "เมื่อหมดเวลา ระบบจะนับคะแนนที่มีและเปิดห้องหนึ่งห้อง"}</p>
       </Paper>} */}
-      {state.phase === "RESOLUTION" && <Paper className="border! border-[#c8a46b]/25! bg-[#1d1d26]! p-5!"><h2 className="font-serif text-xl">{en ? "Room result" : "ผลการเปิดห้อง"}</h2><p className="mt-3 text-lg text-[#e7ce98]">{gameMessage([...(state.publicHistory ?? [])].reverse().find((event) => event.type === "ROOM_OPENED")?.message ?? "", language)}</p></Paper>}
       <Paper className="flex! h-75! flex-col! border! border-[#353440]! bg-[#191a22]! p-5!">
         <h2 id="public-event-history-title" className="shrink-0 font-serif text-xl">{en ? "Public event history" : "ประวัติเหตุการณ์สาธารณะ"}</h2>
         <ol aria-labelledby="public-event-history-title" tabIndex={0} className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto wrap-break-word pr-2 text-sm text-[#c6bdb1]">
@@ -482,5 +493,5 @@ export function GameScreen({ state, privateState, teamState, result, murderSeque
         </ol>
       </Paper>
     </div></div>}
-  </div>{state.phase === "DISCUSSION" && state.phaseDeadlineAt !== undefined && <FloatingGameChat key={`public:${state.turn}:${state.phaseDeadlineAt}`} channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} deadline={state.phaseDeadlineAt} selfId={privateState?.playerId} onSend={(text) => sendChat("PUBLIC", text)} />}{state.phase === "SKILL_PHASE" && teamState?.canChat && teamState.chatDeadlineAt !== undefined && <FloatingGameChat key={`team:${state.turn}:${teamState.chatDeadlineAt}`} channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={connected} language={language} deadline={teamState.chatDeadlineAt} onSend={(text) => sendChat("MURDERER", text)} />}{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={!soundReady || muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
+  </div>{(state.phase === "DISCUSSION" || state.phase === "VOTING") && state.phaseDeadlineAt !== undefined && <FloatingGameChat key={`public:${state.turn}`} channel="PUBLIC" messages={state.chatMessages ?? []} canSend={!!privateState?.isAlive && connected} language={language} deadline={state.phaseDeadlineAt} selfId={privateState?.playerId} onSend={(text) => sendChat("PUBLIC", text)} />}{teamState?.canChat && teamState.chatDeadlineAt !== undefined && <FloatingGameChat key={`team:${state.turn}`} channel="MURDERER" messages={teamState.chatMessages ?? []} canSend={connected} language={language} deadline={teamState.chatDeadlineAt} onSend={(text) => sendChat("MURDERER", text)} />}{privateState?.canUseSkill && <SkillConfirmBar targetLabel={skillTargetLabel} canSubmit={canConfirmSkill} onConfirm={() => { if (skillTarget !== null) void act("game:skill", { target: skillTarget }); }} />}<MurderEventOverlay sequence={murderSequence} muted={!soundReady || muted} />{privateState?.mode === "SPECTATOR" && !deathDismissed && state.phase !== "FINISHED" && <DeathNotification onContinue={() => setDeathDismissed(true)} />}</main>;
 }

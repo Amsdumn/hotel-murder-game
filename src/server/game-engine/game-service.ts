@@ -112,8 +112,8 @@ export class GameService {
       const publicChat = parsed.data.channel === "PUBLIC";
       const activeActor = state.players.find((player) => player.id === state.activePlayerId);
       const allowed = publicChat
-        ? state.phase === "DISCUSSION"
-        : state.phase === "SKILL_PHASE" && sender.team === "MURDERER" && state.players.filter((player) => player.team === "MURDERER").length > 1 && activeActor?.team === "MURDERER";
+        ? state.phase === "DISCUSSION" || state.phase === "VOTING"
+        : sender.team === "MURDERER" && state.players.filter((player) => player.team === "MURDERER").length > 1 && (state.phase === "DISCUSSION" || state.phase === "VOTING" || state.phase === "SKILL_PHASE" && activeActor?.team === "MURDERER");
       if (!allowed) throw new LobbyError("FORBIDDEN");
       if (state.phaseDeadlineAt === undefined || now >= state.phaseDeadlineAt) throw new LobbyError("FORBIDDEN");
       const chatKey = `${parsed.data.channel}:${playerId}`;

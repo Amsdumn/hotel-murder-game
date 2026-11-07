@@ -12,7 +12,7 @@ describe("game chat", () => {
   });
   it("shows the public discussion form to living players", () => {
     const html = renderToStaticMarkup(createElement(GameChat, { channel: "PUBLIC", messages, canSend: true, language: "th", onSend: async () => true }));
-    expect(html).toContain("แชทช่วงพูดคุย");
+    expect(html).toContain("วงสนทนาในล็อบบี้");
     expect(html).toContain("Guest A");
     expect(html).toContain("ห้อง 101");
     expect(html).toContain('aria-label="ข้อความแชท"');
@@ -20,7 +20,7 @@ describe("game chat", () => {
 
   it("keeps murderer history readable but hides the send form outside its turn", () => {
     const html = renderToStaticMarkup(createElement(GameChat, { channel: "MURDERER", messages, canSend: false, language: "en", onSend: async () => true }));
-    expect(html).toContain("Murderer team chat");
+    expect(html).toContain("Murderers&#x27; secret channel");
     expect(html).toContain("Guest A");
     expect(html).not.toContain('aria-label="Chat message"');
   });

@@ -70,6 +70,30 @@ describe("game privacy and turn UI", () => {
     expect(html).toContain('aria-label="เปิดแชทฝ่ายฆาตกร"');
     expect(html).not.toContain('aria-label="แชทฝ่ายฆาตกร"');
   });
+  it("keeps public and murderer chat buttons visible during voting and hides them after the ballot", () => {
+    const props = { privateState, teamState: { teammates: [], privateResults: [], chatMessages: [], canChat: true, chatDeadlineAt: Date.now() + 60_000 }, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }) };
+    const voting = renderToStaticMarkup(createElement(GameScreen, { ...props, state: { ...publicState, phase: "VOTING", phaseDeadlineAt: Date.now() + 60_000 } }));
+    expect(voting).toContain('aria-label="เปิดแชทพูดคุย"');
+    expect(voting).toContain('aria-label="เปิดแชทฝ่ายฆาตกร"');
+    const resolved = renderToStaticMarkup(createElement(GameScreen, { ...props, teamState: { ...props.teamState, canChat: false }, state: { ...publicState, phase: "RESOLUTION", phaseDeadlineAt: Date.now() + 60_000 } }));
+    expect(resolved).not.toContain('aria-label="เปิดแชทพูดคุย"');
+    expect(resolved).not.toContain('aria-label="เปิดแชทฝ่ายฆาตกร"');
+  });
+  it("shows the opened room in a centered dialog during resolution", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase: "RESOLUTION", publicHistory: [{ type: "ROOM_OPENED", message: "เปิดห้อง 102 · มีผู้พัก" }] },
+      privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain('aria-labelledby="vote-result-title"');
+    expect(html).toContain("เปิดห้อง 102 · มีผู้พัก");
+  });
+  it("shows the ballot dialog when opening a room ends the game immediately", () => {
+    const html = renderToStaticMarkup(createElement(GameScreen, {
+      state: { ...publicState, phase: "FINISHED", publicHistory: [{ type: "ROOM_OPENED", message: "เปิดห้อง 102 · มีผู้พัก" }, { type: "GAME_FINISHED", message: "ฝ่ายผู้บริสุทธิ์ชนะ" }] },
+      privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }),
+    }));
+    expect(html).toContain('aria-labelledby="vote-result-title"');
+  });
   it("scrolls mobile skill turns to the required guest or map target", () => {
     const guests = { scrollIntoView: vi.fn() } as unknown as HTMLElement;
     const board = { scrollIntoView: vi.fn() } as unknown as HTMLElement;
@@ -200,6 +224,7 @@ describe("game privacy and turn UI", () => {
     expect(html).toMatch(/id="final-event-history-title"[^>]*>เหตุการณ์สำคัญ<\/h3>/);
     expect(html).toMatch(/aria-labelledby="final-event-history-title"[^>]*overflow-y-auto/);
     expect(html).toContain("เหตุผล: นักฆ่าถูกกำจัด");
+    expect(html).toContain("ผู้บริสุทธิ์ชนะ! นักฆ่าถูกเปิดโปงแล้ว");
   });
   it("calls the murderer-team assassin นักฆ่า while retaining the team name", () => {
     expect(roleNames.KILLER).toBe("นักฆ่า");
@@ -338,7 +363,7 @@ describe("game privacy and turn UI", () => {
     expect(board).not.toContain("Guest C");
     expect(board).not.toContain("คุณโหวตห้อง 101");
     const screen = renderToStaticMarkup(createElement(GameScreen, { state, privateState, teamState: null, result: null, murderSequence: 0, connected: true, connectionMessage: "", onCommand: async () => ({ ok: true as const, data: { version: 4 } }) }));
-    expect(screen).toContain("คุณโหวตห้อง 101 แล้ว");
+    expect(screen).toContain("คุณสงสัยห้อง 101");
     expect(screen).toContain("Guest A โหวตห้อง 101");
   });
 
@@ -616,8 +641,8 @@ describe("game privacy and turn UI", () => {
   it("alerts only the active skill actor to act", () => {
     expect(getTurnNotice(publicState, { ...privateState, canUseSkill: true })).toContain("ถึงตาคุณใช้สกิล");
     expect(getTurnNotice(publicState, privateState)).not.toContain("ถึงตาคุณใช้สกิล");
-    expect(getTurnNotice({ ...publicState, phase: "DISCUSSION" }, privateState)).toContain("ช่วงพูดคุย");
-    expect(getTurnNotice({ ...publicState, phase: "VOTING" }, { ...privateState, canVote: true })).toContain("ถึงตาคุณลงคะแนน");
+    expect(getTurnNotice({ ...publicState, phase: "DISCUSSION" }, privateState)).toContain("ล็อบบี้เปิดวงสนทนา");
+    expect(getTurnNotice({ ...publicState, phase: "VOTING" }, { ...privateState, canVote: true })).toContain("ลงคะแนนเลือกห้อง");
     expect(getTurnNotice({ ...publicState, phase: "VOTING" }, null)).toContain("ช่วงลงคะแนน");
   });
 });
