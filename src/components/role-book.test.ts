@@ -20,7 +20,7 @@ describe("role book", () => {
     expect(html).toContain("สีผม");
     expect(html).toContain("ทนายความ");
     expect(html).toContain("ฝ่ายเดียวกัน");
-    expect(html).toContain("แชทสาธารณะได้จนปิดหีบลงคะแนน");
+    expect(html).toContain("คุยในแชทสาธารณะได้ตั้งแต่ช่วงพูดคุยจนจบการโหวต");
     expect(html).toContain("แท็บเฉพาะฝ่ายฆาตกร");
     for (const avatar of AVATARS) expect(html).toContain(avatar.name);
   });
@@ -32,15 +32,15 @@ describe("role book", () => {
     expect(html).toContain("cannot lock the same room again");
     expect(html).toContain("turn 3");
     expect(html).toContain("at least one targeted room is on your chosen floor");
-    expect(html).toContain("Five-player games have one Assassin and four different Innocent roles");
+    expect(html).toContain("In a five-player game, one is the Assassin and the other four have different Innocent roles");
     expect(html).toContain("both can kill their occupants");
     expect(html).toContain("30–420 seconds");
     expect(html).toContain("Former Police Officer");
     expect(html).toContain("hair color");
     expect(html).toContain("Lawyer");
     expect(html).toContain("same team");
-    expect(html).toContain("until the ballot closes");
-    expect(html).toContain("Murderers-only tab");
+    expect(html).toContain("through discussion and the vote");
+    expect(html).toContain("Murderers can switch to their own tab");
     for (const avatar of AVATARS) expect(html).toContain(avatarEnglish[avatar.id].name);
   });
 });
