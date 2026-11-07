@@ -7,9 +7,8 @@ type AccessEnvironment = Record<string, string | undefined>;
 function accessConfig(source: AccessEnvironment = process.env) {
   const password = source.HOTEL_ACCESS_PASSWORD;
   const secret = source.HOTEL_ACCESS_COOKIE_SECRET;
-  if (!password || password.length < 12 || !secret || secret.length < 32) {
-    throw new Error("Set HOTEL_ACCESS_PASSWORD (12+ characters) and HOTEL_ACCESS_COOKIE_SECRET (32+ characters)");
-  }
+  if (!password || password.length < 12) throw new Error("HOTEL_ACCESS_PASSWORD must be at least 12 characters");
+  if (!secret || secret.length < 32) throw new Error("HOTEL_ACCESS_COOKIE_SECRET must be at least 32 characters");
   return { password, secret };
 }
 

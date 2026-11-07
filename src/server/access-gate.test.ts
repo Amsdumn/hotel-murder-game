@@ -9,7 +9,8 @@ const settings = {
 describe("homepage access gate", () => {
   it("requires server-owned credentials", () => {
     expect(() => assertAccessGateConfigured({ HOTEL_ACCESS_PASSWORD: undefined, HOTEL_ACCESS_COOKIE_SECRET: undefined })).toThrow();
-    expect(() => assertAccessGateConfigured({ ...settings, HOTEL_ACCESS_PASSWORD: "short" })).toThrow();
+    expect(() => assertAccessGateConfigured({ ...settings, HOTEL_ACCESS_PASSWORD: "short" })).toThrow("HOTEL_ACCESS_PASSWORD must be at least 12 characters");
+    expect(() => assertAccessGateConfigured({ ...settings, HOTEL_ACCESS_COOKIE_SECRET: "short" })).toThrow("HOTEL_ACCESS_COOKIE_SECRET must be at least 32 characters");
     expect(() => assertAccessGateConfigured(settings)).not.toThrow();
     expect(isValidAccessPassword(settings.HOTEL_ACCESS_PASSWORD, settings)).toBe(true);
     expect(isValidAccessPassword("wrong-password", settings)).toBe(false);
