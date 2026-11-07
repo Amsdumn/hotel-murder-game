@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PrivatePlayerState, PublicGameState } from "@/types/game";
-import { canUseLocalBots, chooseLocalBotCommand } from "./local-test-bots";
+import { canUseLocalBots, chooseLocalBotChat, chooseLocalBotCommand } from "./local-test-bots";
 
 const state: PublicGameState = {
   code: "ABC234", version: 4, phase: "SKILL_PHASE", turn: 1, phaseMessage: null,
@@ -35,5 +35,37 @@ describe("local test bots", () => {
     const voting = { ...state, phase: "VOTING" as const };
     expect(chooseLocalBotCommand(voting, voter)).toEqual({ event: "game:vote", payload: { roomNumber: 102 } });
     expect(chooseLocalBotCommand({ ...voting, votes: [{ playerId: "bot", roomNumber: 102 }] }, voter)).toBeNull();
+  });
+  it("shares its real investigation result during discussion and only once per turn", () => {
+    const detective = { ...privateState, canUseSkill: false, privateResults: ["ผลตรวจห้อง 102: MURDERER"], actionHistory: [{ turn: 1, type: "SKILL" as const, message: "ใช้สกิล: ผลตรวจห้อง 102: MURDERER" }] };
+    const discussion = { ...state, phase: "DISCUSSION" as const };
+    const chat = chooseLocalBotChat(discussion, detective);
+    expect(chat).toContain("ผลตรวจห้อง 102: MURDERER");
+    expect(chooseLocalBotChat({ ...discussion, chatMessages: [{ id: "1", playerId: "bot", playerName: "Bot", turn: 1, text: chat!, sentAt: 0 }] }, detective)).toBeNull();
+  });
+  it("hides a murderer and invents a misleading room claim", () => {
+    const killer = { ...privateState, role: "KILLER" as const, team: "MURDERER" as const, roomNumber: 101, canUseSkill: false };
+    const chat = chooseLocalBotChat({ ...state, phase: "DISCUSSION" }, killer);
+    expect(chat).toContain("ผลตรวจห้อง 102: MURDERER");
+    expect(chat).not.toMatch(/ฉันเป็นนักฆ่า|I am the Assassin/);
+  });
+  it("uses chat clues to choose a vote and avoids teammate rooms", () => {
+    const voter = { ...privateState, canUseSkill: false, canVote: true, roomNumber: 201 };
+    const voting = { ...state, phase: "VOTING" as const, chatMessages: [{ id: "1", playerId: "other", playerName: "Other", turn: 1, text: "ผลตรวจห้อง 102: MURDERER / Room 102: Murderer", sentAt: 0 }] };
+    expect(chooseLocalBotCommand(voting, voter)).toEqual({ event: "game:vote", payload: { roomNumber: 102 } });
+    expect(chooseLocalBotCommand(voting, { ...voter, role: "KILLER", team: "MURDERER", roomNumber: 101 }, { teammates: [{ playerId: "ally", role: "ACCOMPLICE", roomNumber: 102 }], privateResults: [] })).toBeNull();
+  });
+  it("combines the public photograph with the room register before voting", () => {
+    const voter = { ...privateState, canUseSkill: false, canVote: true, roomNumber: 201 };
+    const voting = { ...state, phase: "VOTING" as const, chatMessages: [
+      { id: "1", playerId: "desk", playerName: "Desk", turn: 1, text: "ทะเบียนห้องพักเทิร์นที่ 3: ผู้เล่น 1 Guest A · ห้อง 101, ผู้เล่น 2 Guest B · ห้อง 102", sentAt: 0 },
+      { id: "2", playerId: "photo", playerName: "Photo", turn: 1, text: "ภาพถ่ายเทิร์นที่ 3: นักฆ่าคือผู้เล่น 2 Guest B / Photograph: Guest B", sentAt: 1 },
+    ] };
+    expect(chooseLocalBotCommand(voting, voter)).toEqual({ event: "game:vote", payload: { roomNumber: 102 } });
+  });
+  it("uses the Witness floor direction shared in chat", () => {
+    const voter = { ...privateState, canUseSkill: false, canVote: true, roomNumber: 201 };
+    const voting = { ...state, phase: "VOTING" as const, publicRooms: [...state.publicRooms, { roomNumber: 301, state: "UNKNOWN" as const }], chatMessages: [{ id: "1", playerId: "witness", playerName: "Witness", turn: 1, text: "ฉันตรวจชั้น 2: ทิศทางชั้นนักฆ่า: ABOVE / I checked floor 2", sentAt: 0 }] };
+    expect(chooseLocalBotCommand(voting, voter)).toEqual({ event: "game:vote", payload: { roomNumber: 301 } });
   });
 });
