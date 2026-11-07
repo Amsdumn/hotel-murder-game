@@ -53,7 +53,7 @@ export function ActiveRooms({ onJoin }: { onJoin: (code: string) => void }) {
     };
   }, []);
 
-  return <section aria-labelledby="active-rooms-title" className="mt-8 rounded-xl border border-[#d9b66f]/25 bg-[#171321]/85 p-4 shadow-[0_16px_45px_rgba(0,0,0,.28)] sm:p-5">
+  return <section aria-labelledby="active-rooms-title" className="mt-4 rounded-xl border border-[#d9b66f]/25 bg-[#171321]/85 p-4 shadow-[0_16px_45px_rgba(0,0,0,.28)] sm:p-5">
     <div className="flex items-center justify-between gap-3">
       <div><p className="text-xs tracking-[.2em] text-[#d9b66f]">OPEN ROOMS</p><h2 id="active-rooms-title" className="mt-1 font-serif text-xl">{en ? "Available game rooms" : "ห้องเกมที่เปิดอยู่"}</h2></div>
       <Button size="small" variant="text" onClick={() => refreshRef.current()} aria-label={en ? "Refresh rooms" : "รีเฟรชรายการห้อง"}>{en ? "Refresh" : "รีเฟรช"}</Button>

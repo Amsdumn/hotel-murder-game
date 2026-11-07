@@ -86,7 +86,7 @@ function resolvePendingAssassination(state: GameEngineState): EngineResult {
 export function performSkill(state: GameEngineState, playerId: string, target: unknown, now: number, discussionSeconds: number): EngineResult {
   const actor = state.players.find((player) => player.id === playerId);
   if (state.phase !== "SKILL_PHASE" || state.activePlayerId !== playerId || !actor?.isAlive || state.usedSkillPlayerIds.includes(playerId)) throw new Error("Skill is not permitted");
-  if (actor.role === "RECEPTIONIST" || actor.role === "PHOTOGRAPHER") throw new Error("Automatic skill cannot be submitted");
+  if (actor.role === "FORMER_POLICE" || actor.role === "RECEPTIONIST" || actor.role === "PHOTOGRAPHER") throw new Error("Automatic skill cannot be submitted");
   if (state.darkFloors?.includes(Math.floor(actor.roomNumber / 100)) || (actor.role === "ELECTRICIAN" && state.electricianLastUsedTurn?.[playerId] === state.turn - 1)) throw new Error("Skill is not permitted");
   let next = state;
   const privateEvents: PrivateGameEvent[] = [];
@@ -136,6 +136,11 @@ export function performSkill(state: GameEngineState, playerId: string, target: u
       const room = requireSelectableRoom(state, target);
       const occupant = state.players.find((player) => player.roomNumber === room && player.isAlive);
       message = `ผลตรวจห้อง ${room}: ${occupant ? occupant.team : "EMPTY"}`;
+    } else if (actor.role === "LAWYER") {
+      if (!Array.isArray(target) || target.length !== 2 || target[0] === target[1]) throw new Error("Two distinct living guests required");
+      const guests = target.map((id) => state.players.find((player) => player.id === id && player.id !== actor.id && player.isAlive));
+      if (guests.some((guest) => !guest)) throw new Error("Invalid skill target");
+      message = guests[0]!.team === guests[1]!.team ? "ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน" : "ผู้เข้าพักทั้งสองอยู่คนละฝ่าย";
     } else {
       if (target === actor.id) throw new Error("Invalid skill target");
       const selected = state.players.find((player) => player.id === target);

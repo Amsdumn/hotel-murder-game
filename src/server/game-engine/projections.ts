@@ -30,7 +30,7 @@ export function projectPrivatePlayerState(state: GameEngineState, requesterId: s
   if (!player) throw new Error("Player not found");
   const deathNotice = state.deathNotices?.[player.id];
   const blockedAction = state.privateActionHistory?.[player.id]?.find((entry) => entry.turn === state.turn && entry.type === "SKILL" && (entry.message === "ใช้สกิลไม่ได้เนื่องจากไฟดับบนชั้นของคุณ" || entry.message === "สกิลช่างไฟกำลังพักหนึ่งเทิร์น"));
-  const canUseSkill = player.isAlive && player.role !== "RECEPTIONIST" && player.role !== "PHOTOGRAPHER" && state.phase === "SKILL_PHASE" && state.activePlayerId === player.id && !state.usedSkillPlayerIds.includes(player.id)
+  const canUseSkill = player.isAlive && player.role !== "FORMER_POLICE" && player.role !== "RECEPTIONIST" && player.role !== "PHOTOGRAPHER" && state.phase === "SKILL_PHASE" && state.activePlayerId === player.id && !state.usedSkillPlayerIds.includes(player.id)
     && !state.darkFloors?.includes(Math.floor(player.roomNumber / 100))
     && !(player.role === "ELECTRICIAN" && state.electricianLastUsedTurn?.[player.id] === state.turn - 1);
   return {

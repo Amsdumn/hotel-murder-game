@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import { ROLE_ORDER } from "../../types/game";
+import { formerPoliceClue } from "../../lib/assassin-clues";
 import { appendPrivateAction, gameFloorCount, gameRooms, isHotelRoom, isSelectableRoom, killPlayer, type EngineResult, type GameEngineState, type PrivateGameEvent } from "./state";
 
 function chooseThreeRooms(emptyRooms: number[]): number[] {
@@ -76,6 +77,20 @@ export function advanceSkillTurn(state: GameEngineState, afterPlayerId: string |
     const coolingDown = player.role === "ELECTRICIAN" && next.electricianLastUsedTurn?.[player.id] === next.turn - 1;
     if (dark || coolingDown) {
       next = appendPrivateAction({ ...next, usedSkillPlayerIds: [...next.usedSkillPlayerIds, player.id] }, player.id, { turn: next.turn, type: "SKILL", message: dark ? "ใช้สกิลไม่ได้เนื่องจากไฟดับบนชั้นของคุณ" : "สกิลช่างไฟกำลังพักหนึ่งเทิร์น" });
+      return false;
+    }
+    if (player.role === "FORMER_POLICE") {
+      const killer = next.players.find((guest) => guest.role === "KILLER");
+      const message = formerPoliceClue(killer?.avatarId, next.turn);
+      next = appendPrivateAction({
+        ...next,
+        usedSkillPlayerIds: [...next.usedSkillPlayerIds, player.id],
+        privateResultMessages: {
+          ...next.privateResultMessages,
+          [player.id]: [...(next.privateResultMessages?.[player.id] ?? []), message].slice(-100),
+        },
+      }, player.id, { turn: next.turn, type: "SKILL", message });
+      privateEvents.push({ type: "SKILL_RESULT", recipientPlayerId: player.id, message });
       return false;
     }
     if (player.role === "RECEPTIONIST") {

@@ -30,4 +30,20 @@ describe("game message translation", () => {
       expect(gameMessage(`ใช้สกิล: ผลตรวจห้อง 203: ${code}`, "en")).toBe(`Skill: Room 203: ${english}`);
     }
   });
+  it("localizes every progressive Former Police Officer clue", () => {
+    for (const [thai, english] of [
+      ["เบาะแสอดีตตำรวจเทิร์นที่ 1: เพศหญิง", "Former Police clue, turn 1: woman"],
+      ["เบาะแสอดีตตำรวจเทิร์นที่ 2: อายุ 30–39 ปี", "Former Police clue, turn 2: age 30–39"],
+      ["เบาะแสอดีตตำรวจเทิร์นที่ 3: ผมสีแดง ผิวสีอ่อน", "Former Police clue, turn 3: red hair, light skin tone"],
+      ["เบาะแสอดีตตำรวจเทิร์นที่ 4: เกิดที่รัสเซีย", "Former Police clue, turn 4: born in Russia"],
+      ["เบาะแสอดีตตำรวจเทิร์นที่ 2: ไม่พบข้อมูลตัวละคร", "Former Police clue, turn 2: character details unavailable"],
+    ]) {
+      expect(gameMessage(thai, "th")).toBe(thai);
+      expect(gameMessage(thai, "en")).toBe(english);
+    }
+  });
+  it("localizes Lawyer comparisons without naming either team", () => {
+    expect(gameMessage("ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน", "en")).toBe("The two guests are on the same team");
+    expect(gameMessage("ผู้เข้าพักทั้งสองอยู่คนละฝ่าย", "en")).toBe("The two guests are on different teams");
+  });
 });

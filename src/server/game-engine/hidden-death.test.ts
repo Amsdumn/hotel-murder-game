@@ -130,6 +130,38 @@ describe("hidden deaths", () => {
     expect(result.privateEvents).toEqual([{ type: "ACTION_REQUEST", recipientPlayerId: "accomplice" }]);
   });
 
+  it("gives the living Former Police Officer one private Assassin-avatar clue per turn", () => {
+    const officer = { id: "officer", displayName: "Officer", seatIndex: 6, role: "FORMER_POLICE" as const, team: "INNOCENT" as const, roomNumber: 301, isAlive: true };
+    const players = [...game().players.map((player) => player.id === "killer" ? { ...player, avatarId: "irina-volkova" as const } : player), officer];
+    for (const [turn, expected] of [
+      [1, "เพศหญิง"], [2, "อายุ 30–39 ปี"], [3, "ผมสีแดง ผิวสีอ่อน"], [4, "เกิดที่รัสเซีย"],
+    ] as const) {
+      const result = advanceSkillTurn(game({ turn, players, activePlayerId: "extra" }), "extra");
+      expect(result.state.activePlayerId).toBe("accomplice");
+      expect(result.state.usedSkillPlayerIds).toContain("officer");
+      expect(result.privateEvents).toContainEqual({ type: "SKILL_RESULT", recipientPlayerId: "officer", message: expect.stringContaining(expected) });
+      expect(projectPrivatePlayerState(result.state, "officer").privateResults).toEqual([expect.stringContaining(expected)]);
+      expect(projectPrivatePlayerState(result.state, "officer").actionHistory).toContainEqual(expect.objectContaining({ turn, type: "SKILL" }));
+      expect(JSON.stringify(projectPublicState(result.state))).not.toContain(expected);
+      expect(JSON.stringify(projectMurdererTeamState(result.state, "killer"))).not.toContain(expected);
+      const repeated = advanceSkillTurn(result.state, "extra");
+      expect(repeated.privateEvents).not.toContainEqual(expect.objectContaining({ recipientPlayerId: "officer" }));
+    }
+  });
+
+  it("withholds the Former Police Officer clue after death or blackout", () => {
+    const officer = { id: "officer", displayName: "Officer", seatIndex: 6, role: "FORMER_POLICE" as const, team: "INNOCENT" as const, roomNumber: 301, isAlive: true };
+    const players = [...game().players, officer];
+    for (const state of [
+      game({ players: players.map((player) => player.id === "officer" ? { ...player, isAlive: false } : player) }),
+      game({ players, darkFloors: [3] }),
+    ]) {
+      const result = advanceSkillTurn({ ...state, activePlayerId: "extra" }, "extra");
+      expect(result.privateEvents.some((event) => event.type === "SKILL_RESULT" && event.recipientPlayerId === "officer")).toBe(false);
+      expect(projectPrivatePlayerState(result.state, "officer").privateResults).toEqual([]);
+    }
+  });
+
   it("privately reveals every guest-room assignment to the living receptionist only on turn three", () => {
     const receptionist = { id: "receptionist", displayName: "Receptionist", seatIndex: 5, role: "RECEPTIONIST" as const, team: "INNOCENT" as const, roomNumber: 303, isAlive: true };
     const base = game({ players: [...game().players.filter((player) => player.id !== "extra"), receptionist], activePlayerId: null, usedSkillPlayerIds: ["innocent", "victim"] });

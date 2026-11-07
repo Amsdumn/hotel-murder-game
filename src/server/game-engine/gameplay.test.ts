@@ -41,6 +41,43 @@ describe("gameplay setup and skills", () => {
     expect(() => createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, ["WITNESS"])).toThrow();
   });
 
+  it("can assign the Former Police Officer without changing public avatar assignment", () => {
+    const selected = ["FORMER_POLICE", "WITNESS", "HOUSEKEEPER", "LOCKSMITH"] as const;
+    const game = createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, [...selected]).state;
+    expect(game.players.filter((player) => player.team === "INNOCENT").map((player) => player.role).sort()).toEqual([...selected].sort());
+    expect(new Set(game.players.map((player) => player.avatarId)).size).toBe(5);
+    const officer = game.players.find((player) => player.role === "FORMER_POLICE")!;
+    expect(projectPrivatePlayerState({ ...game, phase: "SKILL_PHASE", activePlayerId: officer.id }, officer.id).canUseSkill).toBe(false);
+    expect(() => performSkill({ ...game, phase: "SKILL_PHASE", activePlayerId: officer.id }, officer.id, null, 1000, 180)).toThrow("Automatic skill cannot be submitted");
+  });
+
+  it("lets the Lawyer privately compare two living guests without revealing either team", () => {
+    const seats = Array.from({ length: 6 }, (_, seatIndex) => ({ id: `guest-${seatIndex}`, displayName: `Guest ${seatIndex}`, seatIndex }));
+    const initial = createInitialGame("ABC234", seats, 1, choose(), 1000, ["LAWYER", "DETECTIVE", "HOUSEKEEPER", "LOCKSMITH"]).state;
+    expect(initial.players.some((player) => player.role === "LAWYER" && player.team === "INNOCENT")).toBe(true);
+    const players: GameEngineState["players"] = [
+      { id: "lawyer", displayName: "Lawyer", seatIndex: 0, role: "LAWYER", team: "INNOCENT", roomNumber: 101, isAlive: true },
+      { id: "killer", displayName: "Killer", seatIndex: 1, role: "KILLER", team: "MURDERER", roomNumber: 102, isAlive: true },
+      { id: "accomplice", displayName: "Accomplice", seatIndex: 2, role: "ACCOMPLICE", team: "MURDERER", roomNumber: 201, isAlive: true },
+      { id: "detective", displayName: "Detective", seatIndex: 3, role: "DETECTIVE", team: "INNOCENT", roomNumber: 202, isAlive: true },
+      { id: "housekeeper", displayName: "Housekeeper", seatIndex: 4, role: "HOUSEKEEPER", team: "INNOCENT", roomNumber: 301, isAlive: true },
+      { id: "locksmith", displayName: "Locksmith", seatIndex: 5, role: "LOCKSMITH", team: "INNOCENT", roomNumber: 302, isAlive: true },
+    ];
+    const state: GameEngineState = { ...initial, players, phase: "SKILL_PHASE", activePlayerId: "lawyer", crimeRooms: [103, 203, 303] };
+    const same = performSkill(state, "lawyer", ["killer", "accomplice"], 1000, 180);
+    expect(same.privateEvents.filter((event) => event.type === "SKILL_RESULT")).toEqual([{ type: "SKILL_RESULT", recipientPlayerId: "lawyer", message: "ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน" }]);
+    expect(same.publicEvents).toEqual([]);
+    expect(projectPrivatePlayerState(same.state, "lawyer").privateResults).toContain("ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน");
+    expect(() => performSkill(same.state, "lawyer", ["detective", "housekeeper"], 1000, 180)).toThrow();
+    const different = performSkill(state, "lawyer", ["killer", "detective"], 1000, 180);
+    expect(different.privateEvents.filter((event) => event.type === "SKILL_RESULT")).toEqual([{ type: "SKILL_RESULT", recipientPlayerId: "lawyer", message: "ผู้เข้าพักทั้งสองอยู่คนละฝ่าย" }]);
+    for (const target of [null, "killer", ["killer"], ["killer", "killer"], ["lawyer", "killer"], ["killer", "missing"], ["killer", "detective", "housekeeper"]]) {
+      expect(() => performSkill(state, "lawyer", target, 1000, 180)).toThrow();
+    }
+    const dead: GameEngineState = { ...state, players: players.map((player) => player.id === "detective" ? { ...player, isAlive: false } : player) };
+    expect(() => performSkill(dead, "lawyer", ["killer", "detective"], 1000, 180)).toThrow();
+  });
+
   it("draws the needed Innocent roles from a larger host-selected pool", () => {
     const pool = ["WITNESS", "DETECTIVE", "HOUSEKEEPER", "LOCKSMITH", "ELECTRICIAN"] as const;
     const game = createInitialGame("ABC234", lobbyPlayers, 1, choose(), 1000, [...pool]).state;
@@ -98,13 +135,14 @@ describe("gameplay setup and skills", () => {
 
   it("accepts ninth-floor targets in a ten-player game", () => {
     const seats = Array.from({ length: 10 }, (_, seatIndex) => ({ id: `seat-${seatIndex}`, displayName: `Guest ${seatIndex}`, seatIndex }));
-    const initial = createInitialGame("ABC234", seats, 1, choose()).state;
+    const initial = createInitialGame("ABC234", seats, 1, choose(), 1000, ["ELECTRICIAN", "LOCKSMITH", "HOUSEKEEPER", "WINDOW_CLEANER", "DETECTIVE", "RECEPTIONIST", "PHOTOGRAPHER", "WITNESS"]).state;
     const detective = initial.players.find((player) => player.role === "DETECTIVE")!;
     const state: GameEngineState = { ...initial, phase: "SKILL_PHASE", activePlayerId: detective.id };
     expect(() => performSkill(state, detective.id, 901, 1000, 180)).not.toThrow();
     const housekeeper = initial.players.find((player) => player.role === "HOUSEKEEPER")!;
     expect(() => performSkill({ ...state, activePlayerId: housekeeper.id }, housekeeper.id, 9, 1000, 180)).not.toThrow();
-    expect(castRoomVote({ ...initial, phase: "VOTING", phaseDeadlineAt: 2000 }, detective.id, 901, 1000).state.votes[detective.id]).toBe(901);
+    const voter = initial.players.find((player) => player.roomNumber !== 901)!;
+    expect(castRoomVote({ ...initial, phase: "VOTING", phaseDeadlineAt: 2000 }, voter.id, 901, 1000).state.votes[voter.id]).toBe(901);
   });
 
   it("lets a living witness act before a successful assassination resolves", () => {

@@ -4,6 +4,7 @@ import type { LobbyRecord } from "../lobby/lobby-store";
 import { GameService } from "./game-service";
 import { LobbyService } from "../lobby/lobby-service";
 import { AVATAR_ORDER } from "../../lib/avatars";
+import { INNOCENT_ROLES } from "../../types/game";
 import type { GameEngineState } from "./state";
 import { projectMurdererTeamState, projectPrivatePlayerState, projectPublicState } from "./projections";
 
@@ -21,6 +22,17 @@ function record(phase: "ROLE_REVEAL" | "DISCUSSION" | "SKILL_PHASE" | "VOTING"):
 }
 
 describe("persisted server deadlines", () => {
+  it("accepts a Lawyer pair through the game command and keeps the result private", async () => {
+    const store = new MemoryLobbyStore();
+    const lobby = record("SKILL_PHASE");
+    lobby.gameState!.players = lobby.gameState!.players.map((player) => player.id === "a" ? { ...player, role: "LAWYER" } : player);
+    await store.createLobby(lobby);
+    const service = new GameService(store);
+    const result = await service.skill("ABC234", "a", { actionId: crypto.randomUUID(), expectedVersion: 5, target: ["d", "e"] }, 500);
+    expect((await service.snapshot("ABC234", "a"))?.privateState.privateResults).toContain("ผู้เข้าพักทั้งสองอยู่ฝ่ายเดียวกัน");
+    expect((await service.snapshot("ABC234", "b"))?.privateState.privateResults).toEqual([]);
+    expect(JSON.stringify(projectPublicState(result.state))).not.toContain("ผู้เข้าพักทั้งสอง");
+  });
   it("accepts public chat only from living players during discussion and restores it", async () => {
     const store = new MemoryLobbyStore();
     await store.createLobby(record("DISCUSSION"));
@@ -136,6 +148,30 @@ describe("persisted server deadlines", () => {
     expect(avatars.every((avatar) => AVATAR_ORDER.includes(avatar!))).toBe(true);
     expect((await games.snapshot(host.code, ids[1]))?.publicState.players.map((player) => player.avatarId)).toEqual(avatars);
     expect(JSON.stringify(await lobbies.preview(host.code))).not.toContain("avatarId");
+  });
+  it("starts a ready room in system-random mode without manual Innocent roles", async () => {
+    const store = new MemoryLobbyStore();
+    const lobbies = new LobbyService(store);
+    const games = new GameService(store);
+    const host = await lobbies.create({ displayName: "Host", actionId: crypto.randomUUID() });
+    for (let index = 1; index < 5; index += 1) {
+      const view = await lobbies.preview(host.code);
+      await lobbies.join({ code: host.code, displayName: `Guest ${index}`, actionId: crypto.randomUUID(), expectedVersion: view.version });
+    }
+    for (const player of (await lobbies.preview(host.code)).players) {
+      const view = await lobbies.preview(host.code);
+      await lobbies.setReady(player.id, { actionId: crypto.randomUUID(), expectedVersion: view.version, ready: true });
+    }
+    let view = await lobbies.preview(host.code);
+    expect(view.canStart).toBe(false);
+    view = await lobbies.configure(host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version, playerLimit: 5, discussionSeconds: 180, innocentRoleMode: "RANDOM", selectedInnocentRoles: [] });
+    expect(view.canStart).toBe(true);
+    const started = await games.start(host.code, host.playerId, { actionId: crypto.randomUUID(), expectedVersion: view.version });
+    const innocents = started.state.players.filter((player) => player.team === "INNOCENT").map((player) => player.role);
+    expect(innocents).toHaveLength(4);
+    expect(new Set(innocents).size).toBe(4);
+    expect(innocents.every((role) => INNOCENT_ROLES.includes(role))).toBe(true);
+    expect(started.state.players.filter((player) => player.role === "KILLER")).toHaveLength(1);
   });
   it("reveals crime rooms after a saved prologue expires", async () => {
     const store = new MemoryLobbyStore();
