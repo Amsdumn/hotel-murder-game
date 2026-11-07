@@ -24,7 +24,7 @@ export function MurderEventOverlay({ sequence, muted }: { sequence: number; mute
     <div className="murder-event-message max-w-2xl">
       <p className="mb-5 text-sm tracking-[.3em] text-[#c8a46b]">{en ? "WHO KILLED TONIGHT?" : "คืนนี้ใครฆ่า..."}</p>
       <p className="font-serif text-3xl leading-relaxed sm:text-5xl">{en ? "A murder has occurred in the hotel..." : "มีเหตุฆาตกรรมเกิดขึ้นภายในโรงแรม..."}</p>
-      <p className="mt-6 text-lg text-[#c8a46b] sm:text-2xl">{en ? "But nobody knows who the victim is" : "แต่ไม่มีใครรู้ว่าเหยื่อคือใคร"}</p>
+      {/* <p className="mt-6 text-lg text-[#c8a46b] sm:text-2xl">{en ? "But nobody knows who the victim is" : "แต่ไม่มีใครรู้ว่าเหยื่อคือใคร"}</p> */}
     </div>
   </div>;
 }
